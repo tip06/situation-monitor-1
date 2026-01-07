@@ -715,6 +715,147 @@
             text-transform: none;
         }
 
+        /* Hotspot Popup */
+        .hotspot-popup {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            background: rgba(5, 10, 8, 0.95);
+            border: 1px solid #0f5040;
+            min-width: 280px;
+            max-width: 350px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 255, 136, 0.1);
+            pointer-events: auto;
+        }
+
+        .hotspot-popup.visible {
+            display: block;
+        }
+
+        .hotspot-popup-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #0f5040;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hotspot-popup-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .hotspot-popup.elevated .hotspot-popup-title { color: #ffcc00; }
+        .hotspot-popup.high .hotspot-popup-title { color: #ff3333; }
+
+        .hotspot-popup-level {
+            font-size: 0.55rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .hotspot-popup-level.low { background: #00ff88; color: #000; }
+        .hotspot-popup-level.elevated { background: #ffcc00; color: #000; }
+        .hotspot-popup-level.high { background: #ff3333; color: #fff; animation: pulse-level 1s infinite; }
+
+        @keyframes pulse-level {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .hotspot-popup-subtext {
+            font-size: 0.55rem;
+            color: #0a8060;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #0a3020;
+        }
+
+        .hotspot-popup-headlines {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .hotspot-popup-headline {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #0a3020;
+            font-size: 0.65rem;
+            color: #e8e8e8;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .hotspot-popup-headline:last-child {
+            border-bottom: none;
+        }
+
+        .hotspot-popup-headline:hover {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .hotspot-popup-headline a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .hotspot-popup-headline a:hover {
+            color: #00ff88;
+        }
+
+        .hotspot-popup-source {
+            font-size: 0.5rem;
+            color: #0a8060;
+            text-transform: uppercase;
+            margin-bottom: 0.2rem;
+        }
+
+        .hotspot-popup-empty {
+            padding: 1rem;
+            font-size: 0.6rem;
+            color: #0a8060;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .hotspot-popup-close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            color: #0a8060;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .hotspot-popup-close:hover {
+            color: #00ff88;
+        }
+
+        .hotspot-popup-coords {
+            font-size: 0.5rem;
+            color: #0a6040;
+            padding: 0.4rem 1rem;
+            background: #030805;
+            font-family: 'SF Mono', monospace;
+        }
+
+        /* Make hotspots clickable */
+        .hotspot {
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .hotspot:hover .hotspot-dot {
+            transform: scale(1.2);
+        }
+
         /* Shipping Chokepoints */
         .chokepoint {
             position: absolute;
@@ -2256,7 +2397,13 @@
                     if (matchedKeywords.length > 0) {
                         score += matchedKeywords.length;
                         if (item.isAlert) score += 3; // Boost for alert keywords
-                        matchedHeadlines.push(item.title);
+                        // Store full headline object with link and source
+                        matchedHeadlines.push({
+                            title: item.title,
+                            link: item.link,
+                            source: item.source,
+                            isAlert: item.isAlert
+                        });
                     }
                 });
 
@@ -2264,7 +2411,7 @@
                 if (score >= 8) level = 'high';
                 else if (score >= 3) level = 'elevated';
 
-                results[spot.id] = { level, score, headlines: matchedHeadlines.slice(0, 3) };
+                results[spot.id] = { level, score, headlines: matchedHeadlines.slice(0, 5) };
             });
 
             return results;
@@ -2450,10 +2597,22 @@
 
             // Intel hotspots
             INTEL_HOTSPOTS.forEach(spot => {
-                const activity = activityData[spot.id] || { level: 'low', score: 0 };
+                const activity = activityData[spot.id] || { level: 'low', score: 0, headlines: [] };
                 const pos = toPercent(spot.lon, spot.lat);
+                // Store activity data as JSON in data attribute
+                const activityJson = encodeURIComponent(JSON.stringify({
+                    ...activity,
+                    name: spot.name,
+                    subtext: spot.subtext,
+                    lat: spot.lat,
+                    lon: spot.lon
+                }));
                 overlaysHTML += `
-                    <div class="hotspot ${activity.level}" style="left: ${pos.x}%; top: ${pos.y}%;">
+                    <div class="hotspot ${activity.level}"
+                         style="left: ${pos.x}%; top: ${pos.y}%;"
+                         data-hotspot-id="${spot.id}"
+                         data-hotspot-activity="${activityJson}"
+                         onclick="showHotspotPopup(event, '${spot.id}')">
                         <div class="hotspot-dot"></div>
                         <div class="hotspot-label">
                             ${spot.name}
@@ -2463,7 +2622,99 @@
                 `;
             });
 
+            // Add popup container
+            overlaysHTML += `<div class="hotspot-popup" id="hotspotPopup"></div>`;
+
             document.getElementById('mapOverlays').innerHTML = overlaysHTML;
+
+            // Close popup when clicking outside
+            document.getElementById('worldMapContainer').addEventListener('click', (e) => {
+                if (!e.target.closest('.hotspot') && !e.target.closest('.hotspot-popup')) {
+                    hideHotspotPopup();
+                }
+            });
+        }
+
+        // Show hotspot popup
+        function showHotspotPopup(event, hotspotId) {
+            event.stopPropagation();
+
+            const hotspotEl = document.querySelector(`[data-hotspot-id="${hotspotId}"]`);
+            if (!hotspotEl) return;
+
+            const activityData = JSON.parse(decodeURIComponent(hotspotEl.dataset.hotspotActivity));
+            const popup = document.getElementById('hotspotPopup');
+
+            // Build headlines HTML
+            let headlinesHTML = '';
+            if (activityData.headlines && activityData.headlines.length > 0) {
+                headlinesHTML = activityData.headlines.map(h => `
+                    <div class="hotspot-popup-headline">
+                        <div class="hotspot-popup-source">${escapeHtml(h.source || 'News')}</div>
+                        <a href="${h.link || '#'}" target="_blank">${escapeHtml(h.title)}</a>
+                    </div>
+                `).join('');
+            } else {
+                headlinesHTML = '<div class="hotspot-popup-empty">No recent headlines for this location</div>';
+            }
+
+            // Build popup content
+            popup.innerHTML = `
+                <button class="hotspot-popup-close" onclick="hideHotspotPopup()">&times;</button>
+                <div class="hotspot-popup-header">
+                    <span class="hotspot-popup-title">${escapeHtml(activityData.name)}</span>
+                    <span class="hotspot-popup-level ${activityData.level}">${activityData.level.toUpperCase()}</span>
+                </div>
+                <div class="hotspot-popup-subtext">${escapeHtml(activityData.subtext)}</div>
+                <div class="hotspot-popup-coords">${activityData.lat.toFixed(2)}°${activityData.lat >= 0 ? 'N' : 'S'}, ${Math.abs(activityData.lon).toFixed(2)}°${activityData.lon >= 0 ? 'E' : 'W'}</div>
+                <div class="hotspot-popup-headlines">
+                    ${headlinesHTML}
+                </div>
+            `;
+
+            // Set popup class for styling based on threat level
+            popup.className = `hotspot-popup visible ${activityData.level}`;
+
+            // Position popup near the hotspot
+            const hotspotRect = hotspotEl.getBoundingClientRect();
+            const mapContainer = document.getElementById('worldMapContainer');
+            const mapRect = mapContainer.getBoundingClientRect();
+
+            // Calculate position relative to map container
+            let left = hotspotRect.left - mapRect.left + 20;
+            let top = hotspotRect.top - mapRect.top - 10;
+
+            // Ensure popup stays within map bounds
+            const popupWidth = 300;
+            const popupHeight = 280;
+
+            if (left + popupWidth > mapRect.width) {
+                left = hotspotRect.left - mapRect.left - popupWidth - 20;
+            }
+            if (top + popupHeight > mapRect.height) {
+                top = mapRect.height - popupHeight - 10;
+            }
+            if (top < 10) top = 10;
+            if (left < 10) left = 10;
+
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+        }
+
+        // Hide hotspot popup
+        function hideHotspotPopup() {
+            const popup = document.getElementById('hotspotPopup');
+            if (popup) {
+                popup.classList.remove('visible');
+            }
+        }
+
+        // Escape HTML for popup content
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Fetch Congressional trades - uses news RSS since APIs are locked down
