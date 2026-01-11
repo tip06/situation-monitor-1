@@ -4,12 +4,26 @@
 	interface Props {
 		open: boolean;
 		onSelectPreset: (presetId: string) => void;
+		onSkip?: () => void;
 	}
 
-	let { open, onSelectPreset }: Props = $props();
+	let { open, onSelectPreset, onSkip }: Props = $props();
 
 	function handleSelectPreset(presetId: string) {
 		onSelectPreset(presetId);
+	}
+
+	function handleSkip() {
+		// Select the 'everything' preset (show all panels) when skipping
+		onSelectPreset('everything');
+	}
+
+	function handleClose() {
+		if (onSkip) {
+			onSkip();
+		} else {
+			handleSkip();
+		}
 	}
 </script>
 
@@ -17,6 +31,9 @@
 	<div class="modal-overlay">
 		<div class="modal onboarding-modal">
 			<div class="modal-header">
+				<button class="close-btn" onclick={handleClose} aria-label="Skip onboarding">
+					&times;
+				</button>
 				<h2>Welcome to Situation Monitor</h2>
 				<p class="subtitle">Choose a dashboard configuration to get started</p>
 			</div>
@@ -24,10 +41,7 @@
 			<div class="preset-grid">
 				{#each PRESET_ORDER as presetId}
 					{@const preset = PRESETS[presetId]}
-					<button
-						class="preset-card"
-						onclick={() => handleSelectPreset(presetId)}
-					>
+					<button class="preset-card" onclick={() => handleSelectPreset(presetId)}>
 						<div class="preset-icon">{preset.icon}</div>
 						<div class="preset-name">{preset.name}</div>
 						<div class="preset-description">{preset.description}</div>
@@ -66,9 +80,34 @@
 	}
 
 	.modal-header {
+		position: relative;
 		padding: 1.5rem;
 		text-align: center;
 		border-bottom: 1px solid var(--border);
+	}
+
+	.close-btn {
+		position: absolute;
+		top: 0.75rem;
+		right: 0.75rem;
+		width: 2rem;
+		height: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		color: var(--text-secondary);
+		font-size: 1.25rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.close-btn:hover {
+		background: var(--bg);
+		color: var(--text-primary);
+		border-color: var(--text-secondary);
 	}
 
 	.modal-header h2 {

@@ -14,7 +14,9 @@ export default tseslint.config(
 		languageOptions: {
 			globals: {
 				...globals.browser,
-				...globals.node
+				...globals.node,
+				// GeoJSON types are globally available in TypeScript projects with @types/geojson
+				GeoJSON: 'readonly'
 			}
 		}
 	},
@@ -31,9 +33,13 @@ export default tseslint.config(
 			'build/',
 			'.svelte-kit/',
 			'dist/',
-			// Legacy files until migrated
+			// Legacy files - not part of SvelteKit migration
 			'js/',
-			'workers/'
+			'workers/',
+			'static/js/',
+			'static/legacy.html',
+			// Test utility files
+			'test-node.mjs'
 		]
 	}
 );

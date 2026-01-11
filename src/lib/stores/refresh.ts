@@ -225,7 +225,7 @@ function createRefreshStore() {
 					[category]: {
 						...state.categoryStates[category],
 						loading,
-						error: loading ? null : state.categoryStates[category]?.error ?? null,
+						error: loading ? null : (state.categoryStates[category]?.error ?? null),
 						lastUpdated: state.categoryStates[category]?.lastUpdated ?? null
 					}
 				}

@@ -221,6 +221,15 @@ export const govNews = derived(news, ($news) => $news.categories.gov);
 export const aiNews = derived(news, ($news) => $news.categories.ai);
 export const intelNews = derived(news, ($news) => $news.categories.intel);
 
+// Derived store for all news items (reactive)
+export const allNewsItems = derived(news, ($news) => {
+	const allItems: NewsItem[] = [];
+	for (const category of NEWS_CATEGORIES) {
+		allItems.push(...$news.categories[category].items);
+	}
+	return allItems;
+});
+
 // Derived store for alerts
 export const alerts = derived(news, ($news) => {
 	const allAlerts: NewsItem[] = [];

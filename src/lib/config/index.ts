@@ -78,3 +78,6 @@ export {
 	PRESET_STORAGE_KEY,
 	type Preset
 } from './presets';
+
+// API configuration
+export { CORS_PROXY_URL, API_DELAYS, CACHE_TTLS, DEBUG, logger } from './api';

@@ -50,7 +50,10 @@
 					<div class="intel-header">
 						<span class="intel-source">{item.source}</span>
 						<div class="intel-tags">
-							<Badge text={item.sourceType.toUpperCase()} variant={getSourceBadgeVariant(item.sourceType)} />
+							<Badge
+								text={item.sourceType.toUpperCase()}
+								variant={getSourceBadgeVariant(item.sourceType)}
+							/>
 							{#each item.regions.slice(0, 2) as region}
 								<Badge text={region} variant="info" />
 							{/each}

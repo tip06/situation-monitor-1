@@ -18,13 +18,16 @@
 		currencySymbol = '$'
 	}: Props = $props();
 
-	const changeClass = $derived(getChangeClass(item.changePercent));
+	const isDataAvailable = $derived(!isNaN(item.price) && item.price !== null);
+	const changeClass = $derived(isDataAvailable ? getChangeClass(item.changePercent) : '');
 	const priceDisplay = $derived(
-		item.price > 100
-			? item.price.toLocaleString('en-US', { maximumFractionDigits: 0 })
-			: item.price.toFixed(2)
+		!isDataAvailable
+			? '—'
+			: item.price > 100
+				? item.price.toLocaleString('en-US', { maximumFractionDigits: 0 })
+				: item.price.toFixed(2)
 	);
-	const changeText = $derived(formatPercentChange(item.changePercent));
+	const changeText = $derived(isDataAvailable ? formatPercentChange(item.changePercent) : '—');
 </script>
 
 <div class="market-item" class:compact>
@@ -37,9 +40,11 @@
 
 	<div class="market-data">
 		{#if showPrice}
-			<div class="market-price">{currencySymbol}{priceDisplay}</div>
+			<div class="market-price" class:unavailable={!isDataAvailable}>
+				{isDataAvailable ? `${currencySymbol}${priceDisplay}` : priceDisplay}
+			</div>
 		{/if}
-		<div class="market-change {changeClass}">{changeText}</div>
+		<div class="market-change {changeClass}" class:unavailable={!isDataAvailable}>{changeText}</div>
 	</div>
 </div>
 
@@ -112,5 +117,10 @@
 
 	.market-change.down {
 		color: var(--danger);
+	}
+
+	.unavailable {
+		color: var(--text-muted);
+		opacity: 0.5;
 	}
 </style>

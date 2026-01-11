@@ -4,9 +4,7 @@
 
 import { INDICES, SECTORS, COMMODITIES, CRYPTO } from '$lib/config/markets';
 import type { MarketItem, SectorPerformance, CryptoItem } from '$lib/types';
-
-// Proxy URL for CORS requests
-const PROXY_URL = 'https://situation-monitor-proxy.seanthielen-e.workers.dev/?url=';
+import { CORS_PROXY_URL, logger } from '$lib/config/api';
 
 interface CoinGeckoPrice {
 	usd: number;
@@ -26,8 +24,8 @@ export async function fetchCryptoPrices(): Promise<CryptoItem[]> {
 		const coinGeckoUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
 
 		// Use proxy to avoid CORS/rate limiting issues
-		const proxyUrl = PROXY_URL + encodeURIComponent(coinGeckoUrl);
-		console.log('[Markets API] Fetching crypto from:', proxyUrl);
+		const proxyUrl = CORS_PROXY_URL + encodeURIComponent(coinGeckoUrl);
+		logger.log('Markets API', 'Fetching crypto from:', proxyUrl);
 
 		const response = await fetch(proxyUrl);
 		if (!response.ok) {
@@ -48,7 +46,7 @@ export async function fetchCryptoPrices(): Promise<CryptoItem[]> {
 			};
 		});
 	} catch (error) {
-		console.error('[Markets API] Error fetching crypto:', error);
+		logger.error('Markets API', 'Error fetching crypto:', error);
 		return CRYPTO.map((c) => ({
 			id: c.id,
 			symbol: c.symbol,
@@ -62,45 +60,48 @@ export async function fetchCryptoPrices(): Promise<CryptoItem[]> {
 
 /**
  * Fetch market indices (via proxy for Yahoo Finance)
+ * Note: Returns placeholder data - would need Yahoo Finance API or similar
  */
 export async function fetchIndices(): Promise<MarketItem[]> {
-	// For now, return placeholder data - would need Yahoo Finance API or similar
-	// The original app uses a proxy to scrape market data
+	// TODO: Implement real market data fetching
+	// Options: Yahoo Finance API, Alpha Vantage, Polygon.io
 	return INDICES.map((index) => ({
 		symbol: index.symbol,
 		name: index.name,
-		price: 0,
-		change: 0,
-		changePercent: 0,
+		price: NaN, // NaN indicates data not available
+		change: NaN,
+		changePercent: NaN,
 		type: 'index' as const
 	}));
 }
 
 /**
  * Fetch sector performance
+ * Note: Returns placeholder data - would need market data provider
  */
 export async function fetchSectorPerformance(): Promise<SectorPerformance[]> {
-	// Placeholder - would need market data provider
+	// TODO: Implement real sector data fetching
 	return SECTORS.map((sector) => ({
 		symbol: sector.symbol,
 		name: sector.name,
-		price: 0,
-		change: 0,
-		changePercent: 0
+		price: NaN,
+		change: NaN,
+		changePercent: NaN
 	}));
 }
 
 /**
  * Fetch commodities
+ * Note: Returns placeholder data - would need commodities data provider
  */
 export async function fetchCommodities(): Promise<MarketItem[]> {
-	// Placeholder - would need commodities data provider
+	// TODO: Implement real commodities data fetching
 	return COMMODITIES.map((commodity) => ({
 		symbol: commodity.symbol,
 		name: commodity.name,
-		price: 0,
-		change: 0,
-		changePercent: 0,
+		price: NaN,
+		change: NaN,
+		changePercent: NaN,
 		type: 'commodity' as const
 	}));
 }

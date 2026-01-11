@@ -30,11 +30,7 @@
 			<h3 class="section-title">Auto Refresh</h3>
 			<div class="setting-row">
 				<label class="toggle-label">
-					<input
-						type="checkbox"
-						checked={$autoRefreshEnabled}
-						onchange={handleToggleAutoRefresh}
-					/>
+					<input type="checkbox" checked={$autoRefreshEnabled} onchange={handleToggleAutoRefresh} />
 					<span>Enable auto-refresh (hourly)</span>
 				</label>
 			</div>
@@ -64,9 +60,7 @@
 		<section class="settings-section">
 			<h3 class="section-title">Dashboard</h3>
 			{#if onReconfigure}
-				<button class="reconfigure-btn" onclick={onReconfigure}>
-					Reconfigure Dashboard
-				</button>
+				<button class="reconfigure-btn" onclick={onReconfigure}> Reconfigure Dashboard </button>
 				<p class="btn-hint">Choose a preset profile for your panels</p>
 			{/if}
 			<button class="reset-btn" onclick={handleResetPanels}> Reset All Settings </button>

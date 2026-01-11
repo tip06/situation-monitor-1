@@ -25,14 +25,34 @@ export const PRESETS: Record<string, Preset> = {
 		name: 'Trader',
 		icon: '📈',
 		description: 'Market-focused dashboard with stocks, crypto, and commodities',
-		panels: ['markets', 'heatmap', 'commodities', 'polymarket', 'whales', 'printer', 'finance', 'map']
+		panels: [
+			'markets',
+			'heatmap',
+			'commodities',
+			'crypto',
+			'polymarket',
+			'whales',
+			'printer',
+			'finance',
+			'map'
+		]
 	},
 	geopolitics: {
 		id: 'geopolitics',
 		name: 'Geopolitics Watcher',
 		icon: '🌍',
 		description: 'Global situation awareness and regional hotspots',
-		panels: ['map', 'intel', 'politics', 'gov', 'venezuela', 'greenland', 'iran', 'correlation', 'narrative']
+		panels: [
+			'map',
+			'intel',
+			'politics',
+			'gov',
+			'venezuela',
+			'greenland',
+			'iran',
+			'correlation',
+			'narrative'
+		]
 	},
 	intel: {
 		id: 'intel',
@@ -54,16 +74,41 @@ export const PRESETS: Record<string, Preset> = {
 		icon: '🎛️',
 		description: 'Kitchen sink - all panels enabled',
 		panels: [
-			'map', 'politics', 'tech', 'finance', 'gov',
-			'heatmap', 'markets', 'monitors', 'commodities',
-			'polymarket', 'whales', 'mainchar', 'printer',
-			'contracts', 'ai', 'layoffs', 'venezuela',
-			'greenland', 'iran', 'intel', 'correlation', 'narrative'
+			'map',
+			'politics',
+			'tech',
+			'finance',
+			'gov',
+			'heatmap',
+			'markets',
+			'monitors',
+			'commodities',
+			'crypto',
+			'polymarket',
+			'whales',
+			'mainchar',
+			'printer',
+			'contracts',
+			'ai',
+			'layoffs',
+			'venezuela',
+			'greenland',
+			'iran',
+			'intel',
+			'correlation',
+			'narrative'
 		]
 	}
 };
 
-export const PRESET_ORDER = ['news-junkie', 'trader', 'geopolitics', 'intel', 'minimal', 'everything'];
+export const PRESET_ORDER = [
+	'news-junkie',
+	'trader',
+	'geopolitics',
+	'intel',
+	'minimal',
+	'everything'
+];
 
 // Storage keys
 export const ONBOARDING_STORAGE_KEY = 'onboardingComplete';

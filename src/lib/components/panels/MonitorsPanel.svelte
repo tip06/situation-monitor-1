@@ -40,9 +40,7 @@
 			<div class="empty-state">
 				<p>No monitors configured</p>
 				{#if onCreateMonitor}
-					<button class="create-btn" onclick={onCreateMonitor}>
-						+ Create Monitor
-					</button>
+					<button class="create-btn" onclick={onCreateMonitor}> + Create Monitor </button>
 				{/if}
 			</div>
 		{:else}
@@ -83,7 +81,11 @@
 									</button>
 								{/if}
 								{#if onDeleteMonitor}
-									<button class="action-btn delete" onclick={() => onDeleteMonitor?.(monitor.id)} title="Delete">
+									<button
+										class="action-btn delete"
+										onclick={() => onDeleteMonitor?.(monitor.id)}
+										title="Delete"
+									>
 										×
 									</button>
 								{/if}
@@ -109,7 +111,12 @@
 							<div class="monitor-matches">
 								{#each getMatchesForMonitor(monitor.id) as match}
 									<div class="match-item">
-										<a href={match.item.link} target="_blank" rel="noopener noreferrer" class="match-title">
+										<a
+											href={match.item.link}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="match-title"
+										>
 											{match.item.title.length > 80
 												? match.item.title.substring(0, 80) + '...'
 												: match.item.title}

@@ -142,7 +142,8 @@
 	}
 
 	// Get panel visibility
-	const isPanelVisible = (id: string) => $settings.enabled[id as keyof typeof $settings.enabled] !== false;
+	const isPanelVisible = (id: string) =>
+		$settings.enabled[id as keyof typeof $settings.enabled] !== false;
 
 	// Handle preset selection from onboarding
 	function handleSelectPreset(presetId: string) {
@@ -183,10 +184,7 @@
 </svelte:head>
 
 <div class="app">
-	<Header
-		onRefresh={handleRefresh}
-		onSettingsClick={() => (settingsOpen = true)}
-	/>
+	<Header onRefresh={handleRefresh} onSettingsClick={() => (settingsOpen = true)} />
 
 	<main class="main-content">
 		<Dashboard>
@@ -330,24 +328,35 @@
 				</div>
 			{/if}
 
-		{#if isPanelVisible('iran')}
-			<div class="panel-slot">
-				<SituationPanel
-					panelId="iran"
-					config={{
-						title: 'Iran Crisis',
-						subtitle: 'Revolution protests, regime instability & nuclear program',
-						criticalKeywords: ['protest', 'uprising', 'revolution', 'crackdown', 'killed', 'nuclear', 'strike', 'attack', 'irgc', 'khamenei']
-					}}
-					news={allNewsItems.filter(
-						(n) =>
-							n.title.toLowerCase().includes('iran') ||
-							n.title.toLowerCase().includes('tehran') ||
-							n.title.toLowerCase().includes('irgc')
-					)}
-				/>
-			</div>
-		{/if}
+			{#if isPanelVisible('iran')}
+				<div class="panel-slot">
+					<SituationPanel
+						panelId="iran"
+						config={{
+							title: 'Iran Crisis',
+							subtitle: 'Revolution protests, regime instability & nuclear program',
+							criticalKeywords: [
+								'protest',
+								'uprising',
+								'revolution',
+								'crackdown',
+								'killed',
+								'nuclear',
+								'strike',
+								'attack',
+								'irgc',
+								'khamenei'
+							]
+						}}
+						news={allNewsItems.filter(
+							(n) =>
+								n.title.toLowerCase().includes('iran') ||
+								n.title.toLowerCase().includes('tehran') ||
+								n.title.toLowerCase().includes('irgc')
+						)}
+					/>
+				</div>
+			{/if}
 
 			<!-- Placeholder panels for additional data sources -->
 			{#if isPanelVisible('whales')}
@@ -387,10 +396,7 @@
 		onClose={() => (monitorFormOpen = false)}
 		editMonitor={editingMonitor}
 	/>
-	<OnboardingModal
-		open={onboardingOpen}
-		onSelectPreset={handleSelectPreset}
-	/>
+	<OnboardingModal open={onboardingOpen} onSelectPreset={handleSelectPreset} />
 </div>
 
 <style>

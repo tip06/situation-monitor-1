@@ -69,7 +69,12 @@ export const INTEL_SOURCES: IntelSource[] = [
 		type: 'think-tank',
 		topics: ['policy', 'geopolitics']
 	},
-	{ name: 'CFR', url: 'https://www.cfr.org/rss.xml', type: 'think-tank', topics: ['foreign-policy'] },
+	{
+		name: 'CFR',
+		url: 'https://www.cfr.org/rss.xml',
+		type: 'think-tank',
+		topics: ['foreign-policy']
+	},
 	{
 		name: 'Defense One',
 		url: 'https://www.defenseone.com/rss/all/',

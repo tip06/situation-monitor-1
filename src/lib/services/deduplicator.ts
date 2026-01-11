@@ -19,9 +19,11 @@ export class RequestDeduplicator {
 		this.inFlight.set(key, promise);
 
 		// Clean up when promise resolves or rejects
-		promise.finally(() => this.inFlight.delete(key)).catch(() => {
-			// Prevent unhandled rejection
-		});
+		promise
+			.finally(() => this.inFlight.delete(key))
+			.catch(() => {
+				// Prevent unhandled rejection
+			});
 
 		return promise;
 	}

@@ -73,10 +73,7 @@ describe('RequestDeduplicator', () => {
 
 	describe('isInFlight', () => {
 		it('should return true for in-flight requests', () => {
-			deduplicator.dedupe(
-				'test-key',
-				() => new Promise((resolve) => setTimeout(resolve, 1000))
-			);
+			deduplicator.dedupe('test-key', () => new Promise((resolve) => setTimeout(resolve, 1000)));
 
 			expect(deduplicator.isInFlight('test-key')).toBe(true);
 		});
@@ -90,14 +87,8 @@ describe('RequestDeduplicator', () => {
 
 	describe('getCount', () => {
 		it('should return number of in-flight requests', () => {
-			deduplicator.dedupe(
-				'key-1',
-				() => new Promise((resolve) => setTimeout(resolve, 1000))
-			);
-			deduplicator.dedupe(
-				'key-2',
-				() => new Promise((resolve) => setTimeout(resolve, 1000))
-			);
+			deduplicator.dedupe('key-1', () => new Promise((resolve) => setTimeout(resolve, 1000)));
+			deduplicator.dedupe('key-2', () => new Promise((resolve) => setTimeout(resolve, 1000)));
 
 			expect(deduplicator.getCount()).toBe(2);
 		});
@@ -105,14 +96,8 @@ describe('RequestDeduplicator', () => {
 
 	describe('clear', () => {
 		it('should clear all tracked requests', () => {
-			deduplicator.dedupe(
-				'key-1',
-				() => new Promise((resolve) => setTimeout(resolve, 1000))
-			);
-			deduplicator.dedupe(
-				'key-2',
-				() => new Promise((resolve) => setTimeout(resolve, 1000))
-			);
+			deduplicator.dedupe('key-1', () => new Promise((resolve) => setTimeout(resolve, 1000)));
+			deduplicator.dedupe('key-2', () => new Promise((resolve) => setTimeout(resolve, 1000)));
 
 			deduplicator.clear();
 

@@ -32,6 +32,7 @@ export {
 	govNews,
 	aiNews,
 	intelNews,
+	allNewsItems,
 	alerts,
 	isLoading as isNewsLoading,
 	hasErrors as hasNewsErrors,

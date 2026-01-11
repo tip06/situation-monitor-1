@@ -3,12 +3,7 @@
  */
 
 // Errors
-export {
-	ServiceError,
-	NetworkError,
-	TimeoutError,
-	CircuitOpenError
-} from './errors';
+export { ServiceError, NetworkError, TimeoutError, CircuitOpenError } from './errors';
 
 // Cache Manager
 export {
@@ -32,10 +27,7 @@ export {
 } from './circuit-breaker';
 
 // Request Deduplicator
-export {
-	RequestDeduplicator,
-	requestDeduplicator
-} from './deduplicator';
+export { RequestDeduplicator, requestDeduplicator } from './deduplicator';
 
 // Service Registry
 export {

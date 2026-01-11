@@ -67,9 +67,7 @@ const MOMENTUM_WINDOW_MINUTES = 10;
  * Format topic ID to display name
  */
 function formatTopicName(id: string): string {
-	return id
-		.replace(/-/g, ' ')
-		.replace(/\b\w/g, (l) => l.toUpperCase());
+	return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 /**

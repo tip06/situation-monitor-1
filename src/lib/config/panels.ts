@@ -17,6 +17,7 @@ export type PanelId =
 	| 'markets'
 	| 'monitors'
 	| 'commodities'
+	| 'crypto'
 	| 'polymarket'
 	| 'whales'
 	| 'mainchar'
@@ -41,6 +42,7 @@ export const PANELS: Record<PanelId, PanelConfig> = {
 	markets: { name: 'Markets', priority: 1 },
 	monitors: { name: 'My Monitors', priority: 1 },
 	commodities: { name: 'Commodities / VIX', priority: 2 },
+	crypto: { name: 'Crypto', priority: 2 },
 	polymarket: { name: 'Polymarket', priority: 2 },
 	whales: { name: 'Whale Watch', priority: 3 },
 	mainchar: { name: 'Main Character', priority: 2 },

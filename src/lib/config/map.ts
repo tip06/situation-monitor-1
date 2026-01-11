@@ -251,7 +251,12 @@ export const CONFLICT_ZONES: ConflictZone[] = [
 ];
 
 export const CHOKEPOINTS: Chokepoint[] = [
-	{ name: 'Suez', lat: 30.0, lon: 32.5, desc: 'Suez Canal — 12% of global trade, Europe-Asia route' },
+	{
+		name: 'Suez',
+		lat: 30.0,
+		lon: 32.5,
+		desc: 'Suez Canal — 12% of global trade, Europe-Asia route'
+	},
 	{
 		name: 'Panama',
 		lat: 9.1,
@@ -277,7 +282,12 @@ export const CHOKEPOINTS: Chokepoint[] = [
 		desc: 'Bab el-Mandeb — Red Sea gateway, Houthi threat zone'
 	},
 	{ name: 'Gibraltar', lat: 36.0, lon: -5.5, desc: 'Strait of Gibraltar — Mediterranean access' },
-	{ name: 'Bosporus', lat: 41.1, lon: 29.0, desc: 'Bosporus Strait — Black Sea access, Russia exports' }
+	{
+		name: 'Bosporus',
+		lat: 41.1,
+		lon: 29.0,
+		desc: 'Bosporus Strait — Black Sea access, Russia exports'
+	}
 ];
 
 export const CABLE_LANDINGS: CableLanding[] = [

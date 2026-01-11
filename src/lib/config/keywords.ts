@@ -71,16 +71,7 @@ export const REGION_KEYWORDS: Record<string, string[]> = {
 export const TOPIC_KEYWORDS: Record<string, string[]> = {
 	CYBER: ['cyber', 'hack', 'ransomware', 'malware', 'breach', 'apt', 'vulnerability'],
 	NUCLEAR: ['nuclear', 'icbm', 'warhead', 'nonproliferation', 'uranium', 'plutonium'],
-	CONFLICT: [
-		'war',
-		'military',
-		'troops',
-		'invasion',
-		'strike',
-		'missile',
-		'combat',
-		'offensive'
-	],
+	CONFLICT: ['war', 'military', 'troops', 'invasion', 'strike', 'missile', 'combat', 'offensive'],
 	INTEL: ['intelligence', 'espionage', 'spy', 'cia', 'mossad', 'fsb', 'covert'],
 	DEFENSE: ['pentagon', 'dod', 'defense', 'military', 'army', 'navy', 'air force'],
 	DIPLO: ['diplomat', 'embassy', 'treaty', 'sanctions', 'talks', 'summit', 'bilateral']

@@ -13,6 +13,7 @@
 		THREAT_COLORS,
 		WEATHER_CODES
 	} from '$lib/config/map';
+	import { CACHE_TTLS } from '$lib/config/api';
 	import type { CustomMonitor } from '$lib/types';
 
 	interface Props {
@@ -25,18 +26,15 @@
 
 	let mapContainer: HTMLDivElement;
 	// D3 objects - initialized in initMap, null before initialization
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// Using 'any' for D3 objects as they're dynamically imported and have complex generic types
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	let d3Module: typeof import('d3') | null = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let svg: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let mapGroup: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let projection: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let path: any = null;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let zoom: any = null;
+	/* eslint-enable @typescript-eslint/no-explicit-any */
 
 	const WIDTH = 800;
 	const HEIGHT = 400;
@@ -50,8 +48,27 @@
 	let tooltipPosition = $state({ left: 0, top: 0 });
 	let tooltipVisible = $state(false);
 
-	// Data cache for tooltips
-	const dataCache: Record<string, unknown> = {};
+	// Data cache for tooltips with TTL support
+	interface CacheEntry<T> {
+		data: T;
+		timestamp: number;
+	}
+	const dataCache: Record<string, CacheEntry<unknown>> = {};
+
+	function getCachedData<T>(key: string): T | null {
+		const entry = dataCache[key] as CacheEntry<T> | undefined;
+		if (!entry) return null;
+		// Check if cache entry has expired
+		if (Date.now() - entry.timestamp > CACHE_TTLS.weather) {
+			delete dataCache[key];
+			return null;
+		}
+		return entry.data;
+	}
+
+	function setCachedData<T>(key: string, data: T): void {
+		dataCache[key] = { data, timestamp: Date.now() };
+	}
 
 	// Get local time at longitude
 	function getLocalTime(lon: number): string {
@@ -65,13 +82,19 @@
 		return `${localHours}:${utcMinutes.toString().padStart(2, '0')} ${ampm}`;
 	}
 
-	// Fetch weather from Open-Meteo
-	async function getWeather(
-		lat: number,
-		lon: number
-	): Promise<{ temp: number | null; wind: number | null; condition: string } | null> {
+	// Weather result type
+	interface WeatherResult {
+		temp: number | null;
+		wind: number | null;
+		condition: string;
+	}
+
+	// Fetch weather from Open-Meteo with TTL-based caching
+	async function getWeather(lat: number, lon: number): Promise<WeatherResult | null> {
 		const key = `weather_${lat}_${lon}`;
-		if (dataCache[key]) return dataCache[key] as { temp: number | null; wind: number | null; condition: string };
+		const cached = getCachedData<WeatherResult>(key);
+		if (cached) return cached;
+
 		try {
 			const res = await fetch(
 				`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m`
@@ -81,12 +104,12 @@
 			const tempF = temp ? Math.round((temp * 9) / 5 + 32) : null;
 			const wind = data.current?.wind_speed_10m;
 			const code = data.current?.weather_code;
-			const result = {
+			const result: WeatherResult = {
 				temp: tempF,
 				wind: wind ? Math.round(wind) : null,
 				condition: WEATHER_CODES[code] || '—'
 			};
-			dataCache[key] = result;
+			setCachedData(key, result);
 			return result;
 		} catch {
 			return null;
@@ -127,7 +150,12 @@
 	}
 
 	// Show tooltip using state (safe rendering)
-	function showTooltip(event: MouseEvent, title: string, color: string, lines: string[] = []): void {
+	function showTooltip(
+		event: MouseEvent,
+		title: string,
+		color: string,
+		lines: string[] = []
+	): void {
 		if (!mapContainer) return;
 		const rect = mapContainer.getBoundingClientRect();
 		tooltipContent = { title, color, lines };
@@ -220,8 +248,11 @@
 				'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 			);
 			const world = await response.json();
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const countries = topojson.feature(world, world.objects.countries as any) as unknown as GeoJSON.FeatureCollection;
+			const countries = topojson.feature(
+				world,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				world.objects.countries as any
+			) as unknown as GeoJSON.FeatureCollection;
 
 			// Draw countries
 			mapGroup
@@ -317,9 +348,7 @@
 						.attr('r', 10)
 						.attr('fill', 'transparent')
 						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `⬥ ${cp.desc}`, '#00aaff')
-						)
+						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `⬥ ${cp.desc}`, '#00aaff'))
 						.on('mousemove', moveTooltip)
 						.on('mouseleave', hideTooltip);
 				}
@@ -344,9 +373,7 @@
 						.attr('r', 10)
 						.attr('fill', 'transparent')
 						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `◎ ${cl.desc}`, '#aa44ff')
-						)
+						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `◎ ${cl.desc}`, '#aa44ff'))
 						.on('mousemove', moveTooltip)
 						.on('mouseleave', hideTooltip);
 				}
@@ -378,9 +405,7 @@
 						.attr('r', 10)
 						.attr('fill', 'transparent')
 						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `☢ ${ns.desc}`, '#ffff00')
-						)
+						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `☢ ${ns.desc}`, '#ffff00'))
 						.on('mousemove', moveTooltip)
 						.on('mouseleave', hideTooltip);
 				}
@@ -399,9 +424,7 @@
 						.attr('r', 10)
 						.attr('fill', 'transparent')
 						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `★ ${mb.desc}`, '#ff00ff')
-						)
+						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `★ ${mb.desc}`, '#ff00ff'))
 						.on('mousemove', moveTooltip)
 						.on('mouseleave', hideTooltip);
 				}
@@ -422,12 +445,7 @@
 						.attr('fill-opacity', 0.3)
 						.attr('class', 'pulse');
 					// Inner dot
-					mapGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 3)
-						.attr('fill', color);
+					mapGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
 					// Label
 					mapGroup
 						.append('text')
@@ -520,7 +538,10 @@
 
 	function zoomOut(): void {
 		if (!svg || !zoom) return;
-		svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.5);
+		svg
+			.transition()
+			.duration(300)
+			.call(zoom.scaleBy, 1 / 1.5);
 	}
 
 	function resetZoom(): void {

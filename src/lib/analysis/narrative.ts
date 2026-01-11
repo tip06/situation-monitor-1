@@ -48,9 +48,7 @@ const narrativeHistory: Record<
  * Format narrative ID to display name
  */
 function formatNarrativeName(id: string): string {
-	return id
-		.replace(/-/g, ' ')
-		.replace(/\b\w/g, (c) => c.toUpperCase());
+	return id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /**

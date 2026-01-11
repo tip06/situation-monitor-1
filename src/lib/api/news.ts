@@ -5,12 +5,7 @@
 import { FEEDS } from '$lib/config/feeds';
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
-
-// Proxy URL for CORS requests
-const PROXY_URL = 'https://situation-monitor-proxy.seanthielen-e.workers.dev/?url=';
-
-// Delay between API requests to avoid rate limiting (ms)
-const REQUEST_DELAY = 500;
+import { CORS_PROXY_URL, API_DELAYS, logger } from '$lib/config/api';
 
 /**
  * Simple hash function to generate unique IDs from URLs
@@ -19,7 +14,7 @@ function hashCode(str: string): string {
 	let hash = 0;
 	for (let i = 0; i < str.length; i++) {
 		const char = str.charCodeAt(i);
-		hash = ((hash << 5) - hash) + char;
+		hash = (hash << 5) - hash + char;
 		hash = hash & hash; // Convert to 32bit integer
 	}
 	return Math.abs(hash).toString(36);
@@ -29,7 +24,7 @@ function hashCode(str: string): string {
  * Delay helper
  */
 function delay(ms: number): Promise<void> {
-	return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 interface GdeltArticle {
@@ -96,8 +91,8 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 		const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${fullQuery}&mode=artlist&maxrecords=20&format=json&sort=date`;
 
 		// Use proxy to avoid CORS - encode the whole URL once
-		const proxyUrl = PROXY_URL + encodeURIComponent(gdeltUrl);
-		console.log(`[News API] Fetching ${category} from:`, proxyUrl);
+		const proxyUrl = CORS_PROXY_URL + encodeURIComponent(gdeltUrl);
+		logger.log('News API', `Fetching ${category} from:`, proxyUrl);
 
 		const response = await fetch(proxyUrl);
 		if (!response.ok) {
@@ -107,7 +102,7 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 		// Check content type before parsing as JSON
 		const contentType = response.headers.get('content-type');
 		if (!contentType?.includes('application/json')) {
-			console.warn(`[News API] Non-JSON response for ${category}:`, contentType);
+			logger.warn('News API', `Non-JSON response for ${category}:`, contentType);
 			return [];
 		}
 
@@ -116,7 +111,7 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 		try {
 			data = JSON.parse(text);
 		} catch {
-			console.warn(`[News API] Invalid JSON for ${category}:`, text.slice(0, 100));
+			logger.warn('News API', `Invalid JSON for ${category}:`, text.slice(0, 100));
 			return [];
 		}
 
@@ -130,7 +125,7 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 			transformGdeltArticle(article, category, article.domain || defaultSource, index)
 		);
 	} catch (error) {
-		console.error(`[News API] Error fetching ${category}:`, error);
+		logger.error('News API', `Error fetching ${category}:`, error);
 		return [];
 	}
 }
@@ -155,7 +150,7 @@ export async function fetchAllNews(): Promise<Record<NewsCategory, NewsItem[]>> 
 
 		// Add delay between requests (not before the first one)
 		if (i > 0) {
-			await delay(REQUEST_DELAY);
+			await delay(API_DELAYS.betweenCategories);
 		}
 
 		result[category] = await fetchCategoryNews(category);

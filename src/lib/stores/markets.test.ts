@@ -125,7 +125,9 @@ describe('Markets Store', () => {
 	it('should update single market item', async () => {
 		const { markets, indices } = await import('./markets');
 
-		markets.setIndices([{ symbol: '^DJI', name: 'Dow', price: 38000, change: 0, changePercent: 0 }]);
+		markets.setIndices([
+			{ symbol: '^DJI', name: 'Dow', price: 38000, change: 0, changePercent: 0 }
+		]);
 
 		markets.updateItem('indices', '^DJI', { price: 38100, change: 100, changePercent: 0.26 });
 
