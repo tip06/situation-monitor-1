@@ -23,11 +23,9 @@ const isDev = browser ? (import.meta.env?.DEV ?? false) : false;
 
 /**
  * CORS proxy URL for external API requests
- * Uses public proxy in development (custom proxy doesn't allow localhost)
+ * Using corsproxy.io for both dev and production
  */
-export const CORS_PROXY_URL = isDev
-	? 'https://corsproxy.io/?url='
-	: 'https://situation-monitor-proxy.seanthielen-e.workers.dev/?url=';
+export const CORS_PROXY_URL = 'https://corsproxy.io/?url=';
 
 /**
  * API request delays (ms) to avoid rate limiting
