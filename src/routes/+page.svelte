@@ -301,11 +301,11 @@
 				</div>
 
 			{:else if $activeTab === 'economy'}
-				<!-- Economy Tab: Standard columns layout -->
+				<!-- Economy Tab: Row 1 = crypto, markets, heatmap, commodities; Row 2 = finance (wide) -->
 				<div class="columns-layout">
-					{#if isPanelVisible('finance')}
+					{#if isPanelVisible('crypto')}
 						<div class="panel-slot">
-							<NewsPanel category="finance" panelId="finance" title="Finance" />
+							<CryptoPanel />
 						</div>
 					{/if}
 
@@ -327,9 +327,9 @@
 						</div>
 					{/if}
 
-					{#if isPanelVisible('crypto')}
-						<div class="panel-slot">
-							<CryptoPanel />
+					{#if isPanelVisible('finance')}
+						<div class="panel-slot panel-wide">
+							<NewsPanel category="finance" panelId="finance" title="Finance" />
 						</div>
 					{/if}
 				</div>
@@ -461,6 +461,11 @@
 		width: 100%;
 	}
 
+	/* Wide panel spanning 2 columns */
+	.panel-wide {
+		grid-column: span 2;
+	}
+
 	@media (max-width: 1024px) {
 		.grid-row {
 			grid-template-columns: repeat(2, 1fr);
@@ -482,6 +487,10 @@
 
 		.columns-layout {
 			grid-template-columns: 1fr;
+		}
+
+		.panel-wide {
+			grid-column: span 1;
 		}
 	}
 </style>

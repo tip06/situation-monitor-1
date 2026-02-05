@@ -100,4 +100,4 @@ Unique business logic for intelligence analysis:
 ## General Guidance
 
 - Always ask before deleting content.
-- Whenever you finish a task assigned to you, prompt for commits in the git repo.
+- Do not commit changes yourself. Instead, remind the user to commit when a task is complete.

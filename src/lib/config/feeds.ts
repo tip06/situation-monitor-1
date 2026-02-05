@@ -37,11 +37,16 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'OpenAI Blog', url: 'https://openai.com/news/rss.xml' }
 	],
 	finance: [
+		{ name: 'Reuters Business', url: 'https://www.reuters.com/business/rss' },
+		{ name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss' },
 		{ name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
 		{ name: 'MarketWatch', url: 'https://feeds.marketwatch.com/marketwatch/topstories' },
-		{ name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
+		{ name: 'Financial Times', url: 'https://www.ft.com/rss/home' },
+		{ name: 'Wall Street Journal', url: 'https://feeds.wsj.com/xml/rss/3_7085.xml' },
+		{ name: 'The Economist', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
 		{ name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml' },
-		{ name: 'FT', url: 'https://www.ft.com/rss/home' }
+		{ name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
+		{ name: 'Investing.com', url: 'https://www.investing.com/rss/news.rss' }
 	],
 	gov: [
 		{ name: 'White House', url: 'https://www.whitehouse.gov/news/feed/' },

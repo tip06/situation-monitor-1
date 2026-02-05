@@ -36,7 +36,7 @@ export const TABS: TabConfig[] = [
 		id: 'economy',
 		name: 'Economy',
 		layout: 'columns',
-		panels: ['finance', 'markets', 'heatmap', 'commodities', 'crypto']
+		panels: ['crypto', 'markets', 'heatmap', 'commodities', 'finance']
 	},
 	{
 		id: 'social',
