@@ -94,17 +94,8 @@ Unique business logic for intelligence analysis:
 
 ## TODO
 
-- Remove the pop-up that appears any time we open the page for the first time (asking about what kind of views the user wants)
-
-- Organize all feeds under the following tabs: Global, Regional, Economy, Social, Technology. These tabs should be located under the map, and they will change the displayed feeds. Request approval before assigning feeds to tabs.
-
-- The Global tab will display feeds regarding current crisis (Iran, Venezuela, Greenland), current political and military feeds. It will also allow the implementation of custom monitoring.
-
-- The regional tab will display information focused on Brazil and Latin America, in separate feeds side by side. You should add the top 3 feeds for both regions from a google search.
-
-- The economy, social and technology tabs should display all existing feeds related to the subjects.
-
-- Make the dashboard generally prettier, with larger fonts. The design is clean and professional. Add indigo blue background in the title bars of every feed.
+- Filter news feeds by tags or keywords.
+- Check APIs.
 
 ## General Guidance
 
