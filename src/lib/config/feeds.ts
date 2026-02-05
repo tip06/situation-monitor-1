@@ -96,7 +96,9 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	latam: [
 		{ name: 'Reuters Latin America', url: 'https://www.reuters.com/world/americas/rss' },
 		{ name: 'Americas Quarterly', url: 'https://www.americasquarterly.org/feed/' },
-		{ name: 'El Pais America', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada' }
+		{ name: 'El Pais America', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada' },
+		{ name: 'Infobae America', url: 'https://www.infobae.com/america/rss/' }
+		
 	],
 	iran: [
 		{ name: 'Tehran Times', url: 'https://www.tehrantimes.com/rss' },

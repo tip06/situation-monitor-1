@@ -8,7 +8,7 @@ import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/ke
 import { fetchWithProxy, API_DELAYS, logger } from '$lib/config/api';
 
 /** Categories that use RSS feeds only (no GDELT) */
-const RSS_ONLY_CATEGORIES: NewsCategory[] = ['politics', 'brazil'];
+const RSS_ONLY_CATEGORIES: NewsCategory[] = ['politics', 'brazil', 'latam'];
 
 /** Categories that use both RSS feeds AND GDELT */
 const RSS_PLUS_GDELT_CATEGORIES: NewsCategory[] = ['intel'];
