@@ -90,3 +90,19 @@ export {
 	visiblePanels,
 	isPanelInTab
 } from './tabs';
+
+// Map layers store
+export {
+	mapLayers,
+	showHotspots,
+	showConflictZones,
+	showChokepoints,
+	showCableLandings,
+	showNuclearSites,
+	showMilitaryBases,
+	showMonitors,
+	showCustomMarkers,
+	visibleLayerCount,
+	totalLayerCount,
+	type MapLayersState
+} from './mapLayers';

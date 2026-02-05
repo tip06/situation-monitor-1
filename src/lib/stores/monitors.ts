@@ -4,7 +4,7 @@
 
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { CustomMonitor, NewsItem } from '$lib/types';
+import type { CustomMonitor, NewsItem, MarkerType, ThreatLevel } from '$lib/types';
 
 const STORAGE_KEY = 'customMonitors';
 const MAX_MONITORS = 20;
@@ -215,6 +215,52 @@ function createMonitorsStore() {
 		 */
 		clearMatches(): void {
 			update((state) => ({ ...state, matches: [] }));
+		},
+
+		/**
+		 * Add a custom map marker (non-monitor type)
+		 */
+		addMarker(marker: {
+			name: string;
+			markerType: MarkerType;
+			lat: number;
+			lon: number;
+			description?: string;
+			threatLevel?: ThreatLevel;
+			color?: string;
+		}): CustomMonitor | null {
+			const state = get({ subscribe });
+
+			if (state.monitors.length >= MAX_MONITORS) {
+				console.warn(`Maximum markers (${MAX_MONITORS}) reached`);
+				return null;
+			}
+
+			const newMarker: CustomMonitor = {
+				id: generateId(),
+				name: marker.name,
+				keywords: [], // No keywords for non-monitor markers
+				enabled: true,
+				color: marker.color,
+				location: {
+					name: marker.name,
+					lat: marker.lat,
+					lon: marker.lon
+				},
+				createdAt: Date.now(),
+				matchCount: 0,
+				markerType: marker.markerType,
+				description: marker.description,
+				threatLevel: marker.threatLevel
+			};
+
+			update((s) => {
+				const newMonitors = [...s.monitors, newMarker];
+				saveMonitors(newMonitors);
+				return { ...s, monitors: newMonitors };
+			});
+
+			return newMarker;
 		},
 
 		/**

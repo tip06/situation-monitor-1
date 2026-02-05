@@ -179,6 +179,16 @@ export interface Hotspot {
 }
 
 /**
+ * Marker type for custom map data
+ */
+export type MarkerType = 'monitor' | 'hotspot' | 'chokepoint' | 'cable' | 'nuclear' | 'military';
+
+/**
+ * Threat level for hotspot markers
+ */
+export type ThreatLevel = 'critical' | 'high' | 'elevated' | 'low';
+
+/**
  * Custom monitor created by user
  */
 export interface CustomMonitor {
@@ -195,6 +205,12 @@ export interface CustomMonitor {
 	createdAt: number;
 	updatedAt?: number;
 	matchCount: number;
+	/** Type of marker - defaults to 'monitor' for backwards compatibility */
+	markerType?: MarkerType;
+	/** Description for map tooltip */
+	description?: string;
+	/** Threat level for hotspot markers */
+	threatLevel?: ThreatLevel;
 }
 
 /**

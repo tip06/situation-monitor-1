@@ -14,6 +14,7 @@
 		WEATHER_CODES
 	} from '$lib/config/map';
 	import { CACHE_TTLS } from '$lib/config/api';
+	import { mapLayers, type MapLayersState } from '$lib/stores/mapLayers';
 	import type { CustomMonitor } from '$lib/types';
 
 	interface Props {
@@ -23,6 +24,9 @@
 	}
 
 	let { monitors = [], loading = false, error = null }: Props = $props();
+
+	// Layer panel state
+	let layerPanelOpen = $state(false);
 
 	let mapContainer: HTMLDivElement;
 	// D3 objects - initialized in initMap, null before initialization
@@ -319,9 +323,10 @@
 				.attr('fill', 'rgba(0,0,0,0.3)')
 				.attr('stroke', 'none');
 
-			// Draw conflict zones
+			// Draw conflict zones - in a group for toggling
+			const conflictZonesGroup = mapGroup.append('g').attr('class', 'layer-conflict-zones');
 			CONFLICT_ZONES.forEach((zone) => {
-				mapGroup
+				conflictZonesGroup
 					.append('path')
 					.datum({ type: 'Polygon', coordinates: [zone.coords] } as GeoJSON.Polygon)
 					.attr('d', path as unknown as string)
@@ -332,11 +337,12 @@
 					.attr('stroke-opacity', 0.4);
 			});
 
-			// Draw chokepoints
+			// Draw chokepoints - in a group for toggling
+			const chokepointsGroup = mapGroup.append('g').attr('class', 'layer-chokepoints');
 			CHOKEPOINTS.forEach((cp) => {
 				const [x, y] = projection([cp.lon, cp.lat]) || [0, 0];
 				if (x && y) {
-					mapGroup
+					chokepointsGroup
 						.append('rect')
 						.attr('x', x - 4)
 						.attr('y', y - 4)
@@ -345,7 +351,7 @@
 						.attr('fill', '#00aaff')
 						.attr('opacity', 0.8)
 						.attr('transform', `rotate(45,${x},${y})`);
-					mapGroup
+					chokepointsGroup
 						.append('text')
 						.attr('x', x + 8)
 						.attr('y', y + 3)
@@ -353,7 +359,7 @@
 						.attr('font-size', '7px')
 						.attr('font-family', 'monospace')
 						.text(cp.name);
-					mapGroup
+					chokepointsGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -366,11 +372,12 @@
 				}
 			});
 
-			// Draw cable landings
+			// Draw cable landings - in a group for toggling
+			const cableLandingsGroup = mapGroup.append('g').attr('class', 'layer-cable-landings');
 			CABLE_LANDINGS.forEach((cl) => {
 				const [x, y] = projection([cl.lon, cl.lat]) || [0, 0];
 				if (x && y) {
-					mapGroup
+					cableLandingsGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -378,7 +385,7 @@
 						.attr('fill', 'none')
 						.attr('stroke', '#aa44ff')
 						.attr('stroke-width', 1.5);
-					mapGroup
+					cableLandingsGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -391,17 +398,18 @@
 				}
 			});
 
-			// Draw nuclear sites
+			// Draw nuclear sites - in a group for toggling
+			const nuclearSitesGroup = mapGroup.append('g').attr('class', 'layer-nuclear-sites');
 			NUCLEAR_SITES.forEach((ns) => {
 				const [x, y] = projection([ns.lon, ns.lat]) || [0, 0];
 				if (x && y) {
-					mapGroup
+					nuclearSitesGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
 						.attr('r', 2)
 						.attr('fill', '#ffff00');
-					mapGroup
+					nuclearSitesGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -410,7 +418,7 @@
 						.attr('stroke', '#ffff00')
 						.attr('stroke-width', 1)
 						.attr('stroke-dasharray', '3,3');
-					mapGroup
+					nuclearSitesGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -423,13 +431,14 @@
 				}
 			});
 
-			// Draw military bases
+			// Draw military bases - in a group for toggling
+			const militaryBasesGroup = mapGroup.append('g').attr('class', 'layer-military-bases');
 			MILITARY_BASES.forEach((mb) => {
 				const [x, y] = projection([mb.lon, mb.lat]) || [0, 0];
 				if (x && y) {
 					const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-					mapGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
-					mapGroup
+					militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+					militaryBasesGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -442,13 +451,14 @@
 				}
 			});
 
-			// Draw hotspots
+			// Draw hotspots - in a group for toggling
+			const hotspotsGroup = mapGroup.append('g').attr('class', 'layer-hotspots');
 			HOTSPOTS.forEach((h) => {
 				const [x, y] = projection([h.lon, h.lat]) || [0, 0];
 				if (x && y) {
 					const color = THREAT_COLORS[h.level];
 					// Pulsing circle
-					mapGroup
+					hotspotsGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -457,9 +467,9 @@
 						.attr('fill-opacity', 0.3)
 						.attr('class', 'pulse');
 					// Inner dot
-					mapGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+					hotspotsGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
 					// Label
-					mapGroup
+					hotspotsGroup
 						.append('text')
 						.attr('x', x + 8)
 						.attr('y', y + 3)
@@ -468,7 +478,7 @@
 						.attr('font-family', 'monospace')
 						.text(h.name);
 					// Hit area
-					mapGroup
+					hotspotsGroup
 						.append('circle')
 						.attr('cx', x)
 						.attr('cy', y)
@@ -485,17 +495,39 @@
 
 			// Draw custom monitors with locations
 			drawMonitors();
+
+			// Apply initial layer visibility
+			updateLayerVisibility($mapLayers);
 		} catch (err) {
 			console.error('Failed to load map data:', err);
 		}
 	}
 
-	// Draw custom monitor locations
+	// Update layer visibility based on store state
+	function updateLayerVisibility(layers: MapLayersState): void {
+		if (!mapGroup) return;
+
+		mapGroup.select('.layer-hotspots').style('display', layers.hotspots ? null : 'none');
+		mapGroup.select('.layer-conflict-zones').style('display', layers.conflictZones ? null : 'none');
+		mapGroup.select('.layer-chokepoints').style('display', layers.chokepoints ? null : 'none');
+		mapGroup.select('.layer-cable-landings').style('display', layers.cableLandings ? null : 'none');
+		mapGroup.select('.layer-nuclear-sites').style('display', layers.nuclearSites ? null : 'none');
+		mapGroup.select('.layer-military-bases').style('display', layers.militaryBases ? null : 'none');
+		mapGroup.select('.layer-monitors').style('display', layers.monitors ? null : 'none');
+		mapGroup.select('.layer-custom-markers').style('display', layers.customMarkers ? null : 'none');
+	}
+
+	// Draw custom monitor locations and custom markers
 	function drawMonitors(): void {
 		if (!mapGroup || !projection) return;
 
-		// Remove existing monitor markers
-		mapGroup.selectAll('.monitor-marker').remove();
+		// Remove existing monitor and custom marker groups
+		mapGroup.selectAll('.layer-monitors').remove();
+		mapGroup.selectAll('.layer-custom-markers').remove();
+
+		// Create groups for monitors and custom markers
+		const monitorsGroup = mapGroup.append('g').attr('class', 'layer-monitors');
+		const customMarkersGroup = mapGroup.append('g').attr('class', 'layer-custom-markers');
 
 		monitors
 			.filter((m) => m.enabled && m.location)
@@ -504,42 +536,179 @@
 				const [x, y] = projection([m.location.lon, m.location.lat]) || [0, 0];
 				if (x && y) {
 					const color = m.color || '#00ffff';
-					mapGroup
-						.append('circle')
-						.attr('class', 'monitor-marker')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 5)
-						.attr('fill', color)
-						.attr('fill-opacity', 0.6)
-						.attr('stroke', color)
-						.attr('stroke-width', 2);
-					mapGroup
-						.append('text')
-						.attr('class', 'monitor-marker')
-						.attr('x', x + 8)
-						.attr('y', y + 3)
-						.attr('fill', color)
-						.attr('font-size', '8px')
-						.attr('font-family', 'monospace')
-						.text(m.name);
-					mapGroup
-						.append('circle')
-						.attr('class', 'monitor-marker')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 10)
-						.attr('fill', 'transparent')
-						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `📡 ${m.name}`, color, [
-								m.location?.name || '',
-								m.keywords.join(', ')
-							])
-						)
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
+					const markerType = m.markerType || 'monitor';
+					const targetGroup = markerType === 'monitor' ? monitorsGroup : customMarkersGroup;
+
+					// Draw based on marker type
+					if (markerType === 'monitor') {
+						// Standard monitor marker
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 5)
+							.attr('fill', color)
+							.attr('fill-opacity', 0.6)
+							.attr('stroke', color)
+							.attr('stroke-width', 2);
+						targetGroup
+							.append('text')
+							.attr('x', x + 8)
+							.attr('y', y + 3)
+							.attr('fill', color)
+							.attr('font-size', '8px')
+							.attr('font-family', 'monospace')
+							.text(m.name);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 10)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `📡 ${m.name}`, color, [
+									m.location?.name || '',
+									m.keywords.join(', ')
+								])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					} else if (markerType === 'hotspot') {
+						// Custom hotspot marker with pulsing effect
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 6)
+							.attr('fill', color)
+							.attr('fill-opacity', 0.3)
+							.attr('class', 'pulse');
+						targetGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+						targetGroup
+							.append('text')
+							.attr('x', x + 8)
+							.attr('y', y + 3)
+							.attr('fill', color)
+							.attr('font-size', '8px')
+							.attr('font-family', 'monospace')
+							.text(m.name);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 12)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `● ${m.name}`, color, [m.description || ''])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					} else if (markerType === 'chokepoint') {
+						// Rotated diamond
+						targetGroup
+							.append('rect')
+							.attr('x', x - 4)
+							.attr('y', y - 4)
+							.attr('width', 8)
+							.attr('height', 8)
+							.attr('fill', color)
+							.attr('opacity', 0.8)
+							.attr('transform', `rotate(45,${x},${y})`);
+						targetGroup
+							.append('text')
+							.attr('x', x + 8)
+							.attr('y', y + 3)
+							.attr('fill', color)
+							.attr('font-size', '7px')
+							.attr('font-family', 'monospace')
+							.text(m.name);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 10)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `⬥ ${m.name}`, color, [m.description || ''])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					} else if (markerType === 'cable') {
+						// Circle with stroke
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 3)
+							.attr('fill', 'none')
+							.attr('stroke', color)
+							.attr('stroke-width', 1.5);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 10)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `◎ ${m.name}`, color, [m.description || ''])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					} else if (markerType === 'nuclear') {
+						// Circle with dashed ring
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 2)
+							.attr('fill', color);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 5)
+							.attr('fill', 'none')
+							.attr('stroke', color)
+							.attr('stroke-width', 1)
+							.attr('stroke-dasharray', '3,3');
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 10)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `☢ ${m.name}`, color, [m.description || ''])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					} else if (markerType === 'military') {
+						// 5-pointed star
+						const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
+						targetGroup.append('path').attr('d', starPath).attr('fill', color).attr('opacity', 0.8);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 10)
+							.attr('fill', 'transparent')
+							.attr('class', 'hotspot-hit')
+							.on('mouseenter', (event: MouseEvent) =>
+								showTooltip(event, `★ ${m.name}`, color, [m.description || ''])
+							)
+							.on('mousemove', moveTooltip)
+							.on('mouseleave', hideTooltip);
+					}
 				}
 			});
+
+		// Apply current layer visibility to new groups
+		updateLayerVisibility($mapLayers);
 	}
 
 	// Zoom controls
@@ -570,6 +739,26 @@
 		}
 	});
 
+	// Reactively update layer visibility when mapLayers store changes
+	$effect(() => {
+		const layers = $mapLayers;
+		if (mapGroup) {
+			updateLayerVisibility(layers);
+		}
+	});
+
+	// Layer toggle configuration
+	const layerConfig: { key: keyof MapLayersState; label: string; icon: string; color: string }[] = [
+		{ key: 'hotspots', label: 'Hotspots', icon: '●', color: '#ff4444' },
+		{ key: 'conflictZones', label: 'Conflict Zones', icon: '▢', color: '#ff6666' },
+		{ key: 'chokepoints', label: 'Chokepoints', icon: '◆', color: '#00aaff' },
+		{ key: 'cableLandings', label: 'Cable Landings', icon: '◎', color: '#aa44ff' },
+		{ key: 'nuclearSites', label: 'Nuclear Sites', icon: '☢', color: '#ffff00' },
+		{ key: 'militaryBases', label: 'Military Bases', icon: '★', color: '#ff00ff' },
+		{ key: 'monitors', label: 'Monitors', icon: '📡', color: '#00ffff' },
+		{ key: 'customMarkers', label: 'Custom Markers', icon: '📍', color: '#00ff88' }
+	];
+
 	onMount(() => {
 		initMap();
 	});
@@ -589,6 +778,40 @@
 				{/each}
 			</div>
 		{/if}
+
+		<!-- Layer toggle panel -->
+		<div class="layer-panel" class:open={layerPanelOpen}>
+			<button
+				class="layer-toggle-btn"
+				onclick={() => (layerPanelOpen = !layerPanelOpen)}
+				title="Toggle Layers"
+			>
+				<span class="layer-icon">☰</span>
+				{#if !layerPanelOpen}
+					<span class="layer-label">Layers</span>
+				{/if}
+			</button>
+			{#if layerPanelOpen}
+				<div class="layer-list">
+					{#each layerConfig as layer}
+						<label class="layer-item">
+							<input
+								type="checkbox"
+								checked={$mapLayers[layer.key]}
+								onchange={() => mapLayers.toggleLayer(layer.key)}
+							/>
+							<span class="layer-item-icon" style="color: {layer.color}">{layer.icon}</span>
+							<span class="layer-item-label">{layer.label}</span>
+						</label>
+					{/each}
+					<div class="layer-actions">
+						<button class="layer-action-btn" onclick={() => mapLayers.showAll()}>Show All</button>
+						<button class="layer-action-btn" onclick={() => mapLayers.hideAll()}>Hide All</button>
+					</div>
+				</div>
+			{/if}
+		</div>
+
 		<div class="zoom-controls">
 			<button class="zoom-btn" onclick={zoomIn} title="Zoom in">+</button>
 			<button class="zoom-btn" onclick={zoomOut} title="Zoom out">−</button>
@@ -638,6 +861,116 @@
 
 	.tooltip-line {
 		opacity: 0.7;
+	}
+
+	/* Layer panel styles */
+	.layer-panel {
+		position: absolute;
+		top: 0.5rem;
+		left: 0.5rem;
+		z-index: 10;
+	}
+
+	.layer-toggle-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.4rem 0.6rem;
+		background: rgba(20, 20, 20, 0.9);
+		border: 1px solid #333;
+		border-radius: 4px;
+		color: #aaa;
+		font-size: 0.65rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.layer-toggle-btn:hover {
+		background: rgba(40, 40, 40, 0.9);
+		color: #fff;
+	}
+
+	.layer-icon {
+		font-size: 0.8rem;
+	}
+
+	.layer-label {
+		font-size: 0.6rem;
+	}
+
+	.layer-panel.open .layer-toggle-btn {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+		border-bottom-color: transparent;
+	}
+
+	.layer-list {
+		background: rgba(20, 20, 20, 0.95);
+		border: 1px solid #333;
+		border-top: none;
+		border-radius: 0 4px 4px 4px;
+		padding: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		min-width: 140px;
+	}
+
+	.layer-item {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		cursor: pointer;
+		padding: 0.2rem 0;
+		font-size: 0.6rem;
+		color: #ccc;
+		transition: color 0.15s ease;
+	}
+
+	.layer-item:hover {
+		color: #fff;
+	}
+
+	.layer-item input[type='checkbox'] {
+		width: 12px;
+		height: 12px;
+		accent-color: var(--accent, #6366f1);
+		cursor: pointer;
+	}
+
+	.layer-item-icon {
+		font-size: 0.75rem;
+		width: 16px;
+		text-align: center;
+	}
+
+	.layer-item-label {
+		flex: 1;
+	}
+
+	.layer-actions {
+		display: flex;
+		gap: 0.3rem;
+		margin-top: 0.3rem;
+		padding-top: 0.3rem;
+		border-top: 1px solid #333;
+	}
+
+	.layer-action-btn {
+		flex: 1;
+		padding: 0.25rem 0.4rem;
+		background: transparent;
+		border: 1px solid #444;
+		border-radius: 3px;
+		color: #888;
+		font-size: 0.55rem;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.layer-action-btn:hover {
+		background: #333;
+		color: #fff;
 	}
 
 	.zoom-controls {

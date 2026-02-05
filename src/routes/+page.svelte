@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Header, TabBar } from '$lib/components/layout';
-	import { SettingsModal, MonitorFormModal } from '$lib/components/modals';
+	import { SettingsModal, MonitorFormModal, AddDataModal } from '$lib/components/modals';
 	import {
 		NewsPanel,
 		MarketsPanel,
@@ -41,6 +41,7 @@
 	// Modal state
 	let settingsOpen = $state(false);
 	let monitorFormOpen = $state(false);
+	let addDataOpen = $state(false);
 	let editingMonitor = $state<CustomMonitor | null>(null);
 
 	// Misc panel data
@@ -157,7 +158,10 @@
 </svelte:head>
 
 <div class="app">
-	<Header onSettingsClick={() => (settingsOpen = true)} />
+	<Header
+		onSettingsClick={() => (settingsOpen = true)}
+		onAddDataClick={() => (addDataOpen = true)}
+	/>
 
 	<main class="main-content">
 		<!-- Map Panel - Always visible at top -->
@@ -392,6 +396,10 @@
 		open={monitorFormOpen}
 		onClose={() => (monitorFormOpen = false)}
 		editMonitor={editingMonitor}
+	/>
+	<AddDataModal
+		open={addDataOpen}
+		onClose={() => (addDataOpen = false)}
 	/>
 </div>
 

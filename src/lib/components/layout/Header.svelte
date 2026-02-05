@@ -3,9 +3,10 @@
 
 	interface Props {
 		onSettingsClick?: () => void;
+		onAddDataClick?: () => void;
 	}
 
-	let { onSettingsClick }: Props = $props();
+	let { onSettingsClick, onAddDataClick }: Props = $props();
 
 	const lastRefreshText = $derived(
 		$lastRefresh
@@ -30,6 +31,10 @@
 	</div>
 
 	<div class="header-right">
+		<button class="header-btn add-data-btn" onclick={onAddDataClick} title="Add Map Data">
+			<span class="btn-icon">+</span>
+			<span class="btn-label">Add Data</span>
+		</button>
 		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
 			<span class="btn-icon">⚙</span>
 			<span class="btn-label">Settings</span>
