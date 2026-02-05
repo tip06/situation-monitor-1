@@ -42,7 +42,7 @@ export const TABS: TabConfig[] = [
 		id: 'social',
 		name: 'Social',
 		layout: 'columns',
-		panels: ['mainchar', 'correlation', 'narrative', 'layoffs', 'polymarket']
+		panels: ['mainchar', 'correlation', 'narrative', 'polymarket']
 	},
 	{
 		id: 'technology',

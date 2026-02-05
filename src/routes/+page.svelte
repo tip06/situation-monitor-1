@@ -14,7 +14,6 @@
 		MonitorsPanel,
 		MapPanel,
 		PolymarketPanel,
-		LayoffsPanel,
 		IntelPanel,
 		SituationPanel
 	} from '$lib/components/panels';
@@ -31,10 +30,9 @@
 	import {
 		fetchAllNews,
 		fetchAllMarkets,
-		fetchPolymarket,
-		fetchLayoffs
+		fetchPolymarket
 	} from '$lib/api';
-	import type { Prediction, Layoff } from '$lib/api';
+	import type { Prediction } from '$lib/api';
 	import type { CustomMonitor } from '$lib/types';
 	import type { PanelId } from '$lib/config';
 
@@ -46,7 +44,6 @@
 
 	// Misc panel data
 	let predictions = $state<Prediction[]>([]);
-	let layoffs = $state<Layoff[]>([]);
 
 	// Data fetching
 	async function loadNews() {
@@ -78,12 +75,7 @@
 
 	async function loadMiscData() {
 		try {
-			const [predictionsData, layoffsData] = await Promise.all([
-				fetchPolymarket(),
-				fetchLayoffs()
-			]);
-			predictions = predictionsData;
-			layoffs = layoffsData;
+			predictions = await fetchPolymarket();
 		} catch (error) {
 			console.error('Failed to load misc data:', error);
 		}
@@ -352,12 +344,6 @@
 					{#if isPanelVisible('narrative')}
 						<div class="panel-slot">
 							<NarrativePanel news={$allNewsItems} />
-						</div>
-					{/if}
-
-					{#if isPanelVisible('layoffs')}
-						<div class="panel-slot">
-							<LayoffsPanel {layoffs} />
 						</div>
 					{/if}
 
