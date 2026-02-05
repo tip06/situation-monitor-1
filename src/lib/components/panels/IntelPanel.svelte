@@ -47,7 +47,12 @@
 		};
 	}
 
-	const items = $derived(storeItems.map(transformToIntelItem));
+	// Sort by timestamp (newest first) then transform
+	const items = $derived(
+		[...storeItems]
+			.sort((a, b) => b.timestamp - a.timestamp)
+			.map(transformToIntelItem)
+	);
 	const count = $derived(items.length);
 
 	type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
@@ -103,6 +108,28 @@
 	.intel-list {
 		display: flex;
 		flex-direction: column;
+		max-height: 400px;
+		overflow-y: auto;
+		padding-right: 0.25rem;
+	}
+
+	/* Custom scrollbar */
+	.intel-list::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.intel-list::-webkit-scrollbar-track {
+		background: var(--bg-secondary);
+		border-radius: 3px;
+	}
+
+	.intel-list::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 3px;
+	}
+
+	.intel-list::-webkit-scrollbar-thumb:hover {
+		background: var(--text-muted);
 	}
 
 	.intel-item {

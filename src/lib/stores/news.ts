@@ -5,6 +5,7 @@
 import { writable, derived, get } from 'svelte/store';
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config';
+import { deduplicateNews } from '$lib/utils';
 
 export interface CategoryState {
 	items: NewsItem[];
@@ -106,14 +107,17 @@ function createNewsStore() {
 		 * Set items for a category
 		 */
 		setItems(category: NewsCategory, items: NewsItem[]) {
+			// Enrich items with analysis data
 			const enrichedItems = items.map(enrichNewsItem);
+			// Deduplicate by title similarity (keeps most recent)
+			const deduplicatedItems = deduplicateNews(enrichedItems);
 
 			update((state) => ({
 				...state,
 				categories: {
 					...state.categories,
 					[category]: {
-						items: enrichedItems,
+						items: deduplicatedItems,
 						loading: false,
 						error: null,
 						lastUpdated: Date.now()
@@ -226,13 +230,14 @@ export const iranNews = derived(news, ($news) => $news.categories.iran);
 export const venezuelaNews = derived(news, ($news) => $news.categories.venezuela);
 export const greenlandNews = derived(news, ($news) => $news.categories.greenland);
 
-// Derived store for all news items (reactive)
+// Derived store for all news items (reactive, deduplicated across categories)
 export const allNewsItems = derived(news, ($news) => {
 	const allItems: NewsItem[] = [];
 	for (const category of NEWS_CATEGORIES) {
 		allItems.push(...$news.categories[category].items);
 	}
-	return allItems;
+	// Deduplicate across all categories (same story may appear in multiple)
+	return deduplicateNews(allItems);
 });
 
 // Derived store for alerts

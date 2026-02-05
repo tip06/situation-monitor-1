@@ -14,7 +14,7 @@ export interface FilterOptions {
  * Calculate word-based Jaccard similarity between two strings
  * Filters out short words to focus on meaningful content
  */
-function titleSimilarity(a: string, b: string): number {
+export function titleSimilarity(a: string, b: string): number {
 	const wordsA = new Set(
 		a
 			.toLowerCase()
@@ -32,6 +32,31 @@ function titleSimilarity(a: string, b: string): number {
 	const union = new Set([...wordsA, ...wordsB]).size;
 
 	return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Deduplicate news items by title similarity
+ * Keeps the most recent version when duplicates are found
+ *
+ * @param items - Array of news items to deduplicate
+ * @param threshold - Similarity threshold (0-1), default 0.6
+ * @returns Deduplicated array of news items
+ */
+export function deduplicateNews(items: NewsItem[], threshold: number = 0.6): NewsItem[] {
+	// Sort by timestamp first (newest first) so we keep the most recent
+	const sorted = [...items].sort((a, b) => b.timestamp - a.timestamp);
+
+	const deduplicated: NewsItem[] = [];
+	for (const item of sorted) {
+		const isDuplicate = deduplicated.some(
+			(existing) => titleSimilarity(existing.title, item.title) > threshold
+		);
+		if (!isDuplicate) {
+			deduplicated.push(item);
+		}
+	}
+
+	return deduplicated;
 }
 
 /**

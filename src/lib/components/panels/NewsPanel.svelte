@@ -28,7 +28,10 @@
 	};
 
 	const categoryStore = $derived(categoryStores[category]);
-	const items = $derived($categoryStore.items);
+	// Sort items by timestamp (newest first)
+	const items = $derived(
+		[...$categoryStore.items].sort((a, b) => b.timestamp - a.timestamp)
+	);
 	const loading = $derived($categoryStore.loading);
 	const error = $derived($categoryStore.error);
 	const count = $derived(items.length);
@@ -39,7 +42,7 @@
 		<div class="empty-state">No news available</div>
 	{:else}
 		<div class="news-list">
-			{#each items.slice(0, 15) as item (item.id)}
+			{#each items as item (item.id)}
 				<NewsItem {item} />
 			{/each}
 		</div>
@@ -50,6 +53,28 @@
 	.news-list {
 		display: flex;
 		flex-direction: column;
+		max-height: 400px;
+		overflow-y: auto;
+		padding-right: 0.25rem;
+	}
+
+	/* Custom scrollbar */
+	.news-list::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.news-list::-webkit-scrollbar-track {
+		background: var(--bg-secondary);
+		border-radius: 3px;
+	}
+
+	.news-list::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 3px;
+	}
+
+	.news-list::-webkit-scrollbar-thumb:hover {
+		background: var(--text-muted);
 	}
 
 	.empty-state {

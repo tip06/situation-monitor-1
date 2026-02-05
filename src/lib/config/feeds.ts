@@ -18,9 +18,15 @@ export interface IntelSource extends FeedSource {
 export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	politics: [
 		{ name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+		{ name: 'NYT World', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' },
+		{ name: 'Washington Post', url: 'https://feeds.washingtonpost.com/rss/politics' },
+		{ name: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
 		{ name: 'NPR News', url: 'https://feeds.npr.org/1001/rss.xml' },
-		{ name: 'Guardian World', url: 'https://www.theguardian.com/world/rss' },
-		{ name: 'NYT World', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' }
+		{ name: 'Foreign Affairs', url: 'https://www.foreignaffairs.com/rss.xml' },
+		{ name: 'Politico', url: 'https://rss.politico.com/politics-news.xml' },
+		{ name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/' },
+		{ name: 'The Economist', url: 'https://www.economist.com/the-world-this-week/rss.xml' },
+		{ name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' }
 	],
 	tech: [
 		{ name: 'Hacker News', url: 'https://hnrss.org/frontpage' },
@@ -51,8 +57,17 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'ArXiv AI', url: 'https://rss.arxiv.org/rss/cs.AI' }
 	],
 	intel: [
+		{ name: 'Defense One', url: 'https://www.defenseone.com/rss/all/' },
+		{ name: 'Breaking Defense', url: 'https://breakingdefense.com/feed/' },
+		{ name: 'War on the Rocks', url: 'https://warontherocks.com/feed/' },
+		{ name: 'Defense News', url: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml' },
+		{ name: 'The War Zone', url: 'https://www.thedrive.com/the-war-zone/feed' },
+		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
 		{ name: 'CSIS', url: 'https://www.csis.org/analysis/feed' },
-		{ name: 'Brookings', url: 'https://www.brookings.edu/feed/' }
+		{ name: 'Bellingcat', url: 'https://www.bellingcat.com/feed/' },
+		{ name: 'Chatham House', url: 'https://www.chathamhouse.org/rss/all' },
+		{ name: 'IISS', url: 'https://www.iiss.org/rss' },
+		{ name: 'Military.com', url: 'https://www.military.com/rss-feeds/content?feed=news-headlines.xml' }
 	],
 	brazil: [
 		{ name: 'G1 Brasil', url: 'https://g1.globo.com/rss/g1/' },
