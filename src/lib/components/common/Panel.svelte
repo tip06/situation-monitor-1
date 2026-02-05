@@ -108,8 +108,8 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.5rem 0.75rem;
-		background: var(--surface);
-		border-bottom: 1px solid var(--border);
+		background: var(--indigo);
+		border-bottom: 1px solid var(--indigo-dark);
 		min-height: 2rem;
 	}
 
@@ -120,19 +120,19 @@
 	}
 
 	.panel-title {
-		font-size: 0.65rem;
+		font-size: var(--font-size-panel-title);
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: var(--text-secondary);
+		color: #ffffff;
 		margin: 0;
 	}
 
 	.panel-count {
-		font-size: 0.65rem;
+		font-size: var(--font-size-panel-title);
 		font-weight: 500;
-		color: var(--accent);
-		background: rgba(var(--accent-rgb), 0.1);
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.2);
 		padding: 0.1rem 0.4rem;
 		border-radius: 3px;
 	}
@@ -146,8 +146,8 @@
 	}
 
 	.panel-status.monitoring {
-		color: var(--text-secondary);
-		background: rgba(255, 255, 255, 0.05);
+		color: #ffffff;
+		background: rgba(255, 255, 255, 0.2);
 	}
 
 	.panel-status.elevated {
@@ -184,7 +184,7 @@
 	.panel-collapse-btn {
 		background: none;
 		border: none;
-		color: var(--text-secondary);
+		color: rgba(255, 255, 255, 0.8);
 		cursor: pointer;
 		padding: 0.25rem;
 		font-size: 0.5rem;
@@ -192,7 +192,7 @@
 	}
 
 	.panel-collapse-btn:hover {
-		color: var(--text-primary);
+		color: #ffffff;
 	}
 
 	.panel-content {

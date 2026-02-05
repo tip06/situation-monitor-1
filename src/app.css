@@ -17,6 +17,9 @@
 	--green: #44ff88;
 	--yellow: #ffaa00;
 	--blue: #4488ff;
+	--indigo: #4f46e5;
+	--indigo-dark: #4338ca;
+	--font-size-panel-title: 0.75rem;
 }
 
 /* Base styles */

@@ -97,7 +97,9 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 		finance: '(finance OR "stock market" OR economy OR banking)',
 		gov: '("federal government" OR "white house" OR congress OR regulation)',
 		ai: '("artificial intelligence" OR "machine learning" OR AI OR ChatGPT)',
-		intel: '(intelligence OR security OR military OR defense)'
+		intel: '(intelligence OR security OR military OR defense)',
+		brazil: '(Brazil OR Brasilia OR "Sao Paulo" OR Lula OR Bolsonaro)',
+		latam: '("Latin America" OR Mexico OR Argentina OR Colombia OR Chile OR Peru OR Venezuela)'
 	};
 
 	try {
@@ -146,11 +148,11 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 }
 
 /** All news categories in fetch order */
-const NEWS_CATEGORIES: NewsCategory[] = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel'];
+const NEWS_CATEGORIES: NewsCategory[] = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam'];
 
 /** Create an empty news result object */
 function createEmptyNewsResult(): Record<NewsCategory, NewsItem[]> {
-	return { politics: [], tech: [], finance: [], gov: [], ai: [], intel: [] };
+	return { politics: [], tech: [], finance: [], gov: [], ai: [], intel: [], brazil: [], latam: [] };
 }
 
 /**

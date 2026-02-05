@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Header, Dashboard } from '$lib/components/layout';
-	import { SettingsModal, MonitorFormModal, OnboardingModal } from '$lib/components/modals';
+	import { Header, Dashboard, TabBar } from '$lib/components/layout';
+	import { SettingsModal, MonitorFormModal } from '$lib/components/modals';
 	import {
 		NewsPanel,
 		MarketsPanel,
@@ -13,15 +13,10 @@
 		NarrativePanel,
 		MonitorsPanel,
 		MapPanel,
-		WhalePanel,
 		PolymarketPanel,
-		ContractsPanel,
 		LayoffsPanel,
 		IntelPanel,
-		SituationPanel,
-		WorldLeadersPanel,
-		PrinterPanel,
-		FedPanel
+		SituationPanel
 	} from '$lib/components/panels';
 	import {
 		news,
@@ -30,42 +25,31 @@
 		settings,
 		refresh,
 		allNewsItems,
-		fedIndicators,
-		fedNews
+		activeTab
 	} from '$lib/stores';
 	import {
 		fetchAllNews,
 		fetchAllMarkets,
 		fetchPolymarket,
-		fetchWhaleTransactions,
-		fetchGovContracts,
-		fetchLayoffs,
-		fetchWorldLeaders,
-		fetchFedIndicators,
-		fetchFedNews
+		fetchLayoffs
 	} from '$lib/api';
-	import type { Prediction, WhaleTransaction, Contract, Layoff } from '$lib/api';
-	import type { CustomMonitor, WorldLeader } from '$lib/types';
+	import type { Prediction, Layoff } from '$lib/api';
+	import type { CustomMonitor } from '$lib/types';
 	import type { PanelId } from '$lib/config';
 
 	// Modal state
 	let settingsOpen = $state(false);
 	let monitorFormOpen = $state(false);
-	let onboardingOpen = $state(false);
 	let editingMonitor = $state<CustomMonitor | null>(null);
 
 	// Misc panel data
 	let predictions = $state<Prediction[]>([]);
-	let whales = $state<WhaleTransaction[]>([]);
-	let contracts = $state<Contract[]>([]);
 	let layoffs = $state<Layoff[]>([]);
-	let leaders = $state<WorldLeader[]>([]);
-	let leadersLoading = $state(false);
 
 	// Data fetching
 	async function loadNews() {
 		// Set loading for all categories
-		const categories = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel'] as const;
+		const categories = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam'] as const;
 		categories.forEach((cat) => news.setLoading(cat, true));
 
 		try {
@@ -92,45 +76,14 @@
 
 	async function loadMiscData() {
 		try {
-			const [predictionsData, whalesData, contractsData, layoffsData] = await Promise.all([
+			const [predictionsData, layoffsData] = await Promise.all([
 				fetchPolymarket(),
-				fetchWhaleTransactions(),
-				fetchGovContracts(),
 				fetchLayoffs()
 			]);
 			predictions = predictionsData;
-			whales = whalesData;
-			contracts = contractsData;
 			layoffs = layoffsData;
 		} catch (error) {
 			console.error('Failed to load misc data:', error);
-		}
-	}
-
-	async function loadWorldLeaders() {
-		if (!isPanelVisible('leaders')) return;
-		leadersLoading = true;
-		try {
-			leaders = await fetchWorldLeaders();
-		} catch (error) {
-			console.error('Failed to load world leaders:', error);
-		} finally {
-			leadersLoading = false;
-		}
-	}
-
-	async function loadFedData() {
-		if (!isPanelVisible('fed')) return;
-		fedIndicators.setLoading(true);
-		fedNews.setLoading(true);
-		try {
-			const [indicatorsData, newsData] = await Promise.all([fetchFedIndicators(), fetchFedNews()]);
-			fedIndicators.setData(indicatorsData);
-			fedNews.setItems(newsData);
-		} catch (error) {
-			console.error('Failed to load Fed data:', error);
-			fedIndicators.setError(String(error));
-			fedNews.setError(String(error));
 		}
 	}
 
@@ -169,27 +122,10 @@
 		return $settings.enabled[id] !== false;
 	}
 
-	// Handle preset selection from onboarding
-	function handleSelectPreset(presetId: string) {
-		settings.applyPreset(presetId);
-		onboardingOpen = false;
-		// Refresh data after applying preset
-		handleRefresh();
-	}
-
-	// Show onboarding again (called from settings)
-	function handleReconfigure() {
-		settingsOpen = false;
-		settings.resetOnboarding();
-		onboardingOpen = true;
-	}
-
 	// Initial load
 	onMount(() => {
-		// Check if first visit
-		if (!settings.isOnboardingComplete()) {
-			onboardingOpen = true;
-		}
+		// Initialize tab store from localStorage
+		activeTab.init();
 
 		// Load initial data and track as refresh
 		async function initialLoad() {
@@ -198,9 +134,7 @@
 				await Promise.all([
 					loadNews(),
 					loadMarkets(),
-					loadMiscData(),
-					loadWorldLeaders(),
-					loadFedData()
+					loadMiscData()
 				]);
 				refresh.endRefresh();
 			} catch (error) {
@@ -225,221 +159,210 @@
 	<Header onSettingsClick={() => (settingsOpen = true)} />
 
 	<main class="main-content">
+		<!-- Map Panel - Always visible at top -->
+		{#if isPanelVisible('map')}
+			<div class="map-container">
+				<MapPanel monitors={$monitors.monitors} />
+			</div>
+		{/if}
+
+		<!-- Tab Navigation -->
+		<TabBar />
+
+		<!-- Tab Content -->
 		<Dashboard>
-			<!-- Map Panel - Full width -->
-			{#if isPanelVisible('map')}
-				<div class="panel-slot map-slot">
-					<MapPanel monitors={$monitors.monitors} />
-				</div>
-			{/if}
+			{#if $activeTab === 'global'}
+				<!-- Global Tab: 2-row grid layout -->
+				<div class="grid-2row">
+					<div class="grid-row">
+						{#if isPanelVisible('iran')}
+							<div class="panel-slot">
+								<SituationPanel
+									panelId="iran"
+									config={{
+										title: 'Iran Crisis',
+										subtitle: 'Revolution protests, regime instability & nuclear program',
+										criticalKeywords: [
+											'protest',
+											'uprising',
+											'revolution',
+											'crackdown',
+											'killed',
+											'nuclear',
+											'strike',
+											'attack',
+											'irgc',
+											'khamenei'
+										]
+									}}
+									news={$allNewsItems.filter(
+										(n) =>
+											n.title.toLowerCase().includes('iran') ||
+											n.title.toLowerCase().includes('tehran') ||
+											n.title.toLowerCase().includes('irgc')
+									)}
+								/>
+							</div>
+						{/if}
 
-			<!-- News Panels -->
-			{#if isPanelVisible('politics')}
-				<div class="panel-slot">
-					<NewsPanel category="politics" panelId="politics" title="Politics" />
-				</div>
-			{/if}
+						{#if isPanelVisible('venezuela')}
+							<div class="panel-slot">
+								<SituationPanel
+									panelId="venezuela"
+									config={{
+										title: 'Venezuela Watch',
+										subtitle: 'Humanitarian crisis monitoring',
+										criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
+									}}
+									news={$allNewsItems.filter(
+										(n) =>
+											n.title.toLowerCase().includes('venezuela') ||
+											n.title.toLowerCase().includes('maduro')
+									)}
+								/>
+							</div>
+						{/if}
 
-			{#if isPanelVisible('tech')}
-				<div class="panel-slot">
-					<NewsPanel category="tech" panelId="tech" title="Tech" />
-				</div>
-			{/if}
+						{#if isPanelVisible('greenland')}
+							<div class="panel-slot">
+								<SituationPanel
+									panelId="greenland"
+									config={{
+										title: 'Greenland Watch',
+										subtitle: 'Arctic geopolitics monitoring',
+										criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
+									}}
+									news={$allNewsItems.filter(
+										(n) =>
+											n.title.toLowerCase().includes('greenland') ||
+											n.title.toLowerCase().includes('arctic')
+									)}
+								/>
+							</div>
+						{/if}
+					</div>
 
-			{#if isPanelVisible('finance')}
-				<div class="panel-slot">
-					<NewsPanel category="finance" panelId="finance" title="Finance" />
-				</div>
-			{/if}
+					<div class="grid-row">
+						{#if isPanelVisible('politics')}
+							<div class="panel-slot">
+								<NewsPanel category="politics" panelId="politics" title="Politics" />
+							</div>
+						{/if}
 
-			{#if isPanelVisible('gov')}
-				<div class="panel-slot">
-					<NewsPanel category="gov" panelId="gov" title="Government" />
-				</div>
-			{/if}
+						{#if isPanelVisible('intel')}
+							<div class="panel-slot">
+								<IntelPanel />
+							</div>
+						{/if}
 
-			{#if isPanelVisible('ai')}
-				<div class="panel-slot">
-					<NewsPanel category="ai" panelId="ai" title="AI" />
+						{#if isPanelVisible('monitors')}
+							<div class="panel-slot">
+								<MonitorsPanel
+									monitors={$monitors.monitors}
+									matches={$monitors.matches}
+									onCreateMonitor={handleCreateMonitor}
+									onEditMonitor={handleEditMonitor}
+									onDeleteMonitor={handleDeleteMonitor}
+									onToggleMonitor={handleToggleMonitor}
+								/>
+							</div>
+						{/if}
+					</div>
 				</div>
-			{/if}
 
-			<!-- Markets Panels -->
-			{#if isPanelVisible('markets')}
-				<div class="panel-slot">
-					<MarketsPanel />
-				</div>
-			{/if}
+			{:else if $activeTab === 'regional'}
+				<!-- Regional Tab: Side-by-side layout -->
+				<div class="side-by-side">
+					{#if isPanelVisible('brazil')}
+						<div class="panel-slot side-panel">
+							<NewsPanel category="brazil" panelId="brazil" title="Brazil" />
+						</div>
+					{/if}
 
-			{#if isPanelVisible('heatmap')}
-				<div class="panel-slot">
-					<HeatmapPanel />
+					{#if isPanelVisible('latam')}
+						<div class="panel-slot side-panel">
+							<NewsPanel category="latam" panelId="latam" title="Latin America" />
+						</div>
+					{/if}
 				</div>
-			{/if}
 
-			{#if isPanelVisible('commodities')}
-				<div class="panel-slot">
-					<CommoditiesPanel />
-				</div>
-			{/if}
+			{:else if $activeTab === 'economy'}
+				<!-- Economy Tab: Standard columns layout -->
+				{#if isPanelVisible('finance')}
+					<div class="panel-slot">
+						<NewsPanel category="finance" panelId="finance" title="Finance" />
+					</div>
+				{/if}
 
-			{#if isPanelVisible('crypto')}
-				<div class="panel-slot">
-					<CryptoPanel />
-				</div>
-			{/if}
+				{#if isPanelVisible('markets')}
+					<div class="panel-slot">
+						<MarketsPanel />
+					</div>
+				{/if}
 
-			<!-- Analysis Panels -->
-			{#if isPanelVisible('mainchar')}
-				<div class="panel-slot">
-					<MainCharPanel />
-				</div>
-			{/if}
+				{#if isPanelVisible('heatmap')}
+					<div class="panel-slot">
+						<HeatmapPanel />
+					</div>
+				{/if}
 
-			{#if isPanelVisible('correlation')}
-				<div class="panel-slot">
-					<CorrelationPanel news={$allNewsItems} />
-				</div>
-			{/if}
+				{#if isPanelVisible('commodities')}
+					<div class="panel-slot">
+						<CommoditiesPanel />
+					</div>
+				{/if}
 
-			{#if isPanelVisible('narrative')}
-				<div class="panel-slot">
-					<NarrativePanel news={$allNewsItems} />
-				</div>
-			{/if}
+				{#if isPanelVisible('crypto')}
+					<div class="panel-slot">
+						<CryptoPanel />
+					</div>
+				{/if}
 
-			<!-- Intel Panel -->
-			{#if isPanelVisible('intel')}
-				<div class="panel-slot">
-					<IntelPanel />
-				</div>
-			{/if}
+			{:else if $activeTab === 'social'}
+				<!-- Social Tab: Standard columns layout -->
+				{#if isPanelVisible('mainchar')}
+					<div class="panel-slot">
+						<MainCharPanel />
+					</div>
+				{/if}
 
-			<!-- Fed Panel -->
-			{#if isPanelVisible('fed')}
-				<div class="panel-slot">
-					<FedPanel />
-				</div>
-			{/if}
+				{#if isPanelVisible('correlation')}
+					<div class="panel-slot">
+						<CorrelationPanel news={$allNewsItems} />
+					</div>
+				{/if}
 
-			<!-- World Leaders Panel -->
-			{#if isPanelVisible('leaders')}
-				<div class="panel-slot">
-					<WorldLeadersPanel {leaders} loading={leadersLoading} />
-				</div>
-			{/if}
+				{#if isPanelVisible('narrative')}
+					<div class="panel-slot">
+						<NarrativePanel news={$allNewsItems} />
+					</div>
+				{/if}
 
-			<!-- Situation Panels -->
-			{#if isPanelVisible('venezuela')}
-				<div class="panel-slot">
-					<SituationPanel
-						panelId="venezuela"
-						config={{
-							title: 'Venezuela Watch',
-							subtitle: 'Humanitarian crisis monitoring',
-							criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
-						}}
-						news={$allNewsItems.filter(
-							(n) =>
-								n.title.toLowerCase().includes('venezuela') ||
-								n.title.toLowerCase().includes('maduro')
-						)}
-					/>
-				</div>
-			{/if}
+				{#if isPanelVisible('layoffs')}
+					<div class="panel-slot">
+						<LayoffsPanel {layoffs} />
+					</div>
+				{/if}
 
-			{#if isPanelVisible('greenland')}
-				<div class="panel-slot">
-					<SituationPanel
-						panelId="greenland"
-						config={{
-							title: 'Greenland Watch',
-							subtitle: 'Arctic geopolitics monitoring',
-							criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
-						}}
-						news={$allNewsItems.filter(
-							(n) =>
-								n.title.toLowerCase().includes('greenland') ||
-								n.title.toLowerCase().includes('arctic')
-						)}
-					/>
-				</div>
-			{/if}
+				{#if isPanelVisible('polymarket')}
+					<div class="panel-slot">
+						<PolymarketPanel {predictions} />
+					</div>
+				{/if}
 
-			{#if isPanelVisible('iran')}
-				<div class="panel-slot">
-					<SituationPanel
-						panelId="iran"
-						config={{
-							title: 'Iran Crisis',
-							subtitle: 'Revolution protests, regime instability & nuclear program',
-							criticalKeywords: [
-								'protest',
-								'uprising',
-								'revolution',
-								'crackdown',
-								'killed',
-								'nuclear',
-								'strike',
-								'attack',
-								'irgc',
-								'khamenei'
-							]
-						}}
-						news={$allNewsItems.filter(
-							(n) =>
-								n.title.toLowerCase().includes('iran') ||
-								n.title.toLowerCase().includes('tehran') ||
-								n.title.toLowerCase().includes('irgc')
-						)}
-					/>
-				</div>
-			{/if}
+			{:else if $activeTab === 'technology'}
+				<!-- Technology Tab: Standard columns layout -->
+				{#if isPanelVisible('tech')}
+					<div class="panel-slot">
+						<NewsPanel category="tech" panelId="tech" title="Tech" />
+					</div>
+				{/if}
 
-			<!-- Placeholder panels for additional data sources -->
-			{#if isPanelVisible('whales')}
-				<div class="panel-slot">
-					<WhalePanel {whales} />
-				</div>
-			{/if}
-
-			{#if isPanelVisible('polymarket')}
-				<div class="panel-slot">
-					<PolymarketPanel {predictions} />
-				</div>
-			{/if}
-
-			{#if isPanelVisible('contracts')}
-				<div class="panel-slot">
-					<ContractsPanel {contracts} />
-				</div>
-			{/if}
-
-			{#if isPanelVisible('layoffs')}
-				<div class="panel-slot">
-					<LayoffsPanel {layoffs} />
-				</div>
-			{/if}
-
-			<!-- Money Printer Panel -->
-			{#if isPanelVisible('printer')}
-				<div class="panel-slot">
-					<PrinterPanel />
-				</div>
-			{/if}
-
-			<!-- Custom Monitors (always last) -->
-			{#if isPanelVisible('monitors')}
-				<div class="panel-slot">
-					<MonitorsPanel
-						monitors={$monitors.monitors}
-						matches={$monitors.matches}
-						onCreateMonitor={handleCreateMonitor}
-						onEditMonitor={handleEditMonitor}
-						onDeleteMonitor={handleDeleteMonitor}
-						onToggleMonitor={handleToggleMonitor}
-					/>
-				</div>
+				{#if isPanelVisible('ai')}
+					<div class="panel-slot">
+						<NewsPanel category="ai" panelId="ai" title="AI" />
+					</div>
+				{/if}
 			{/if}
 		</Dashboard>
 	</main>
@@ -448,14 +371,12 @@
 	<SettingsModal
 		open={settingsOpen}
 		onClose={() => (settingsOpen = false)}
-		onReconfigure={handleReconfigure}
 	/>
 	<MonitorFormModal
 		open={monitorFormOpen}
 		onClose={() => (monitorFormOpen = false)}
 		editMonitor={editingMonitor}
 	/>
-	<OnboardingModal open={onboardingOpen} onSelectPreset={handleSelectPreset} />
 </div>
 
 <style>
@@ -472,14 +393,51 @@
 		overflow-y: auto;
 	}
 
-	.map-slot {
-		column-span: all;
+	.map-container {
 		margin-bottom: 0.5rem;
+	}
+
+	/* Grid 2-row layout for Global tab */
+	.grid-2row {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.grid-row {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+	}
+
+	/* Side-by-side layout for Regional tab */
+	.side-by-side {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+	}
+
+	.side-panel {
+		min-height: 400px;
+	}
+
+	@media (max-width: 1024px) {
+		.grid-row {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
 
 	@media (max-width: 768px) {
 		.main-content {
 			padding: 0.25rem;
+		}
+
+		.grid-row {
+			grid-template-columns: 1fr;
+		}
+
+		.side-by-side {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

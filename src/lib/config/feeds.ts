@@ -53,6 +53,16 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	intel: [
 		{ name: 'CSIS', url: 'https://www.csis.org/analysis/feed' },
 		{ name: 'Brookings', url: 'https://www.brookings.edu/feed/' }
+	],
+	brazil: [
+		{ name: 'G1 Brasil', url: 'https://g1.globo.com/rss/g1/' },
+		{ name: 'Folha de S.Paulo', url: 'https://feeds.folha.uol.com.br/emcimadahora/rss091.xml' },
+		{ name: 'Reuters Brazil', url: 'https://www.reuters.com/world/americas/rss' }
+	],
+	latam: [
+		{ name: 'Reuters Latin America', url: 'https://www.reuters.com/world/americas/rss' },
+		{ name: 'Americas Quarterly', url: 'https://www.americasquarterly.org/feed/' },
+		{ name: 'El Pais America', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada' }
 	]
 };
 

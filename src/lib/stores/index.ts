@@ -32,6 +32,8 @@ export {
 	govNews,
 	aiNews,
 	intelNews,
+	brazilNews,
+	latamNews,
 	allNewsItems,
 	alerts,
 	isLoading as isNewsLoading,
@@ -77,3 +79,11 @@ export {
 	type FedIndicatorsState,
 	type FedNewsState
 } from './fed';
+
+// Tab store
+export {
+	activeTab,
+	currentTabConfig,
+	visiblePanels,
+	isPanelInTab
+} from './tabs';

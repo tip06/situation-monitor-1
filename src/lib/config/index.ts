@@ -79,6 +79,17 @@ export {
 	type Preset
 } from './presets';
 
+// Tab configuration
+export {
+	TABS,
+	DEFAULT_TAB,
+	getTabConfig,
+	getTabPanels,
+	type TabId,
+	type TabLayout,
+	type TabConfig
+} from './tabs';
+
 // API configuration
 export { CORS_PROXY_URL, API_DELAYS, CACHE_TTLS, DEBUG, logger, FINNHUB_API_KEY, FINNHUB_BASE_URL } from './api';
 
