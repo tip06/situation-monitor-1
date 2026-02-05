@@ -69,7 +69,7 @@
 			<div class="empty-state">No recent news</div>
 		{:else}
 			<div class="situation-news">
-				{#each news.slice(0, 8) as item (item.id)}
+				{#each news as item (item.id)}
 					<div class="situation-item">
 						<a href={item.link} target="_blank" rel="noopener noreferrer" class="headline">
 							{item.title}

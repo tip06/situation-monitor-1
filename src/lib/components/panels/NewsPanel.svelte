@@ -2,7 +2,7 @@
 	import { Panel, NewsItem } from '$lib/components/common';
 	import type { NewsCategory } from '$lib/types';
 	import type { PanelId } from '$lib/config';
-	import { politicsNews, techNews, financeNews, govNews, aiNews, intelNews, brazilNews, latamNews } from '$lib/stores';
+	import { politicsNews, techNews, financeNews, govNews, aiNews, intelNews, brazilNews, latamNews, iranNews, venezuelaNews, greenlandNews } from '$lib/stores';
 
 	interface Props {
 		category: NewsCategory;
@@ -21,7 +21,10 @@
 		ai: aiNews,
 		intel: intelNews,
 		brazil: brazilNews,
-		latam: latamNews
+		latam: latamNews,
+		iran: iranNews,
+		venezuela: venezuelaNews,
+		greenland: greenlandNews
 	};
 
 	const categoryStore = $derived(categoryStores[category]);

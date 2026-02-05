@@ -63,6 +63,29 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Reuters Latin America', url: 'https://www.reuters.com/world/americas/rss' },
 		{ name: 'Americas Quarterly', url: 'https://www.americasquarterly.org/feed/' },
 		{ name: 'El Pais America', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada' }
+	],
+	iran: [
+		{ name: 'Tehran Times', url: 'https://www.tehrantimes.com/rss' },
+		{ name: 'Al-Monitor', url: 'https://www.al-monitor.com/rss' },
+		{ name: 'Radio Farda', url: 'https://en.radiofarda.com/api/zp_qmtl-vomx-tpe_bimr' },
+		{ name: 'Mehr News', url: 'https://en.mehrnews.com/rss' },
+		{ name: 'ISNA', url: 'https://en.isna.ir/rss' },
+		{ name: 'IFP News', url: 'https://ifpnews.com/feed' },
+		{ name: 'IranWire', url: 'https://iranwire.com/en/feed' }
+	],
+	venezuela: [
+		{ name: 'Caracas Chronicles', url: 'https://www.caracaschronicles.com/feed' },
+		{ name: 'El Nacional', url: 'https://www.elnacional.com/feed' },
+		{ name: 'Venezuelanalysis', url: 'https://venezuelanalysis.com/feed' },
+		{ name: 'VOA Americas', url: 'https://www.vozdeamerica.com/api/zt-pemyvi' },
+		{ name: 'Reuters Americas', url: 'https://www.reuters.com/world/americas/rss' }
+	],
+	greenland: [
+		{ name: 'Arctic Today', url: 'https://www.arctictoday.com/feed' },
+		{ name: 'High North News', url: 'https://en.highnorthnews.com/feed' },
+		{ name: 'The Arctic Institute', url: 'https://www.thearcticinstitute.org/feed' },
+		{ name: 'Arctic Council', url: 'https://arctic-council.org/feed' },
+		{ name: 'Eye on the Arctic', url: 'https://www.rcinet.ca/eye-on-the-arctic/feed/' }
 	]
 };
 

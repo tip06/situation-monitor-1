@@ -19,7 +19,7 @@ export interface NewsState {
 }
 
 // All news categories
-const NEWS_CATEGORIES: NewsCategory[] = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam'];
+const NEWS_CATEGORIES: NewsCategory[] = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam', 'iran', 'venezuela', 'greenland'];
 
 // Create initial state for a category
 function createCategoryState(): CategoryState {
@@ -222,6 +222,9 @@ export const aiNews = derived(news, ($news) => $news.categories.ai);
 export const intelNews = derived(news, ($news) => $news.categories.intel);
 export const brazilNews = derived(news, ($news) => $news.categories.brazil);
 export const latamNews = derived(news, ($news) => $news.categories.latam);
+export const iranNews = derived(news, ($news) => $news.categories.iran);
+export const venezuelaNews = derived(news, ($news) => $news.categories.venezuela);
+export const greenlandNews = derived(news, ($news) => $news.categories.greenland);
 
 // Derived store for all news items (reactive)
 export const allNewsItems = derived(news, ($news) => {

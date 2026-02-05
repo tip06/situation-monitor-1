@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Header, Dashboard, TabBar } from '$lib/components/layout';
+	import { Header, TabBar } from '$lib/components/layout';
 	import { SettingsModal, MonitorFormModal } from '$lib/components/modals';
 	import {
 		NewsPanel,
@@ -27,6 +27,7 @@
 		allNewsItems,
 		activeTab
 	} from '$lib/stores';
+	import { filterNews } from '$lib/utils';
 	import {
 		fetchAllNews,
 		fetchAllMarkets,
@@ -49,7 +50,7 @@
 	// Data fetching
 	async function loadNews() {
 		// Set loading for all categories
-		const categories = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam'] as const;
+		const categories = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam', 'iran', 'venezuela', 'greenland'] as const;
 		categories.forEach((cat) => news.setLoading(cat, true));
 
 		try {
@@ -170,7 +171,7 @@
 		<TabBar />
 
 		<!-- Tab Content -->
-		<Dashboard>
+		<div class="tab-content">
 			{#if $activeTab === 'global'}
 				<!-- Global Tab: 2-row grid layout -->
 				<div class="grid-2row">
@@ -195,11 +196,14 @@
 											'khamenei'
 										]
 									}}
-									news={$allNewsItems.filter(
-										(n) =>
-											n.title.toLowerCase().includes('iran') ||
-											n.title.toLowerCase().includes('tehran') ||
-											n.title.toLowerCase().includes('irgc')
+									news={filterNews(
+										$allNewsItems.filter(
+											(n) =>
+												n.title.toLowerCase().includes('iran') ||
+												n.title.toLowerCase().includes('tehran') ||
+												n.title.toLowerCase().includes('irgc')
+										),
+										{ maxItems: 10, maxAgeDays: 7 }
 									)}
 								/>
 							</div>
@@ -214,10 +218,13 @@
 										subtitle: 'Humanitarian crisis monitoring',
 										criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
 									}}
-									news={$allNewsItems.filter(
-										(n) =>
-											n.title.toLowerCase().includes('venezuela') ||
-											n.title.toLowerCase().includes('maduro')
+									news={filterNews(
+										$allNewsItems.filter(
+											(n) =>
+												n.title.toLowerCase().includes('venezuela') ||
+												n.title.toLowerCase().includes('maduro')
+										),
+										{ maxItems: 10, maxAgeDays: 7 }
 									)}
 								/>
 							</div>
@@ -232,10 +239,13 @@
 										subtitle: 'Arctic geopolitics monitoring',
 										criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
 									}}
-									news={$allNewsItems.filter(
-										(n) =>
-											n.title.toLowerCase().includes('greenland') ||
-											n.title.toLowerCase().includes('arctic')
+									news={filterNews(
+										$allNewsItems.filter(
+											(n) =>
+												n.title.toLowerCase().includes('greenland') ||
+												n.title.toLowerCase().includes('arctic')
+										),
+										{ maxItems: 10, maxAgeDays: 7 }
 									)}
 								/>
 							</div>
@@ -288,83 +298,89 @@
 
 			{:else if $activeTab === 'economy'}
 				<!-- Economy Tab: Standard columns layout -->
-				{#if isPanelVisible('finance')}
-					<div class="panel-slot">
-						<NewsPanel category="finance" panelId="finance" title="Finance" />
-					</div>
-				{/if}
+				<div class="columns-layout">
+					{#if isPanelVisible('finance')}
+						<div class="panel-slot">
+							<NewsPanel category="finance" panelId="finance" title="Finance" />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('markets')}
-					<div class="panel-slot">
-						<MarketsPanel />
-					</div>
-				{/if}
+					{#if isPanelVisible('markets')}
+						<div class="panel-slot">
+							<MarketsPanel />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('heatmap')}
-					<div class="panel-slot">
-						<HeatmapPanel />
-					</div>
-				{/if}
+					{#if isPanelVisible('heatmap')}
+						<div class="panel-slot">
+							<HeatmapPanel />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('commodities')}
-					<div class="panel-slot">
-						<CommoditiesPanel />
-					</div>
-				{/if}
+					{#if isPanelVisible('commodities')}
+						<div class="panel-slot">
+							<CommoditiesPanel />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('crypto')}
-					<div class="panel-slot">
-						<CryptoPanel />
-					</div>
-				{/if}
+					{#if isPanelVisible('crypto')}
+						<div class="panel-slot">
+							<CryptoPanel />
+						</div>
+					{/if}
+				</div>
 
 			{:else if $activeTab === 'social'}
 				<!-- Social Tab: Standard columns layout -->
-				{#if isPanelVisible('mainchar')}
-					<div class="panel-slot">
-						<MainCharPanel />
-					</div>
-				{/if}
+				<div class="columns-layout">
+					{#if isPanelVisible('mainchar')}
+						<div class="panel-slot">
+							<MainCharPanel />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('correlation')}
-					<div class="panel-slot">
-						<CorrelationPanel news={$allNewsItems} />
-					</div>
-				{/if}
+					{#if isPanelVisible('correlation')}
+						<div class="panel-slot">
+							<CorrelationPanel news={$allNewsItems} />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('narrative')}
-					<div class="panel-slot">
-						<NarrativePanel news={$allNewsItems} />
-					</div>
-				{/if}
+					{#if isPanelVisible('narrative')}
+						<div class="panel-slot">
+							<NarrativePanel news={$allNewsItems} />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('layoffs')}
-					<div class="panel-slot">
-						<LayoffsPanel {layoffs} />
-					</div>
-				{/if}
+					{#if isPanelVisible('layoffs')}
+						<div class="panel-slot">
+							<LayoffsPanel {layoffs} />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('polymarket')}
-					<div class="panel-slot">
-						<PolymarketPanel {predictions} />
-					</div>
-				{/if}
+					{#if isPanelVisible('polymarket')}
+						<div class="panel-slot">
+							<PolymarketPanel {predictions} />
+						</div>
+					{/if}
+				</div>
 
 			{:else if $activeTab === 'technology'}
 				<!-- Technology Tab: Standard columns layout -->
-				{#if isPanelVisible('tech')}
-					<div class="panel-slot">
-						<NewsPanel category="tech" panelId="tech" title="Tech" />
-					</div>
-				{/if}
+				<div class="columns-layout">
+					{#if isPanelVisible('tech')}
+						<div class="panel-slot">
+							<NewsPanel category="tech" panelId="tech" title="Tech" />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('ai')}
-					<div class="panel-slot">
-						<NewsPanel category="ai" panelId="ai" title="AI" />
-					</div>
-				{/if}
+					{#if isPanelVisible('ai')}
+						<div class="panel-slot">
+							<NewsPanel category="ai" panelId="ai" title="AI" />
+						</div>
+					{/if}
+				</div>
 			{/if}
-		</Dashboard>
+		</div>
 	</main>
 
 	<!-- Modals -->
@@ -397,17 +413,24 @@
 		margin-bottom: 0.5rem;
 	}
 
+	/* Tab content container */
+	.tab-content {
+		width: 100%;
+	}
+
 	/* Grid 2-row layout for Global tab */
 	.grid-2row {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		width: 100%;
 	}
 
 	.grid-row {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
 		gap: 0.5rem;
+		width: 100%;
 	}
 
 	/* Side-by-side layout for Regional tab */
@@ -415,10 +438,19 @@
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
 		gap: 0.5rem;
+		width: 100%;
 	}
 
 	.side-panel {
 		min-height: 400px;
+	}
+
+	/* Standard columns layout for Economy, Social, Technology tabs */
+	.columns-layout {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 0.5rem;
+		width: 100%;
 	}
 
 	@media (max-width: 1024px) {
@@ -437,6 +469,10 @@
 		}
 
 		.side-by-side {
+			grid-template-columns: 1fr;
+		}
+
+		.columns-layout {
 			grid-template-columns: 1fr;
 		}
 	}

@@ -14,3 +14,6 @@ export {
 	getToday,
 	latLonToXY
 } from './format';
+
+export { filterNews } from './news-filter';
+export type { FilterOptions } from './news-filter';
