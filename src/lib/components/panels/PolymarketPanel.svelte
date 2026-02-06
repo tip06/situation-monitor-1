@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { Panel } from '$lib/components/common';
+	import type { PredictionCategory } from '$lib/api/misc';
+
+	type SortOption = 'volume' | 'probability' | 'volume24hr';
+	type FilterOption = 'all' | PredictionCategory;
 
 	interface Prediction {
 		id: string;
 		question: string;
 		yes: number;
-		volume: number | string;
+		volume: number;
+		volume24hr?: number;
 		url?: string;
+		endDate?: string;
+		category: PredictionCategory;
 	}
 
 	interface Props {
@@ -17,38 +24,181 @@
 
 	let { predictions = [], loading = false, error = null }: Props = $props();
 
-	const count = $derived(predictions.length);
+	let sortBy = $state<SortOption>('volume');
+	let filterBy = $state<FilterOption>('all');
 
-	function formatVolume(v: number | string): string {
-		if (typeof v === 'string') return '$' + v;
+	const filterOptions: { value: FilterOption; label: string }[] = [
+		{ value: 'all', label: 'All' },
+		{ value: 'politics', label: 'Politics' },
+		{ value: 'geopolitics', label: 'Geo' },
+		{ value: 'tech', label: 'Tech' },
+		{ value: 'finance', label: 'Finance' },
+		{ value: 'elections', label: 'Elections' }
+	];
+
+	const filteredPredictions = $derived.by(() => {
+		if (filterBy === 'all') return predictions;
+		return predictions.filter((p) => p.category === filterBy);
+	});
+
+	const sortedPredictions = $derived.by(() => {
+		const sorted = [...filteredPredictions];
+		switch (sortBy) {
+			case 'volume':
+				return sorted.sort((a, b) => b.volume - a.volume);
+			case 'probability':
+				return sorted.sort((a, b) => b.yes - a.yes);
+			case 'volume24hr':
+				return sorted.sort((a, b) => (b.volume24hr || 0) - (a.volume24hr || 0));
+			default:
+				return sorted;
+		}
+	});
+
+	const count = $derived(filteredPredictions.length);
+
+	function formatVolume(v: number): string {
 		if (!v) return '$0';
 		if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
 		if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
 		return '$' + v.toFixed(0);
 	}
+
+	function handleSort(option: SortOption) {
+		sortBy = option;
+	}
+
+	function handleFilter(option: FilterOption) {
+		filterBy = option;
+	}
 </script>
 
 <Panel id="polymarket" title="Polymarket" {count} {loading} {error}>
-	{#if predictions.length === 0 && !loading && !error}
+	{#snippet headerExtra()}
+		<div class="sort-controls">
+			<button
+				class="sort-btn"
+				class:active={sortBy === 'volume'}
+				onclick={() => handleSort('volume')}
+				title="Sort by total volume"
+			>
+				Vol
+			</button>
+			<button
+				class="sort-btn"
+				class:active={sortBy === 'probability'}
+				onclick={() => handleSort('probability')}
+				title="Sort by Yes probability"
+			>
+				%
+			</button>
+			<button
+				class="sort-btn"
+				class:active={sortBy === 'volume24hr'}
+				onclick={() => handleSort('volume24hr')}
+				title="Sort by 24h volume"
+			>
+				24h
+			</button>
+		</div>
+	{/snippet}
+
+	<div class="filter-controls">
+		{#each filterOptions as option (option.value)}
+			<button
+				class="filter-btn"
+				class:active={filterBy === option.value}
+				onclick={() => handleFilter(option.value)}
+			>
+				{option.label}
+			</button>
+		{/each}
+	</div>
+
+	{#if sortedPredictions.length === 0 && !loading && !error}
 		<div class="empty-state">No predictions available</div>
 	{:else}
 		<div class="predictions-list">
-			{#each predictions as pred (pred.id)}
-				<div class="prediction-item">
+			{#each sortedPredictions as pred (pred.id)}
+				<a href={pred.url} target="_blank" rel="noopener noreferrer" class="prediction-item">
 					<div class="prediction-info">
 						<div class="prediction-question">{pred.question}</div>
-						<div class="prediction-volume">Vol: {formatVolume(pred.volume)}</div>
+						<div class="prediction-meta">
+							<span class="prediction-volume">Vol: {formatVolume(pred.volume)}</span>
+							{#if pred.volume24hr}
+								<span class="prediction-volume-24h">24h: {formatVolume(pred.volume24hr)}</span>
+							{/if}
+						</div>
 					</div>
 					<div class="prediction-odds">
 						<span class="prediction-yes">{pred.yes}%</span>
 					</div>
-				</div>
+				</a>
 			{/each}
 		</div>
 	{/if}
 </Panel>
 
 <style>
+	.sort-controls {
+		display: flex;
+		gap: 0.25rem;
+		margin-left: auto;
+	}
+
+	.sort-btn {
+		background: transparent;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		font-size: 0.5rem;
+		padding: 0.15rem 0.3rem;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.sort-btn:hover {
+		color: var(--text-primary);
+		border-color: var(--text-secondary);
+	}
+
+	.sort-btn.active {
+		background: transparent;
+		border-color: #ffffff;
+		color: #ffffff;
+	}
+
+	.filter-controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-bottom: 0.5rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.filter-btn {
+		background: transparent;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		font-size: 0.5rem;
+		padding: 0.15rem 0.35rem;
+		border-radius: 2px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.filter-btn:hover {
+		color: var(--text-primary);
+		border-color: var(--text-secondary);
+	}
+
+	.filter-btn.active {
+		background: transparent;
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
 	.predictions-list {
 		display: flex;
 		flex-direction: column;
@@ -60,6 +210,13 @@
 		align-items: center;
 		padding: 0.5rem 0;
 		border-bottom: 1px solid var(--border);
+		text-decoration: none;
+		color: inherit;
+		transition: background 0.15s ease;
+	}
+
+	.prediction-item:hover {
+		background: var(--bg-secondary);
 	}
 
 	.prediction-item:last-child {
@@ -78,7 +235,13 @@
 		margin-bottom: 0.2rem;
 	}
 
-	.prediction-volume {
+	.prediction-meta {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.prediction-volume,
+	.prediction-volume-24h {
 		font-size: 0.55rem;
 		color: var(--text-muted);
 	}

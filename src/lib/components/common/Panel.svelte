@@ -15,6 +15,7 @@
 		collapsed?: boolean;
 		onCollapse?: () => void;
 		header?: Snippet;
+		headerExtra?: Snippet;
 		actions?: Snippet;
 		children: Snippet;
 	}
@@ -32,6 +33,7 @@
 		collapsed = false,
 		onCollapse,
 		header,
+		headerExtra,
 		actions,
 		children
 	}: Props = $props();
@@ -55,6 +57,9 @@
 			{/if}
 			{#if loading}
 				<span class="panel-loading"></span>
+			{/if}
+			{#if headerExtra}
+				{@render headerExtra()}
 			{/if}
 		</div>
 
