@@ -228,8 +228,6 @@ export async function fetchPolymarket(): Promise<Prediction[]> {
 			.sort((a, b) => b.volume - a.volume)
 			.slice(0, 20);
 
-		console.log('[Polymarket] Final predictions count:', predictions.length);
-
 		// Cache successful results
 		cacheManager.set(POLYMARKET_CACHE_KEY, predictions, POLYMARKET_CACHE_TTL);
 
