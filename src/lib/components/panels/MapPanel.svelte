@@ -437,7 +437,11 @@
 				const [x, y] = projection([mb.lon, mb.lat]) || [0, 0];
 				if (x && y) {
 					const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-					militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+					militaryBasesGroup
+						.append('path')
+						.attr('d', starPath)
+						.attr('fill', '#ff00ff')
+						.attr('opacity', 0.8);
 					militaryBasesGroup
 						.append('circle')
 						.attr('cx', x)
@@ -467,7 +471,12 @@
 						.attr('fill-opacity', 0.3)
 						.attr('class', 'pulse');
 					// Inner dot
-					hotspotsGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+					hotspotsGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 3)
+						.attr('fill', color);
 					// Label
 					hotspotsGroup
 						.append('text')
@@ -584,7 +593,12 @@
 							.attr('fill', color)
 							.attr('fill-opacity', 0.3)
 							.attr('class', 'pulse');
-						targetGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+						targetGroup
+							.append('circle')
+							.attr('cx', x)
+							.attr('cy', y)
+							.attr('r', 3)
+							.attr('fill', color);
 						targetGroup
 							.append('text')
 							.attr('x', x + 8)

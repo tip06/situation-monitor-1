@@ -17,7 +17,8 @@ import {
 const STORAGE_KEYS = {
 	panels: 'situationMonitorPanels',
 	order: 'panelOrder',
-	sizes: 'panelSizes'
+	sizes: 'panelSizes',
+	fringeFeeds: 'enableFringeFeeds'
 } as const;
 
 // Types
@@ -25,6 +26,7 @@ export interface PanelSettings {
 	enabled: Record<PanelId, boolean>;
 	order: PanelId[];
 	sizes: Record<PanelId, { width?: number; height?: number }>;
+	enableFringeFeeds: boolean;
 }
 
 export interface SettingsState extends PanelSettings {
@@ -38,7 +40,8 @@ function getDefaultSettings(): PanelSettings {
 	return {
 		enabled: Object.fromEntries(allPanelIds.map((id) => [id, true])) as Record<PanelId, boolean>,
 		order: allPanelIds,
-		sizes: {} as Record<PanelId, { width?: number; height?: number }>
+		sizes: {} as Record<PanelId, { width?: number; height?: number }>,
+		enableFringeFeeds: false
 	};
 }
 
@@ -50,11 +53,13 @@ function loadFromStorage(): Partial<PanelSettings> {
 		const panels = localStorage.getItem(STORAGE_KEYS.panels);
 		const order = localStorage.getItem(STORAGE_KEYS.order);
 		const sizes = localStorage.getItem(STORAGE_KEYS.sizes);
+		const fringeFeeds = localStorage.getItem(STORAGE_KEYS.fringeFeeds);
 
 		return {
 			enabled: panels ? JSON.parse(panels) : undefined,
 			order: order ? JSON.parse(order) : undefined,
-			sizes: sizes ? JSON.parse(sizes) : undefined
+			sizes: sizes ? JSON.parse(sizes) : undefined,
+			enableFringeFeeds: fringeFeeds ? JSON.parse(fringeFeeds) : undefined
 		};
 	} catch (e) {
 		console.warn('Failed to load settings from localStorage:', e);
@@ -82,6 +87,7 @@ function createSettingsStore() {
 		enabled: { ...defaults.enabled, ...saved.enabled },
 		order: saved.order ?? defaults.order,
 		sizes: { ...defaults.sizes, ...saved.sizes },
+		enableFringeFeeds: saved.enableFringeFeeds ?? defaults.enableFringeFeeds,
 		initialized: false
 	};
 
@@ -186,6 +192,25 @@ function createSettingsStore() {
 		},
 
 		/**
+		 * Toggle fringe feeds on/off
+		 */
+		toggleFringeFeeds() {
+			update((state) => {
+				const newValue = !state.enableFringeFeeds;
+				saveToStorage('fringeFeeds', newValue);
+				return { ...state, enableFringeFeeds: newValue };
+			});
+		},
+
+		/**
+		 * Check if fringe feeds are enabled
+		 */
+		isFringeFeedsEnabled(): boolean {
+			const state = get({ subscribe });
+			return state.enableFringeFeeds;
+		},
+
+		/**
 		 * Reset all settings to defaults
 		 */
 		reset() {
@@ -194,6 +219,7 @@ function createSettingsStore() {
 				localStorage.removeItem(STORAGE_KEYS.panels);
 				localStorage.removeItem(STORAGE_KEYS.order);
 				localStorage.removeItem(STORAGE_KEYS.sizes);
+				localStorage.removeItem(STORAGE_KEYS.fringeFeeds);
 			}
 			set({ ...defaults, initialized: true });
 		},

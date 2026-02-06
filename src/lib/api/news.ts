@@ -69,12 +69,16 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 			link = linkEl?.getAttribute('href') || '';
 		}
 		if (!pubDate) {
-			pubDate = entry.querySelector('published')?.textContent?.trim() ||
-				entry.querySelector('updated')?.textContent?.trim() || '';
+			pubDate =
+				entry.querySelector('published')?.textContent?.trim() ||
+				entry.querySelector('updated')?.textContent?.trim() ||
+				'';
 		}
 		if (!description) {
-			description = entry.querySelector('summary')?.textContent?.trim() ||
-				entry.querySelector('content')?.textContent?.trim() || '';
+			description =
+				entry.querySelector('summary')?.textContent?.trim() ||
+				entry.querySelector('content')?.textContent?.trim() ||
+				'';
 		}
 
 		// Skip items without title or link
@@ -112,7 +116,11 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 /**
  * Fetch and parse a single RSS feed
  */
-async function fetchRssFeed(url: string, sourceName: string, category: NewsCategory): Promise<NewsItem[]> {
+async function fetchRssFeed(
+	url: string,
+	sourceName: string,
+	category: NewsCategory
+): Promise<NewsItem[]> {
 	try {
 		logger.log('RSS', `Fetching ${sourceName}`);
 		const response = await fetchWithProxy(url);
@@ -226,7 +234,9 @@ const GDELT_QUERIES: Record<NewsCategory, string> = {
 	latam: '("Latin America" OR Mexico OR Argentina OR Colombia OR Chile OR Peru)',
 	iran: '(Iran OR Tehran OR IRGC OR Khamenei OR "Iranian government" OR "Persian Gulf")',
 	venezuela: '(Venezuela OR Maduro OR Caracas OR "Venezuelan government" OR "Venezuelan crisis")',
-	greenland: '(Greenland OR Arctic OR "Danish territory" OR Nuuk OR "Arctic council" OR "polar region")'
+	greenland:
+		'(Greenland OR Arctic OR "Danish territory" OR Nuuk OR "Arctic council" OR "polar region")',
+	fringe: '(conspiracy OR "deep state" OR "globalist agenda")'
 };
 
 /**
@@ -305,7 +315,10 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 
 		// Combine, filter by age, and sort
 		const allItems = [...rssItems, ...gdeltItems];
-		logger.log('News API', `${category}: ${rssItems.length} RSS + ${gdeltItems.length} GDELT = ${allItems.length} total`);
+		logger.log(
+			'News API',
+			`${category}: ${rssItems.length} RSS + ${gdeltItems.length} GDELT = ${allItems.length} total`
+		);
 
 		return filterByAge(allItems, 7).sort((a, b) => b.timestamp - a.timestamp);
 	}
@@ -316,11 +329,36 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 }
 
 /** All news categories in fetch order */
-const NEWS_CATEGORIES: NewsCategory[] = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam', 'iran', 'venezuela', 'greenland'];
+const NEWS_CATEGORIES: NewsCategory[] = [
+	'politics',
+	'tech',
+	'finance',
+	'gov',
+	'ai',
+	'intel',
+	'brazil',
+	'latam',
+	'iran',
+	'venezuela',
+	'greenland'
+];
 
 /** Create an empty news result object */
 function createEmptyNewsResult(): Record<NewsCategory, NewsItem[]> {
-	return { politics: [], tech: [], finance: [], gov: [], ai: [], intel: [], brazil: [], latam: [], iran: [], venezuela: [], greenland: [] };
+	return {
+		politics: [],
+		tech: [],
+		finance: [],
+		gov: [],
+		ai: [],
+		intel: [],
+		brazil: [],
+		latam: [],
+		iran: [],
+		venezuela: [],
+		greenland: [],
+		fringe: []
+	};
 }
 
 /**

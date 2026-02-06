@@ -65,14 +65,20 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Defense One', url: 'https://www.defenseone.com/rss/all/' },
 		{ name: 'Breaking Defense', url: 'https://breakingdefense.com/feed/' },
 		{ name: 'War on the Rocks', url: 'https://warontherocks.com/feed/' },
-		{ name: 'Defense News', url: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml' },
+		{
+			name: 'Defense News',
+			url: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml'
+		},
 		{ name: 'The War Zone', url: 'https://www.thedrive.com/the-war-zone/feed' },
 		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
 		{ name: 'CSIS', url: 'https://www.csis.org/analysis/feed' },
 		{ name: 'Bellingcat', url: 'https://www.bellingcat.com/feed/' },
 		{ name: 'Chatham House', url: 'https://www.chathamhouse.org/rss/all' },
 		{ name: 'IISS', url: 'https://www.iiss.org/rss' },
-		{ name: 'Military.com', url: 'https://www.military.com/rss-feeds/content?feed=news-headlines.xml' }
+		{
+			name: 'Military.com',
+			url: 'https://www.military.com/rss-feeds/content?feed=news-headlines.xml'
+		}
 	],
 	brazil: [
 		// === GENERAL (3) ===
@@ -85,7 +91,10 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Gazeta do Povo', url: 'https://www.gazetadopovo.com.br/feed/rss/republica.xml' },
 		{ name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/politica/feed/' },
 		{ name: 'Poder360', url: 'https://www.poder360.com.br/feed/' },
-		{ name: 'Agencia Brasil', url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml' },
+		{
+			name: 'Agencia Brasil',
+			url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml'
+		},
 
 		// === ECONOMY (4) ===
 		{ name: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
@@ -101,9 +110,11 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	latam: [
 		{ name: 'Reuters Latin America', url: 'https://www.reuters.com/world/americas/rss' },
 		{ name: 'Americas Quarterly', url: 'https://www.americasquarterly.org/feed/' },
-		{ name: 'El Pais America', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada' },
+		{
+			name: 'El Pais America',
+			url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada'
+		},
 		{ name: 'Infobae America', url: 'https://www.infobae.com/america/rss/' }
-		
 	],
 	iran: [
 		{ name: 'Tehran Times', url: 'https://www.tehrantimes.com/rss' },
@@ -127,6 +138,12 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'The Arctic Institute', url: 'https://www.thearcticinstitute.org/feed' },
 		{ name: 'Arctic Council', url: 'https://arctic-council.org/feed' },
 		{ name: 'Eye on the Arctic', url: 'https://www.rcinet.ca/eye-on-the-arctic/feed/' }
+	],
+	fringe: [
+		{ name: 'ZeroHedge', url: 'https://feeds.feedburner.com/zerohedge/feed' },
+		{ name: 'Breitbart', url: 'https://feeds.feedburner.com/breitbart' },
+		{ name: 'Daily Caller', url: 'https://dailycaller.com/feed/' },
+		{ name: 'Epoch Times', url: 'https://www.theepochtimes.com/c-us/feed' }
 	]
 };
 

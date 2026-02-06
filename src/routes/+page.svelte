@@ -17,21 +17,9 @@
 		IntelPanel,
 		SituationPanel
 	} from '$lib/components/panels';
-	import {
-		news,
-		markets,
-		monitors,
-		settings,
-		refresh,
-		allNewsItems,
-		activeTab
-	} from '$lib/stores';
+	import { news, markets, monitors, settings, refresh, allNewsItems, activeTab } from '$lib/stores';
 	import { filterNews } from '$lib/utils';
-	import {
-		fetchAllNews,
-		fetchAllMarkets,
-		fetchPolymarket
-	} from '$lib/api';
+	import { fetchAllNews, fetchAllMarkets, fetchPolymarket } from '$lib/api';
 	import type { Prediction } from '$lib/api';
 	import type { CustomMonitor } from '$lib/types';
 	import type { PanelId } from '$lib/config';
@@ -48,7 +36,19 @@
 	// Data fetching
 	async function loadNews() {
 		// Set loading for all categories
-		const categories = ['politics', 'tech', 'finance', 'gov', 'ai', 'intel', 'brazil', 'latam', 'iran', 'venezuela', 'greenland'] as const;
+		const categories = [
+			'politics',
+			'tech',
+			'finance',
+			'gov',
+			'ai',
+			'intel',
+			'brazil',
+			'latam',
+			'iran',
+			'venezuela',
+			'greenland'
+		] as const;
 		categories.forEach((cat) => news.setLoading(cat, true));
 
 		try {
@@ -125,11 +125,7 @@
 		async function initialLoad() {
 			refresh.startRefresh();
 			try {
-				await Promise.all([
-					loadNews(),
-					loadMarkets(),
-					loadMiscData()
-				]);
+				await Promise.all([loadNews(), loadMarkets(), loadMiscData()]);
 				refresh.endRefresh();
 			} catch (error) {
 				refresh.endRefresh([String(error)]);
@@ -275,7 +271,6 @@
 						{/if}
 					</div>
 				</div>
-
 			{:else if $activeTab === 'regional'}
 				<!-- Regional Tab: Side-by-side layout -->
 				<div class="side-by-side">
@@ -291,7 +286,6 @@
 						</div>
 					{/if}
 				</div>
-
 			{:else if $activeTab === 'economy'}
 				<!-- Economy Tab: Row 1 = crypto, markets, heatmap, commodities; Row 2 = finance (wide) -->
 				<div class="columns-layout">
@@ -325,7 +319,6 @@
 						</div>
 					{/if}
 				</div>
-
 			{:else if $activeTab === 'social'}
 				<!-- Social Tab: Standard columns layout -->
 				<div class="columns-layout">
@@ -353,7 +346,6 @@
 						</div>
 					{/if}
 				</div>
-
 			{:else if $activeTab === 'technology'}
 				<!-- Technology Tab: Standard columns layout -->
 				<div class="columns-layout">
@@ -374,19 +366,13 @@
 	</main>
 
 	<!-- Modals -->
-	<SettingsModal
-		open={settingsOpen}
-		onClose={() => (settingsOpen = false)}
-	/>
+	<SettingsModal open={settingsOpen} onClose={() => (settingsOpen = false)} />
 	<MonitorFormModal
 		open={monitorFormOpen}
 		onClose={() => (monitorFormOpen = false)}
 		editMonitor={editingMonitor}
 	/>
-	<AddDataModal
-		open={addDataOpen}
-		onClose={() => (addDataOpen = false)}
-	/>
+	<AddDataModal open={addDataOpen} onClose={() => (addDataOpen = false)} />
 </div>
 
 <style>

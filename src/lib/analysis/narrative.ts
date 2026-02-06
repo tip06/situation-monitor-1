@@ -1,9 +1,14 @@
 /**
- * Narrative tracker - analyzes fringe-to-mainstream narrative propagation
+ * Narrative tracker - analyzes mainstream narrative trends and fringe-to-mainstream propagation
  */
 
 import type { NewsItem } from '$lib/types';
-import { NARRATIVE_PATTERNS, SOURCE_TYPES, type NarrativePattern } from '$lib/config/analysis';
+import {
+	NARRATIVE_PATTERNS,
+	SOURCE_TYPES,
+	MAINSTREAM_NARRATIVE_PATTERNS,
+	type NarrativePattern
+} from '$lib/config/analysis';
 
 // Types for narrative results
 export interface NarrativeData {
@@ -28,21 +33,39 @@ export interface FringeToMainstream extends NarrativeData {
 	crossoverLevel: number;
 }
 
+// New type for trending mainstream narratives
+export interface TrendingNarrative {
+	id: string;
+	name: string;
+	category: string;
+	region?: 'global' | 'brazil' | 'latam' | 'mena';
+	count: number;
+	sources: string[];
+	headlines: NewsItem[];
+	momentum: 'rising' | 'stable' | 'falling';
+	sentiment: 'positive' | 'neutral' | 'negative';
+}
+
 export interface NarrativeResults {
+	trendingNarratives: TrendingNarrative[];
 	emergingFringe: EmergingFringe[];
 	fringeToMainstream: FringeToMainstream[];
 	narrativeWatch: NarrativeData[];
 	disinfoSignals: NarrativeData[];
 }
 
-// Track narrative history for crossover detection
+// Track narrative history for momentum calculation
 const narrativeHistory: Record<
 	string,
 	{
 		firstSeen: number;
+		counts: { timestamp: number; count: number }[];
 		sources: Set<string>;
 	}
 > = {};
+
+// Minimum mentions to show a trending narrative
+const MIN_TRENDING_MENTIONS = 2;
 
 /**
  * Format narrative ID to display name
@@ -70,17 +93,141 @@ function classifySource(source: string): 'fringe' | 'alternative' | 'mainstream'
 }
 
 /**
- * Analyze narratives across all news items
+ * Check if text matches any pattern in the list
  */
-export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null {
-	if (!allNews || allNews.length === 0) return null;
+function matchesPatterns(text: string, patterns: RegExp[]): boolean {
+	return patterns.some((pattern) => pattern.test(text));
+}
 
-	const now = Date.now();
-	const results: NarrativeResults = {
-		emergingFringe: [],
-		fringeToMainstream: [],
-		narrativeWatch: [],
-		disinfoSignals: []
+/**
+ * Calculate momentum based on history
+ */
+function calculateMomentum(
+	narrativeId: string,
+	currentCount: number,
+	_now: number
+): 'rising' | 'stable' | 'falling' {
+	const history = narrativeHistory[narrativeId];
+	if (!history || history.counts.length < 2) {
+		return 'stable';
+	}
+
+	// Compare to previous count
+	const previousCounts = history.counts.slice(-3);
+	if (previousCounts.length < 2) return 'stable';
+
+	const avgPrevious =
+		previousCounts.slice(0, -1).reduce((sum, c) => sum + c.count, 0) / (previousCounts.length - 1);
+
+	if (currentCount > avgPrevious * 1.2) return 'rising';
+	if (currentCount < avgPrevious * 0.8) return 'falling';
+	return 'stable';
+}
+
+/**
+ * Estimate sentiment from headlines (simple heuristic)
+ */
+function estimateSentiment(headlines: NewsItem[]): 'positive' | 'neutral' | 'negative' {
+	const positivePatterns = [/surge|gain|rise|boost|rally|success|breakthrough|win|grow/i];
+	const negativePatterns = [
+		/crash|fall|drop|crisis|fear|risk|warn|threat|fail|lose|plunge|slump|loom|weak/i
+	];
+
+	let positive = 0;
+	let negative = 0;
+
+	for (const item of headlines) {
+		const text = `${item.title || ''} ${item.description || ''}`;
+		if (positivePatterns.some((p) => p.test(text))) positive++;
+		if (negativePatterns.some((p) => p.test(text))) negative++;
+	}
+
+	if (positive > negative) return 'positive';
+	if (negative > positive) return 'negative';
+	return 'neutral';
+}
+
+/**
+ * Analyze mainstream narrative patterns
+ */
+function analyzeMainstreamNarratives(allNews: NewsItem[], now: number): TrendingNarrative[] {
+	const results: TrendingNarrative[] = [];
+
+	for (const pattern of MAINSTREAM_NARRATIVE_PATTERNS) {
+		const matches: NewsItem[] = [];
+		const sources = new Set<string>();
+
+		// Find matching news items - check both title AND description
+		for (const item of allNews) {
+			const title = item.title || '';
+			const description = item.description || '';
+			const combinedText = `${title} ${description}`;
+
+			if (matchesPatterns(combinedText, pattern.patterns)) {
+				matches.push(item);
+				sources.add(item.source);
+			}
+		}
+
+		// Only include if we have minimum mentions
+		if (matches.length < MIN_TRENDING_MENTIONS) continue;
+
+		// Update history
+		if (!narrativeHistory[pattern.id]) {
+			narrativeHistory[pattern.id] = {
+				firstSeen: now,
+				counts: [],
+				sources: new Set()
+			};
+		}
+		narrativeHistory[pattern.id].counts.push({ timestamp: now, count: matches.length });
+		// Keep only last 10 data points
+		if (narrativeHistory[pattern.id].counts.length > 10) {
+			narrativeHistory[pattern.id].counts.shift();
+		}
+		for (const source of sources) {
+			narrativeHistory[pattern.id].sources.add(source);
+		}
+
+		const momentum = calculateMomentum(pattern.id, matches.length, now);
+		const sentiment = estimateSentiment(matches);
+
+		results.push({
+			id: pattern.id,
+			name: pattern.name,
+			category: pattern.category,
+			region: pattern.region,
+			count: matches.length,
+			sources: [...sources].slice(0, 5),
+			headlines: matches.slice(0, 3),
+			momentum,
+			sentiment
+		});
+	}
+
+	// Sort by count descending
+	results.sort((a, b) => b.count - a.count);
+
+	return results;
+}
+
+/**
+ * Analyze fringe narratives (original logic, enhanced with description matching)
+ */
+function analyzeFringeNarratives(
+	allNews: NewsItem[],
+	now: number
+): {
+	emergingFringe: EmergingFringe[];
+	fringeToMainstream: FringeToMainstream[];
+	narrativeWatch: NarrativeData[];
+	disinfoSignals: NarrativeData[];
+} {
+	const results = {
+		emergingFringe: [] as EmergingFringe[],
+		fringeToMainstream: [] as FringeToMainstream[],
+		narrativeWatch: [] as NarrativeData[],
+		disinfoSignals: [] as NarrativeData[]
 	};
 
 	for (const narrative of NARRATIVE_PATTERNS) {
@@ -95,12 +242,14 @@ export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null 
 			mainstream: []
 		};
 
-		// Find matching news items
+		// Find matching news items - now check both title AND description
 		for (const item of allNews) {
 			const title = (item.title || '').toLowerCase();
+			const description = (item.description || '').toLowerCase();
+			const combinedText = `${title} ${description}`;
 			const source = (item.source || '').toLowerCase();
 
-			const hasMatch = narrative.keywords.some((kw) => title.includes(kw.toLowerCase()));
+			const hasMatch = narrative.keywords.some((kw) => combinedText.includes(kw.toLowerCase()));
 
 			if (hasMatch) {
 				matches.push(item);
@@ -115,14 +264,16 @@ export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null 
 		if (matches.length === 0) continue;
 
 		// Update narrative history
-		if (!narrativeHistory[narrative.id]) {
-			narrativeHistory[narrative.id] = {
+		const historyKey = `fringe-${narrative.id}`;
+		if (!narrativeHistory[historyKey]) {
+			narrativeHistory[historyKey] = {
 				firstSeen: now,
+				counts: [],
 				sources: new Set()
 			};
 		}
 		for (const match of matches) {
-			narrativeHistory[narrative.id].sources.add(match.source);
+			narrativeHistory[historyKey].sources.add(match.source);
 		}
 
 		// Build narrative data
@@ -175,6 +326,26 @@ export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null 
 }
 
 /**
+ * Analyze narratives across all news items
+ */
+export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null {
+	if (!allNews || allNews.length === 0) return null;
+
+	const now = Date.now();
+
+	// Analyze mainstream narratives (always active)
+	const trendingNarratives = analyzeMainstreamNarratives(allNews, now);
+
+	// Analyze fringe narratives (works best with fringe sources)
+	const fringeResults = analyzeFringeNarratives(allNews, now);
+
+	return {
+		trendingNarratives,
+		...fringeResults
+	};
+}
+
+/**
  * Get narrative summary for status display
  */
 export function getNarrativeSummary(results: NarrativeResults | null): {
@@ -186,6 +357,7 @@ export function getNarrativeSummary(results: NarrativeResults | null): {
 	}
 
 	const total =
+		results.trendingNarratives.length +
 		results.emergingFringe.length +
 		results.fringeToMainstream.length +
 		results.narrativeWatch.length +

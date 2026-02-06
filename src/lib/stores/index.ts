@@ -37,6 +37,7 @@ export {
 	iranNews,
 	venezuelaNews,
 	greenlandNews,
+	fringeNews,
 	allNewsItems,
 	alerts,
 	isLoading as isNewsLoading,
@@ -84,12 +85,7 @@ export {
 } from './fed';
 
 // Tab store
-export {
-	activeTab,
-	currentTabConfig,
-	visiblePanels,
-	isPanelInTab
-} from './tabs';
+export { activeTab, currentTabConfig, visiblePanels, isPanelInTab } from './tabs';
 
 // Map layers store
 export {

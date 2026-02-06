@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
-	import { analyzeNarratives } from '$lib/analysis/narrative';
+	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
 
 	interface Props {
@@ -40,6 +40,63 @@
 				return 'default';
 		}
 	}
+
+	function getMomentumIcon(momentum: TrendingNarrative['momentum']): string {
+		switch (momentum) {
+			case 'rising':
+				return '▲';
+			case 'falling':
+				return '▼';
+			default:
+				return '─';
+		}
+	}
+
+	function getMomentumClass(momentum: TrendingNarrative['momentum']): string {
+		switch (momentum) {
+			case 'rising':
+				return 'momentum-rising';
+			case 'falling':
+				return 'momentum-falling';
+			default:
+				return 'momentum-stable';
+		}
+	}
+
+	function getSentimentIndicator(sentiment: TrendingNarrative['sentiment']): string {
+		switch (sentiment) {
+			case 'positive':
+				return '+';
+			case 'negative':
+				return '-';
+			default:
+				return '=';
+		}
+	}
+
+	function getSentimentClass(sentiment: TrendingNarrative['sentiment']): string {
+		switch (sentiment) {
+			case 'positive':
+				return 'sentiment-positive';
+			case 'negative':
+				return 'sentiment-negative';
+			default:
+				return 'sentiment-neutral';
+		}
+	}
+
+	function getRegionLabel(region?: string): string {
+		switch (region) {
+			case 'brazil':
+				return 'BR';
+			case 'latam':
+				return 'LATAM';
+			case 'mena':
+				return 'MENA';
+			default:
+				return '';
+		}
+	}
 </script>
 
 <Panel id="narrative" title="Narrative Tracker" {loading} {error}>
@@ -47,6 +104,47 @@
 		<div class="empty-state">Insufficient data for narrative analysis</div>
 	{:else if analysis}
 		<div class="narrative-content">
+			{#if analysis.trendingNarratives.length > 0}
+				<div class="section">
+					<div class="section-title">Trending Narratives</div>
+					{#each analysis.trendingNarratives.slice(0, 6) as narrative}
+						<div class="trending-item">
+							<div class="trending-header">
+								<span class="trending-name">
+									{narrative.name}
+									{#if narrative.region && narrative.region !== 'global'}
+										<span class="region-tag">{getRegionLabel(narrative.region)}</span>
+									{/if}
+								</span>
+								<div class="trending-indicators">
+									<span
+										class="momentum-indicator {getMomentumClass(narrative.momentum)}"
+										title="Momentum: {narrative.momentum}"
+									>
+										{getMomentumIcon(narrative.momentum)}
+									</span>
+									<span
+										class="sentiment-indicator {getSentimentClass(narrative.sentiment)}"
+										title="Sentiment: {narrative.sentiment}"
+									>
+										{getSentimentIndicator(narrative.sentiment)}
+									</span>
+								</div>
+							</div>
+							<div class="trending-meta">
+								<span class="mention-count">{narrative.count} mentions</span>
+								<span class="category-tag">{narrative.category}</span>
+							</div>
+							{#if narrative.sources.length > 0}
+								<div class="trending-sources">
+									{narrative.sources.slice(0, 3).join(' · ')}
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			{#if analysis.emergingFringe.length > 0}
 				<div class="section">
 					<div class="section-title">Emerging Fringe</div>
@@ -123,8 +221,13 @@
 				</div>
 			{/if}
 
-			{#if analysis.emergingFringe.length === 0 && analysis.fringeToMainstream.length === 0}
-				<div class="empty-state">No significant narratives detected</div>
+			{#if analysis.trendingNarratives.length === 0 && analysis.emergingFringe.length === 0 && analysis.fringeToMainstream.length === 0}
+				<div class="empty-state">
+					No significant narratives detected in current data.
+					{#if news.length < 50}
+						<br /><span class="hint">Try refreshing to load more articles.</span>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	{:else}
@@ -158,6 +261,113 @@
 		margin-bottom: 0.4rem;
 	}
 
+	/* Trending narratives styles */
+	.trending-item {
+		padding: 0.4rem 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.trending-item:last-child {
+		border-bottom: none;
+	}
+
+	.trending-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.2rem;
+	}
+
+	.trending-name {
+		font-size: 0.65rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.region-tag {
+		font-size: 0.5rem;
+		padding: 0.1rem 0.25rem;
+		background: rgba(99, 102, 241, 0.2);
+		color: var(--accent);
+		border-radius: 2px;
+		font-weight: 600;
+	}
+
+	.trending-indicators {
+		display: flex;
+		gap: 0.35rem;
+		align-items: center;
+	}
+
+	.momentum-indicator {
+		font-size: 0.6rem;
+		font-weight: bold;
+		width: 1rem;
+		text-align: center;
+	}
+
+	.momentum-rising {
+		color: var(--success);
+	}
+
+	.momentum-falling {
+		color: var(--danger);
+	}
+
+	.momentum-stable {
+		color: var(--text-muted);
+	}
+
+	.sentiment-indicator {
+		font-size: 0.6rem;
+		font-weight: bold;
+		width: 0.8rem;
+		height: 0.8rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 2px;
+	}
+
+	.sentiment-positive {
+		background: rgba(34, 197, 94, 0.2);
+		color: var(--success);
+	}
+
+	.sentiment-negative {
+		background: rgba(239, 68, 68, 0.2);
+		color: var(--danger);
+	}
+
+	.sentiment-neutral {
+		background: rgba(255, 255, 255, 0.1);
+		color: var(--text-muted);
+	}
+
+	.trending-meta {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 0.15rem;
+	}
+
+	.category-tag {
+		font-size: 0.5rem;
+		padding: 0.1rem 0.2rem;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 2px;
+		color: var(--text-muted);
+	}
+
+	.trending-sources {
+		font-size: 0.5rem;
+		color: var(--text-muted);
+	}
+
+	/* Original narrative styles */
 	.narrative-item {
 		padding: 0.4rem 0;
 		border-bottom: 1px solid var(--border);
@@ -286,5 +496,10 @@
 		color: var(--text-secondary);
 		font-size: 0.7rem;
 		padding: 1rem;
+	}
+
+	.hint {
+		font-size: 0.6rem;
+		color: var(--text-muted);
 	}
 </style>

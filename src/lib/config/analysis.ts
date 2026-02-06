@@ -8,6 +8,194 @@ export interface CorrelationTopic {
 	category: string;
 }
 
+// Source credibility weights for weighted scoring
+export const SOURCE_WEIGHTS: Record<string, number> = {
+	// Tier 1: Major wire services (weight: 1.5)
+	reuters: 1.5,
+	ap: 1.5,
+	afp: 1.5,
+
+	// Tier 2: Major outlets (weight: 1.2)
+	bbc: 1.2,
+	nytimes: 1.2,
+	wsj: 1.2,
+	wapo: 1.2,
+	guardian: 1.2,
+	cnn: 1.2,
+	ft: 1.2,
+	economist: 1.2,
+
+	// Tier 3: Standard outlets (weight: 1.0) - default
+	// All unlisted sources get 1.0
+
+	// Tier 4: Partisan/tabloid (weight: 0.7)
+	breitbart: 0.7,
+	dailymail: 0.7,
+	nypost: 0.7,
+
+	// Tier 5: Fringe (weight: 0.4)
+	zerohedge: 0.4,
+	infowars: 0.4,
+	naturalnews: 0.4
+};
+
+export function getSourceWeight(source: string): number {
+	const normalized = source.toLowerCase().replace(/[^a-z]/g, '');
+	for (const [key, weight] of Object.entries(SOURCE_WEIGHTS)) {
+		if (normalized.includes(key)) return weight;
+	}
+	return 1.0; // Default weight
+}
+
+// Compound patterns for cross-topic correlation detection
+export interface CompoundPattern {
+	id: string;
+	topics: string[]; // Topic IDs that must co-occur
+	minTopics: number; // Minimum topics required (default: all)
+	name: string;
+	prediction: string;
+	boostFactor: number; // Score multiplier when detected
+}
+
+export const COMPOUND_PATTERNS: CompoundPattern[] = [
+	{
+		id: 'trade-war-escalation',
+		topics: ['tariffs', 'china-tensions'],
+		minTopics: 2,
+		name: 'Trade War Escalation',
+		prediction: 'Expect market volatility and supply chain disruption',
+		boostFactor: 1.5
+	},
+	{
+		id: 'stagflation-risk',
+		topics: ['inflation', 'fed-rates', 'layoffs'],
+		minTopics: 2,
+		name: 'Stagflation Risk',
+		prediction: 'Economic headwinds combining - defensive positioning advised',
+		boostFactor: 1.8
+	},
+	{
+		id: 'geopolitical-crisis',
+		topics: ['russia-ukraine', 'israel-gaza', 'china-tensions'],
+		minTopics: 2,
+		name: 'Multi-Front Geopolitical Crisis',
+		prediction: 'Multiple conflict zones active - risk-off sentiment likely',
+		boostFactor: 2.0
+	},
+	{
+		id: 'tech-regulatory-storm',
+		topics: ['ai-regulation', 'big-tech', 'crypto'],
+		minTopics: 2,
+		name: 'Tech Regulatory Storm',
+		prediction: 'Coordinated regulatory action may impact tech sector',
+		boostFactor: 1.4
+	},
+	{
+		id: 'financial-stress',
+		topics: ['bank-crisis', 'fed-rates', 'housing'],
+		minTopics: 2,
+		name: 'Financial Sector Stress',
+		prediction: 'Banking sector under pressure - monitor closely',
+		boostFactor: 1.7
+	},
+
+	// Geopolitical/Security
+	{
+		id: 'nuclear-escalation',
+		topics: ['russia-ukraine', 'iran', 'nuclear'],
+		minTopics: 2,
+		name: 'Nuclear Escalation',
+		prediction: 'Heightened nuclear rhetoric - extreme risk-off likely',
+		boostFactor: 2.5
+	},
+	{
+		id: 'middle-east-escalation',
+		topics: ['israel-gaza', 'iran'],
+		minTopics: 2,
+		name: 'Middle East Escalation',
+		prediction: 'Regional conflict expansion risk',
+		boostFactor: 1.8
+	},
+	{
+		id: 'energy-supply-shock',
+		topics: ['russia-ukraine', 'iran', 'supply-chain'],
+		minTopics: 2,
+		name: 'Energy Supply Shock',
+		prediction: 'Energy price spikes and supply disruption expected',
+		boostFactor: 1.7
+	},
+
+	// Economic
+	{
+		id: 'recession-signal',
+		topics: ['layoffs', 'housing', 'fed-rates'],
+		minTopics: 2,
+		name: 'Recession Signal',
+		prediction: 'Classic recession indicators aligning',
+		boostFactor: 1.9
+	},
+	{
+		id: 'inflation-spiral',
+		topics: ['inflation', 'supply-chain', 'climate'],
+		minTopics: 2,
+		name: 'Inflation Spiral',
+		prediction: 'Multiple inflation drivers converging',
+		boostFactor: 1.6
+	},
+	{
+		id: 'dollar-stress',
+		topics: ['fed-rates', 'crypto', 'china-tensions'],
+		minTopics: 2,
+		name: 'Dollar Stress',
+		prediction: 'Currency instability concerns rising',
+		boostFactor: 1.5
+	},
+
+	// Tech/AI
+	{
+		id: 'ai-disruption-wave',
+		topics: ['ai-regulation', 'layoffs', 'big-tech'],
+		minTopics: 2,
+		name: 'AI Disruption Wave',
+		prediction: 'AI-driven workforce disruption accelerating',
+		boostFactor: 1.6
+	},
+	{
+		id: 'disinfo-storm',
+		topics: ['deepfake', 'election', 'ai-regulation'],
+		minTopics: 2,
+		name: 'Disinfo Storm',
+		prediction: 'AI-generated misinformation concerns surging',
+		boostFactor: 1.7
+	},
+
+	// Crisis Combinations
+	{
+		id: 'pandemic-redux',
+		topics: ['pandemic', 'supply-chain', 'inflation'],
+		minTopics: 2,
+		name: 'Pandemic Redux',
+		prediction: 'Health crisis with economic spillover',
+		boostFactor: 2.0
+	},
+	{
+		id: 'climate-shock',
+		topics: ['climate', 'supply-chain', 'inflation'],
+		minTopics: 2,
+		name: 'Climate Shock',
+		prediction: 'Weather events disrupting economy',
+		boostFactor: 1.6
+	},
+	{
+		id: 'social-pressure',
+		topics: ['inflation', 'layoffs', 'immigration', 'election'],
+		minTopics: 3,
+		name: 'Social Pressure',
+		prediction: 'Economic stress combining with political flashpoints',
+		boostFactor: 1.8
+	}
+];
+
 export interface NarrativePattern {
 	id: string;
 	keywords: string[];
@@ -223,6 +411,216 @@ export const NARRATIVE_PATTERNS: NarrativePattern[] = [
 	}
 ];
 
+// Mainstream narrative patterns with regex for better matching
+export interface MainstreamNarrativePattern {
+	id: string;
+	name: string;
+	patterns: RegExp[];
+	category: string;
+	region?: 'global' | 'brazil' | 'latam' | 'mena';
+}
+
+export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
+	// === GLOBAL ECONOMIC ===
+	{
+		id: 'soft-landing',
+		name: 'Soft Landing',
+		patterns: [/soft landing/i, /goldilocks/i, /soft[\s-]?landing/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'recession-fears',
+		name: 'Recession Fears',
+		patterns: [/recession.{0,20}(risk|fear|warn|loom|threat)/i, /fear.{0,10}recession/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'rate-pivot',
+		name: 'Fed Pivot',
+		patterns: [/rate cut/i, /fed pivot/i, /dovish/i, /hawkish/i, /fed.{0,10}(pause|hold)/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'china-decoupling',
+		name: 'China Decoupling',
+		patterns: [/decouple/i, /chip ban/i, /tech war/i, /decoupling/i, /china.{0,20}restrict/i],
+		category: 'Geopolitics',
+		region: 'global'
+	},
+
+	// === TECH/AI ===
+	{
+		id: 'ai-hype',
+		name: 'AI Hype Cycle',
+		patterns: [
+			/ai revolution/i,
+			/generative ai/i,
+			/ai boom/i,
+			/ai gold rush/i,
+			/chatgpt/i,
+			/ai transform/i
+		],
+		category: 'Tech',
+		region: 'global'
+	},
+	{
+		id: 'ai-regulation',
+		name: 'AI Regulation Push',
+		patterns: [/ai.{0,20}(regulation|law|ban|rule|govern)/i, /regulat.{0,10}ai/i, /ai act/i],
+		category: 'Tech',
+		region: 'global'
+	},
+	{
+		id: 'tech-layoffs',
+		name: 'Tech Layoffs Wave',
+		patterns: [/layoff/i, /job cut/i, /workforce reduction/i, /downsiz/i, /let go.{0,10}employee/i],
+		category: 'Business',
+		region: 'global'
+	},
+
+	// === POLITICAL ===
+	{
+		id: 'election-coverage',
+		name: 'Election Coverage',
+		patterns: [/election/i, /campaign/i, /polling/i, /ballot/i, /candidate/i, /vote.{0,5}count/i],
+		category: 'Politics',
+		region: 'global'
+	},
+
+	// === BRAZIL ===
+	{
+		id: 'lula-government',
+		name: 'Lula Government',
+		patterns: [/lula/i, /planalto/i, /pt.{0,10}governo/i, /governo federal/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+	{
+		id: 'bolsonaro-factor',
+		name: 'Bolsonaro Factor',
+		patterns: [/bolsonaro/i, /jan(eiro)?\s*8/i, /8 de janeiro/i, /inelegib/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+	{
+		id: 'selic-rates',
+		name: 'Selic Policy',
+		patterns: [/selic/i, /banco central/i, /copom/i, /taxa de juros/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'real-pressure',
+		name: 'Real Currency',
+		patterns: [/dolar.{0,10}real/i, /cambio/i, /desvaloriza/i, /real.{0,10}dolar/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'fiscal-framework',
+		name: 'Fiscal Framework',
+		patterns: [/arcabou[cç]o fiscal/i, /teto de gastos/i, /meta fiscal/i, /d[ée]ficit/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'amazon-watch',
+		name: 'Amazon Watch',
+		patterns: [/amaz[oô]nia/i, /desmatamento/i, /ibama/i, /floresta/i, /queimada/i],
+		category: 'Environment',
+		region: 'brazil'
+	},
+	{
+		id: 'brics-brazil',
+		name: 'BRICS Brazil',
+		patterns: [/brics/i, /c[úu]pula/i, /sul.{0,5}sul/i, /novo banco/i],
+		category: 'Geopolitics',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-crime',
+		name: 'Organized Crime',
+		patterns: [/pcc/i, /fac[çc][ãa]o/i, /mil[ií]cia/i, /seguran[çc]a p[úu]blica/i, /crime organizado/i],
+		category: 'Security',
+		region: 'brazil'
+	},
+	{
+		id: 'military-smear',
+		name: 'Armed Forces Smear',
+		patterns: [
+			/ex[ée]rcito.{0,15}(ataque|cr[ií]tica|pol[eê]mica)/i,
+			/for[çc]as armadas.{0,15}cr[ií]tica/i,
+			/generais.{0,15}pol[eê]mic/i,
+			/militares.{0,15}investigad/i
+		],
+		category: 'Politics',
+		region: 'brazil'
+	},
+
+	// === LATIN AMERICA ===
+	{
+		id: 'argentina-milei',
+		name: 'Milei Argentina',
+		patterns: [/milei/i, /argentina.{0,15}econom/i, /peso argentino/i, /libertad avanza/i],
+		category: 'Politics',
+		region: 'latam'
+	},
+	{
+		id: 'argentina-crisis',
+		name: 'Argentina Crisis',
+		patterns: [/inflaci[oó]n argentina/i, /crisis argentina/i, /fmi.{0,10}argentina/i, /cepo/i],
+		category: 'Economy',
+		region: 'latam'
+	},
+	{
+		id: 'mexico-amlo',
+		name: 'AMLO/Sheinbaum',
+		patterns: [/amlo/i, /sheinbaum/i, /morena/i, /mexico.{0,10}gobierno/i, /lópez obrador/i],
+		category: 'Politics',
+		region: 'latam'
+	},
+	{
+		id: 'mexico-cartel',
+		name: 'Mexico Cartel Violence',
+		patterns: [/cartel/i, /narco/i, /sinaloa/i, /violencia.{0,10}mexico/i, /cjng/i],
+		category: 'Security',
+		region: 'latam'
+	},
+	{
+		id: 'venezuela-crisis',
+		name: 'Venezuela Crisis',
+		patterns: [/maduro/i, /venezuela.{0,15}crisis/i, /oposici[oó]n venezolana/i, /guaid[oó]/i],
+		category: 'Politics',
+		region: 'latam'
+	},
+	{
+		id: 'latam-china',
+		name: 'China in LatAm',
+		patterns: [
+			/china.{0,15}am[eé]rica latina/i,
+			/inversi[oó]n china/i,
+			/belt and road.{0,10}latam/i,
+			/china.{0,10}infraestruct/i
+		],
+		category: 'Geopolitics',
+		region: 'latam'
+	},
+	{
+		id: 'latam-us',
+		name: 'US-LatAm Relations',
+		patterns: [
+			/estados unidos.{0,15}am[eé]rica latina/i,
+			/washington.{0,10}regi[oó]n/i,
+			/us.{0,10}latin america/i
+		],
+		category: 'Geopolitics',
+		region: 'latam'
+	}
+];
+
 export const SOURCE_TYPES: SourceTypes = {
 	fringe: [
 		'zerohedge',
@@ -236,8 +634,11 @@ export const SOURCE_TYPES: SourceTypes = {
 	],
 	alternative: ['substack', 'rumble', 'bitchute', 'telegram', 'gab', 'gettr', 'truth social'],
 	mainstream: [
+		// Wire services
 		'reuters',
 		'ap news',
+		'afp',
+		// Major international
 		'bbc',
 		'cnn',
 		'nytimes',
@@ -247,7 +648,76 @@ export const SOURCE_TYPES: SourceTypes = {
 		'abc',
 		'nbc',
 		'cbs',
-		'fox'
+		'fox',
+		'al jazeera',
+		'economist',
+		'npr',
+		// Business/Finance
+		'bloomberg',
+		'cnbc',
+		'marketwatch',
+		'financial times',
+		'ft.com',
+		'yahoo finance',
+		'investing.com',
+		// Politics
+		'politico',
+		'foreign affairs',
+		'foreign policy',
+		// Tech
+		'hacker news',
+		'ars technica',
+		'verge',
+		'mit tech',
+		'openai',
+		'arxiv',
+		// Intel/Defense
+		'defense one',
+		'breaking defense',
+		'war on the rocks',
+		'defense news',
+		'war zone',
+		'realcleardefense',
+		'csis',
+		'bellingcat',
+		'chatham house',
+		'iiss',
+		'military.com',
+		'cfr',
+		'brookings',
+		'diplomat',
+		'al-monitor',
+		// Brazil
+		'g1',
+		'globo',
+		'folha',
+		'cnn brasil',
+		'gazeta do povo',
+		'poder360',
+		'agencia brasil',
+		'infomoney',
+		'valor',
+		'defesanet',
+		'zona militar',
+		// Latin America
+		'americas quarterly',
+		'el pais',
+		'infobae',
+		'caracas chronicles',
+		'el nacional',
+		'venezuelanalysis',
+		// Middle East
+		'tehran times',
+		'radio farda',
+		'mehr news',
+		'isna',
+		'ifp news',
+		'iranwire',
+		// Arctic
+		'arctic today',
+		'high north news',
+		'arctic institute',
+		'arctic council'
 	]
 };
 

@@ -3,7 +3,19 @@
 /**
  * News feed category
  */
-export type NewsCategory = 'politics' | 'tech' | 'finance' | 'gov' | 'ai' | 'intel' | 'brazil' | 'latam' | 'iran' | 'venezuela' | 'greenland';
+export type NewsCategory =
+	| 'politics'
+	| 'tech'
+	| 'finance'
+	| 'gov'
+	| 'ai'
+	| 'intel'
+	| 'brazil'
+	| 'latam'
+	| 'iran'
+	| 'venezuela'
+	| 'greenland'
+	| 'fringe';
 
 /**
  * A news item from any source (RSS, GDELT, etc.)

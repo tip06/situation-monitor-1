@@ -91,7 +91,15 @@ export {
 } from './tabs';
 
 // API configuration
-export { CORS_PROXY_URL, API_DELAYS, CACHE_TTLS, DEBUG, logger, FINNHUB_API_KEY, FINNHUB_BASE_URL } from './api';
+export {
+	CORS_PROXY_URL,
+	API_DELAYS,
+	CACHE_TTLS,
+	DEBUG,
+	logger,
+	FINNHUB_API_KEY,
+	FINNHUB_BASE_URL
+} from './api';
 
 // World leaders configuration
 export { WORLD_LEADERS } from './leaders';

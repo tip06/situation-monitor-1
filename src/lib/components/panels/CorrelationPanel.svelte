@@ -16,6 +16,7 @@
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (level) {
 			case 'high':
+			case 'critical':
 				return 'danger';
 			case 'elevated':
 				return 'warning';
@@ -39,10 +40,8 @@
 		}
 	}
 
-	function getDirectionArrow(delta: number): string {
-		if (delta > 0) return '↑';
-		if (delta < 0) return '↓';
-		return '→';
+	function formatTopicName(id: string): string {
+		return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	}
 </script>
 
@@ -51,6 +50,27 @@
 		<div class="empty-state">Insufficient data for analysis</div>
 	{:else if analysis}
 		<div class="correlation-content">
+			{#if analysis.compoundSignals.length > 0}
+				<div class="section">
+					<div class="section-title">Compound Signals</div>
+					{#each analysis.compoundSignals.slice(0, 2) as signal}
+						<div class="compound-item" class:critical={signal.level === 'critical'}>
+							<div class="compound-header">
+								<span class="compound-name">{signal.name}</span>
+								<Badge
+									text={signal.level.toUpperCase()}
+									variant={signal.level === 'critical' ? 'danger' : 'warning'}
+								/>
+							</div>
+							<div class="compound-topics">
+								{signal.activeTopics.map((t) => formatTopicName(t)).join(' + ')}
+							</div>
+							<div class="compound-prediction">{signal.prediction}</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
 			{#if analysis.emergingPatterns.length > 0}
 				<div class="section">
 					<div class="section-title">Emerging Patterns</div>
@@ -65,6 +85,11 @@
 							</div>
 							<div class="pattern-sources">
 								{pattern.sources.slice(0, 3).join(' · ')} ({pattern.count} items)
+								{#if pattern.zScore > 1}
+									<span class="z-score" class:high={pattern.zScore >= 2}>
+										z={pattern.zScore.toFixed(1)}
+									</span>
+								{/if}
 							</div>
 						</div>
 					{/each}
@@ -82,8 +107,15 @@
 								class:up={signal.delta > 0}
 								class:down={signal.delta < 0}
 							>
-								{getDirectionArrow(signal.delta)}
+								{#if signal.velocity > 0}
+									<span class="velocity-indicator">↗</span>
+								{:else}
+									<span class="velocity-indicator">→</span>
+								{/if}
 								{signal.current}
+								{#if signal.acceleration > 0}
+									<span class="accel-indicator">++</span>
+								{/if}
 							</span>
 						</div>
 					{/each}
@@ -111,14 +143,14 @@
 						<div class="predictive-item">
 							<div class="predictive-pattern">{signal.prediction}</div>
 							<div class="predictive-confidence">
-								Confidence: {Math.round(signal.confidence * 100)}%
+								Confidence: {Math.round(signal.confidence)}%
 							</div>
 						</div>
 					{/each}
 				</div>
 			{/if}
 
-			{#if analysis.emergingPatterns.length === 0 && analysis.momentumSignals.length === 0}
+			{#if analysis.emergingPatterns.length === 0 && analysis.momentumSignals.length === 0 && analysis.compoundSignals.length === 0}
 				<div class="empty-state">No significant patterns detected</div>
 			{/if}
 		</div>
@@ -153,6 +185,44 @@
 		margin-bottom: 0.4rem;
 	}
 
+	.compound-item {
+		padding: 0.4rem;
+		margin: 0.25rem 0;
+		border-radius: 4px;
+		background: rgba(255, 165, 0, 0.05);
+		border-left: 2px solid var(--warning);
+	}
+
+	.compound-item.critical {
+		background: rgba(255, 100, 100, 0.08);
+		border-left-color: var(--danger);
+	}
+
+	.compound-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.2rem;
+	}
+
+	.compound-name {
+		font-size: 0.65rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.compound-topics {
+		font-size: 0.55rem;
+		color: var(--text-secondary);
+		margin-bottom: 0.15rem;
+	}
+
+	.compound-prediction {
+		font-size: 0.55rem;
+		color: var(--text-muted);
+		font-style: italic;
+	}
+
 	.pattern-item {
 		padding: 0.3rem 0;
 	}
@@ -173,6 +243,22 @@
 	.pattern-sources {
 		font-size: 0.55rem;
 		color: var(--text-muted);
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.z-score {
+		font-size: 0.5rem;
+		padding: 0.1rem 0.25rem;
+		border-radius: 3px;
+		background: rgba(68, 255, 136, 0.1);
+		color: var(--success);
+	}
+
+	.z-score.high {
+		background: rgba(255, 165, 0, 0.15);
+		color: var(--warning);
 	}
 
 	.signal-item {
@@ -203,6 +289,9 @@
 	.signal-direction {
 		font-size: 0.6rem;
 		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
 	}
 
 	.signal-direction.up {
@@ -211,6 +300,16 @@
 
 	.signal-direction.down {
 		color: var(--danger);
+	}
+
+	.velocity-indicator {
+		font-size: 0.55rem;
+	}
+
+	.accel-indicator {
+		font-size: 0.5rem;
+		color: var(--warning);
+		font-weight: 700;
 	}
 
 	.correlation-item {

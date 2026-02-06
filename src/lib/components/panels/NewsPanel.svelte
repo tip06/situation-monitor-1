@@ -2,7 +2,20 @@
 	import { Panel, NewsItem } from '$lib/components/common';
 	import type { NewsCategory } from '$lib/types';
 	import type { PanelId } from '$lib/config';
-	import { politicsNews, techNews, financeNews, govNews, aiNews, intelNews, brazilNews, latamNews, iranNews, venezuelaNews, greenlandNews } from '$lib/stores';
+	import {
+		politicsNews,
+		techNews,
+		financeNews,
+		govNews,
+		aiNews,
+		intelNews,
+		brazilNews,
+		latamNews,
+		iranNews,
+		venezuelaNews,
+		greenlandNews,
+		fringeNews
+	} from '$lib/stores';
 
 	interface Props {
 		category: NewsCategory;
@@ -24,14 +37,13 @@
 		latam: latamNews,
 		iran: iranNews,
 		venezuela: venezuelaNews,
-		greenland: greenlandNews
+		greenland: greenlandNews,
+		fringe: fringeNews
 	};
 
 	const categoryStore = $derived(categoryStores[category]);
 	// Sort items by timestamp (newest first)
-	const items = $derived(
-		[...$categoryStore.items].sort((a, b) => b.timestamp - a.timestamp)
-	);
+	const items = $derived([...$categoryStore.items].sort((a, b) => b.timestamp - a.timestamp));
 	const loading = $derived($categoryStore.loading);
 	const error = $derived($categoryStore.error);
 	const count = $derived(items.length);

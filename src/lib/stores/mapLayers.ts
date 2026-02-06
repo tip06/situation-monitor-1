@@ -134,8 +134,9 @@ export const showMonitors = derived(mapLayers, ($mapLayers) => $mapLayers.monito
 export const showCustomMarkers = derived(mapLayers, ($mapLayers) => $mapLayers.customMarkers);
 
 // Count of visible layers
-export const visibleLayerCount = derived(mapLayers, ($mapLayers) =>
-	Object.values($mapLayers).filter(Boolean).length
+export const visibleLayerCount = derived(
+	mapLayers,
+	($mapLayers) => Object.values($mapLayers).filter(Boolean).length
 );
 
 // Total layer count
