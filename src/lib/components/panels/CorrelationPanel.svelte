@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
+	import { Modal } from '$lib/components/modals';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
 	import type { NewsItem } from '$lib/types';
 
@@ -12,6 +13,35 @@
 	let { news = [], loading = false, error = null }: Props = $props();
 
 	const analysis = $derived(analyzeCorrelations(news));
+
+	// Modal state
+	let modalOpen = $state(false);
+	let modalTitle = $state('');
+	let modalHeadlines = $state<Array<{ title: string; link: string; source: string }>>([]);
+
+	function openHeadlines(title: string, headlines: Array<{ title: string; link: string; source: string }>) {
+		modalTitle = title;
+		modalHeadlines = headlines;
+		modalOpen = true;
+	}
+
+	function openCompoundHeadlines(signalName: string, activeTopics: string[]) {
+		if (!analysis) return;
+		const seen = new Set<string>();
+		const combined: Array<{ title: string; link: string; source: string }> = [];
+		for (const topicId of activeTopics) {
+			const stats = analysis.topicStats[topicId];
+			if (stats) {
+				for (const h of stats.headlines) {
+					if (!seen.has(h.link)) {
+						seen.add(h.link);
+						combined.push(h);
+					}
+				}
+			}
+		}
+		openHeadlines(signalName, combined);
+	}
 
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (level) {
@@ -54,7 +84,9 @@
 				<div class="section">
 					<div class="section-title">Compound Signals<InfoTooltip text="Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks" /></div>
 					{#each analysis.compoundSignals.slice(0, 2) as signal}
-						<div class="compound-item" class:critical={signal.level === 'critical'}>
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="compound-item clickable" class:critical={signal.level === 'critical'} onclick={() => openCompoundHeadlines(signal.name, signal.activeTopics)}>
 							<div class="compound-header">
 								<span class="compound-name">{signal.name}</span>
 								<Badge
@@ -75,7 +107,9 @@
 				<div class="section">
 					<div class="section-title">Emerging Patterns<InfoTooltip text="Topics with unusual mention spikes detected via z-score analysis against 7-day historical averages" /></div>
 					{#each analysis.emergingPatterns.slice(0, 3) as pattern}
-						<div class="pattern-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="pattern-item clickable" onclick={() => openHeadlines(pattern.name, pattern.headlines)}>
 							<div class="pattern-header">
 								<span class="pattern-topic">{pattern.name}</span>
 								<Badge
@@ -100,7 +134,9 @@
 				<div class="section">
 					<div class="section-title">Momentum Signals<InfoTooltip text="Topics with rising velocity and acceleration in mention frequency, showing real-time traction changes" /></div>
 					{#each analysis.momentumSignals.slice(0, 3) as signal}
-						<div class="signal-item {getMomentumClass(signal.momentum)}">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="signal-item clickable {getMomentumClass(signal.momentum)}" onclick={() => openHeadlines(signal.name, signal.headlines)}>
 							<span class="signal-topic">{signal.name}</span>
 							<span
 								class="signal-direction"
@@ -126,7 +162,9 @@
 				<div class="section">
 					<div class="section-title">Cross-Source Links<InfoTooltip text="Topics receiving independent coverage from 3+ news sources, indicating broad awareness and credibility" /></div>
 					{#each analysis.crossSourceCorrelations.slice(0, 3) as corr}
-						<div class="correlation-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="correlation-item clickable" onclick={() => openHeadlines(corr.name, corr.headlines)}>
 							<div class="correlation-sources">
 								{corr.sources.slice(0, 2).join(' ↔ ')}
 							</div>
@@ -140,7 +178,9 @@
 				<div class="section">
 					<div class="section-title">Predictive Signals<InfoTooltip text="AI-generated outcome predictions based on weighted scoring of source credibility, multi-source confirmation, and statistical significance" /></div>
 					{#each analysis.predictiveSignals.slice(0, 2) as signal}
-						<div class="predictive-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="predictive-item clickable" onclick={() => openHeadlines(signal.name, signal.headlines)}>
 							<div class="predictive-pattern">{signal.prediction}</div>
 							<div class="predictive-confidence">
 								Confidence: {Math.round(signal.confidence)}%
@@ -158,6 +198,21 @@
 		<div class="empty-state">No significant patterns detected</div>
 	{/if}
 </Panel>
+
+<Modal open={modalOpen} title={modalTitle} onClose={() => (modalOpen = false)}>
+	{#if modalHeadlines.length > 0}
+		<div class="headlines-list">
+			{#each modalHeadlines as headline}
+				<div class="headline-item">
+					<span class="headline-source">{headline.source}</span>
+					<a href={headline.link} target="_blank" rel="noopener noreferrer" class="headline-link">{headline.title}</a>
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<p class="empty-state">No headlines available for this pattern.</p>
+	{/if}
+</Modal>
 
 <style>
 	.correlation-content {
@@ -347,5 +402,50 @@
 		color: var(--text-secondary);
 		font-size: 0.7rem;
 		padding: 1rem;
+	}
+
+	.clickable {
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.clickable:hover {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	.headlines-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.headline-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 0.5rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.03);
+		border-left: 2px solid var(--accent);
+	}
+
+	.headline-source {
+		font-size: 0.6rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+
+	.headline-link {
+		font-size: 0.75rem;
+		color: var(--text-primary);
+		text-decoration: none;
+		line-height: 1.4;
+	}
+
+	.headline-link:hover {
+		color: var(--accent);
+		text-decoration: underline;
 	}
 </style>

@@ -83,6 +83,7 @@ export interface CorrelationResults {
 	crossSourceCorrelations: CrossSourceCorrelation[];
 	predictiveSignals: PredictiveSignal[];
 	compoundSignals: CompoundSignal[];
+	topicStats: Record<string, TopicStats>;
 }
 
 // Topic history for momentum analysis (in-memory)
@@ -293,7 +294,8 @@ export function analyzeCorrelations(allNews: NewsItem[]): CorrelationResults | n
 		momentumSignals: [],
 		crossSourceCorrelations: [],
 		predictiveSignals: [],
-		compoundSignals: []
+		compoundSignals: [],
+		topicStats: {}
 	};
 
 	// Track topic statistics
@@ -462,6 +464,9 @@ export function analyzeCorrelations(allNews: NewsItem[]): CorrelationResults | n
 
 	// Detect compound patterns
 	results.compoundSignals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+
+	// Expose topicStats for headline lookups
+	results.topicStats = topicStats;
 
 	// Sort results
 	results.emergingPatterns.sort((a, b) => b.weightedCount - a.weightedCount);

@@ -73,6 +73,8 @@ Unique business logic for intelligence analysis:
 - Entity prominence calculation ("main character" analysis)
 - All use configurable regex patterns from `src/lib/config/analysis.ts`
 
+**Compound signals** are predefined in `src/lib/config/analysis.ts` and evaluated by the logic in `src/lib/analysis/correlation.ts`.
+
 ### Configuration-Driven Design (`src/lib/config/`)
 
 - `feeds.ts`: 30+ RSS sources across 6 categories (politics, tech, finance, gov, ai, intel)
@@ -95,7 +97,8 @@ Unique business logic for intelligence analysis:
 ## TODO
 
 - Filter news feeds by tags or keywords.
-- The Polymarket section should occupy the whole width of the page. We will organize a first row  Polymarket should show 20 results when "all" tab is toggled on. When focusing on one specific category, show the top 10 for each. Keep the sorting by vol, % and 24h change.
+- The Polymarket section should occupy the whole width of the page. We will organize a first row with the three major geopolitical markets (highest volume). These three should be displayed as a "speedometer" (in the case of a yes/no market) or a pie (in case of multiple options, such as elections). Refer to https://polymarket.com/dashboards/macro for a better idea. In the second row, let's organize feeds for the existing categories (politics, geopolitics, tech, finance and elections). Refer to https://polymarket.com/politics for a layout idea. The difference is going to be that each column displays one specific category. You will show the top 10 markets, ordered by 24-hour volume. However, the box should only display 5, and apply the scrollbar mechanism to show more. In the third row, you will display a box similar to what we have now, showing top markets for categories with the option to filter them. This should show 20 results when "all" tab is toggled on. When focusing on one specific category, show the top 10 for each. Keep the sorting by vol, % and 24h change.
+- Solve 10 cache test failures.
 
 ## General Guidance
 
