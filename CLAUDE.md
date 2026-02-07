@@ -95,7 +95,7 @@ Unique business logic for intelligence analysis:
 ## TODO
 
 - Filter news feeds by tags or keywords.
-- Polymarket should show 20 results when "all" tab is toggled on. When focusing on one specific category, show the top 10 for each. Keep the sorting by vol, % and 24h change.
+- The Polymarket section should occupy the whole width of the page. We will organize a first row  Polymarket should show 20 results when "all" tab is toggled on. When focusing on one specific category, show the top 10 for each. Keep the sorting by vol, % and 24h change.
 
 ## General Guidance
 

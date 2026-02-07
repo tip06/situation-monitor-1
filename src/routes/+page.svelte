@@ -8,7 +8,6 @@
 		HeatmapPanel,
 		CommoditiesPanel,
 		CryptoPanel,
-		MainCharPanel,
 		CorrelationPanel,
 		NarrativePanel,
 		MonitorsPanel,
@@ -320,25 +319,21 @@
 					{/if}
 				</div>
 			{:else if $activeTab === 'social'}
-				<!-- Social Tab: Standard columns layout -->
-				<div class="columns-layout">
-					{#if isPanelVisible('mainchar')}
-						<div class="panel-slot">
-							<MainCharPanel />
-						</div>
-					{/if}
+				<!-- Trends and Analysis Tab: 2-row layout -->
+				<div class="analysis-layout">
+					<div class="analysis-row">
+						{#if isPanelVisible('correlation')}
+							<div class="panel-slot">
+								<CorrelationPanel news={$allNewsItems} />
+							</div>
+						{/if}
 
-					{#if isPanelVisible('correlation')}
-						<div class="panel-slot">
-							<CorrelationPanel news={$allNewsItems} />
-						</div>
-					{/if}
-
-					{#if isPanelVisible('narrative')}
-						<div class="panel-slot">
-							<NarrativePanel news={$allNewsItems} />
-						</div>
-					{/if}
+						{#if isPanelVisible('narrative')}
+							<div class="panel-slot">
+								<NarrativePanel news={$allNewsItems} />
+							</div>
+						{/if}
+					</div>
 
 					{#if isPanelVisible('polymarket')}
 						<div class="panel-slot">
@@ -438,6 +433,21 @@
 		grid-column: span 2;
 	}
 
+	/* Trends and Analysis tab layout */
+	.analysis-layout {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.analysis-row {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+		width: 100%;
+	}
+
 	@media (max-width: 1024px) {
 		.grid-row {
 			grid-template-columns: repeat(2, 1fr);
@@ -463,6 +473,10 @@
 
 		.panel-wide {
 			grid-column: span 1;
+		}
+
+		.analysis-row {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

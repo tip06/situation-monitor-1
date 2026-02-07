@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Panel, Badge } from '$lib/components/common';
+	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
 	import type { NewsItem } from '$lib/types';
 
@@ -52,7 +52,7 @@
 		<div class="correlation-content">
 			{#if analysis.compoundSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Compound Signals</div>
+					<div class="section-title">Compound Signals<InfoTooltip text="Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks" /></div>
 					{#each analysis.compoundSignals.slice(0, 2) as signal}
 						<div class="compound-item" class:critical={signal.level === 'critical'}>
 							<div class="compound-header">
@@ -73,7 +73,7 @@
 
 			{#if analysis.emergingPatterns.length > 0}
 				<div class="section">
-					<div class="section-title">Emerging Patterns</div>
+					<div class="section-title">Emerging Patterns<InfoTooltip text="Topics with unusual mention spikes detected via z-score analysis against 7-day historical averages" /></div>
 					{#each analysis.emergingPatterns.slice(0, 3) as pattern}
 						<div class="pattern-item">
 							<div class="pattern-header">
@@ -98,7 +98,7 @@
 
 			{#if analysis.momentumSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Momentum Signals</div>
+					<div class="section-title">Momentum Signals<InfoTooltip text="Topics with rising velocity and acceleration in mention frequency, showing real-time traction changes" /></div>
 					{#each analysis.momentumSignals.slice(0, 3) as signal}
 						<div class="signal-item {getMomentumClass(signal.momentum)}">
 							<span class="signal-topic">{signal.name}</span>
@@ -124,7 +124,7 @@
 
 			{#if analysis.crossSourceCorrelations.length > 0}
 				<div class="section">
-					<div class="section-title">Cross-Source Links</div>
+					<div class="section-title">Cross-Source Links<InfoTooltip text="Topics receiving independent coverage from 3+ news sources, indicating broad awareness and credibility" /></div>
 					{#each analysis.crossSourceCorrelations.slice(0, 3) as corr}
 						<div class="correlation-item">
 							<div class="correlation-sources">
@@ -138,7 +138,7 @@
 
 			{#if analysis.predictiveSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Predictive Signals</div>
+					<div class="section-title">Predictive Signals<InfoTooltip text="AI-generated outcome predictions based on weighted scoring of source credibility, multi-source confirmation, and statistical significance" /></div>
 					{#each analysis.predictiveSignals.slice(0, 2) as signal}
 						<div class="predictive-item">
 							<div class="predictive-pattern">{signal.prediction}</div>
@@ -177,6 +177,8 @@
 	}
 
 	.section-title {
+		display: flex;
+		align-items: center;
 		font-size: 0.6rem;
 		font-weight: 600;
 		color: var(--accent);
