@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
+	import { Modal } from '$lib/components/modals';
 	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
 
@@ -12,6 +13,17 @@
 	let { news = [], loading = false, error = null }: Props = $props();
 
 	const analysis = $derived(analyzeNarratives(news));
+
+	// Modal state
+	let modalOpen = $state(false);
+	let modalTitle = $state('');
+	let modalHeadlines = $state<NewsItem[]>([]);
+
+	function openHeadlines(title: string, headlines: NewsItem[]) {
+		modalTitle = title;
+		modalHeadlines = headlines;
+		modalOpen = true;
+	}
 
 	function getStatusVariant(status: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (status) {
@@ -108,7 +120,9 @@
 				<div class="section">
 					<div class="section-title">Trending Narratives</div>
 					{#each analysis.trendingNarratives.slice(0, 6) as narrative}
-						<div class="trending-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="trending-item clickable" onclick={() => openHeadlines(narrative.name, narrative.headlines)}>
 							<div class="trending-header">
 								<span class="trending-name">
 									{narrative.name}
@@ -149,7 +163,9 @@
 				<div class="section">
 					<div class="section-title">Emerging Fringe</div>
 					{#each analysis.emergingFringe.slice(0, 4) as narrative}
-						<div class="narrative-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="narrative-item clickable" onclick={() => openHeadlines(narrative.name, narrative.headlines)}>
 							<div class="narrative-header">
 								<span class="narrative-name">{narrative.name}</span>
 								<Badge
@@ -174,7 +190,9 @@
 				<div class="section">
 					<div class="section-title">Fringe → Mainstream Crossovers</div>
 					{#each analysis.fringeToMainstream.slice(0, 3) as crossover}
-						<div class="crossover-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="crossover-item clickable" onclick={() => openHeadlines(crossover.name, crossover.headlines)}>
 							<div class="crossover-narrative">{crossover.name}</div>
 							<div class="crossover-path">
 								<span class="from">Fringe ({crossover.fringeCount})</span>
@@ -194,7 +212,9 @@
 					<div class="section-title">Narrative Watch</div>
 					<div class="themes-grid">
 						{#each analysis.narrativeWatch.slice(0, 6) as narrative}
-							<div class="theme-tag">
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="theme-tag clickable" onclick={() => openHeadlines(narrative.name, narrative.headlines)}>
 								{narrative.name}
 								<span class="theme-count">{narrative.count}</span>
 							</div>
@@ -207,7 +227,9 @@
 				<div class="section">
 					<div class="section-title">Disinfo Signals</div>
 					{#each analysis.disinfoSignals.slice(0, 3) as signal}
-						<div class="disinfo-item">
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="disinfo-item clickable" onclick={() => openHeadlines(signal.name, signal.headlines)}>
 							<div class="disinfo-header">
 								<span class="disinfo-name">{signal.name}</span>
 								<Badge
@@ -234,6 +256,24 @@
 		<div class="empty-state">No significant narratives detected</div>
 	{/if}
 </Panel>
+
+<Modal open={modalOpen} title={modalTitle} onClose={() => (modalOpen = false)}>
+	{#if modalHeadlines.length > 0}
+		<div class="headlines-list">
+			{#each modalHeadlines as headline}
+				<div class="headline-item">
+					<span class="headline-source">{headline.source}</span>
+					<a href={headline.link} target="_blank" rel="noopener noreferrer" class="headline-link">{headline.title}</a>
+					{#if headline.pubDate}
+						<span class="headline-date">{new Date(headline.pubDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<p class="empty-state">No headlines available for this narrative.</p>
+	{/if}
+</Modal>
 
 <style>
 	.narrative-content {
@@ -500,6 +540,56 @@
 
 	.hint {
 		font-size: 0.6rem;
+		color: var(--text-muted);
+	}
+
+	.clickable {
+		cursor: pointer;
+		transition: background 0.15s ease;
+	}
+
+	.clickable:hover {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	.headlines-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.headline-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 0.5rem;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.03);
+		border-left: 2px solid var(--accent);
+	}
+
+	.headline-source {
+		font-size: 0.6rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+
+	.headline-link {
+		font-size: 0.75rem;
+		color: var(--text-primary);
+		text-decoration: none;
+		line-height: 1.4;
+	}
+
+	.headline-link:hover {
+		color: var(--accent);
+		text-decoration: underline;
+	}
+
+	.headline-date {
+		font-size: 0.55rem;
 		color: var(--text-muted);
 	}
 </style>
