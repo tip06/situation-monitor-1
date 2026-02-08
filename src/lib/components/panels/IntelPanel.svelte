@@ -9,6 +9,7 @@
 	interface IntelItem {
 		id: string;
 		title: string;
+		description?: string;
 		link: string;
 		source: string;
 		sourceType: SourceType;
@@ -17,6 +18,11 @@
 		pubDate?: string;
 		isPriority?: boolean;
 	}
+
+	// Filter state
+	let searchQuery = $state('');
+	let activeRegions = $state<Set<string>>(new Set());
+	let activeTopics = $state<Set<string>>(new Set());
 
 	// Destructure store state for cleaner access
 	const { items: storeItems, loading, error } = $derived($intelNews);
@@ -38,6 +44,7 @@
 		return {
 			id: item.id,
 			title: item.title,
+			description: item.description,
 			link: item.link,
 			source: item.source,
 			sourceType: inferSourceType(item.source),
@@ -49,10 +56,80 @@
 	}
 
 	// Sort by timestamp (newest first) then transform
-	const items = $derived(
+	const allItems = $derived(
 		[...storeItems].sort((a, b) => b.timestamp - a.timestamp).map(transformToIntelItem)
 	);
+
+	// Extract available regions and topics from current items
+	const availableRegions = $derived(
+		[...new Set(allItems.flatMap((item) => item.regions).filter((r) => !!r))].sort()
+	);
+	const availableTopics = $derived(
+		[...new Set(allItems.flatMap((item) => item.topics).filter((t) => !!t))].sort()
+	);
+
+	// Filtered items: text AND region AND topic
+	const filteredItems = $derived(() => {
+		let result = allItems;
+
+		// Text search (case-insensitive on title + description)
+		if (searchQuery.trim()) {
+			const q = searchQuery.trim().toLowerCase();
+			result = result.filter((item) => {
+				const text = `${item.title} ${item.description ?? ''}`.toLowerCase();
+				return text.includes(q);
+			});
+		}
+
+		// Region filter (OR within selected regions)
+		if (activeRegions.size > 0) {
+			result = result.filter(
+				(item) => item.regions.length > 0 && item.regions.some((r) => activeRegions.has(r))
+			);
+		}
+
+		// Topic filter (OR within selected topics)
+		if (activeTopics.size > 0) {
+			result = result.filter(
+				(item) => item.topics.length > 0 && item.topics.some((t) => activeTopics.has(t))
+			);
+		}
+
+		return result;
+	});
+
+	const items = $derived(filteredItems());
 	const count = $derived(items.length);
+
+	const hasActiveFilters = $derived(
+		searchQuery.trim() !== '' || activeRegions.size > 0 || activeTopics.size > 0
+	);
+
+	function toggleRegion(region: string) {
+		const next = new Set(activeRegions);
+		if (next.has(region)) {
+			next.delete(region);
+		} else {
+			next.add(region);
+		}
+		activeRegions = next;
+	}
+
+	function toggleTopic(topic: string) {
+		const next = new Set(activeTopics);
+		if (next.has(topic)) {
+			next.delete(topic);
+		} else {
+			next.add(topic);
+		}
+		activeTopics = next;
+	}
+
+	function clearFilters() {
+		searchQuery = '';
+		activeRegions = new Set();
+		activeTopics = new Set();
+	}
 
 	type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -68,42 +145,187 @@
 </script>
 
 <Panel id="intel" title="Intel Feed" {count} {loading} {error}>
-	{#if items.length === 0 && !loading && !error}
+	{#if allItems.length === 0 && !loading && !error}
 		<div class="empty-state">No intel available</div>
 	{:else}
-		<div class="intel-list">
-			{#each items as item (item.id)}
-				<div class="intel-item" class:priority={item.isPriority}>
-					<div class="intel-header">
-						<span class="intel-source">{item.source}</span>
-						<div class="intel-tags">
-							<Badge
-								text={item.sourceType.toUpperCase()}
-								variant={getSourceBadgeVariant(item.sourceType)}
-							/>
-							{#each item.regions.slice(0, 2) as region}
-								<Badge text={region} variant="info" />
-							{/each}
-							{#each item.topics.slice(0, 2) as topic}
-								<Badge text={topic} />
-							{/each}
-						</div>
-					</div>
-					<a href={item.link} target="_blank" rel="noopener noreferrer" class="intel-title">
-						{item.title}
-					</a>
-					{#if item.pubDate}
-						<div class="intel-meta">
-							<span>{getRelativeTime(item.pubDate)}</span>
-						</div>
+		<!-- Filter toolbar -->
+		{#if allItems.length > 0}
+			<div class="filter-toolbar">
+				<div class="search-row">
+					<input
+						type="text"
+						class="search-input"
+						placeholder="Search intel..."
+						bind:value={searchQuery}
+					/>
+					{#if hasActiveFilters}
+						<button class="clear-btn" onclick={clearFilters} title="Clear all filters">
+							&times;
+						</button>
 					{/if}
 				</div>
-			{/each}
-		</div>
+
+				{#if availableRegions.length > 0}
+					<div class="chip-row">
+						<span class="chip-label">Region:</span>
+						{#each availableRegions as region}
+							<button
+								class="chip"
+								class:active={activeRegions.has(region)}
+								onclick={() => toggleRegion(region)}
+							>
+								{region}
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if availableTopics.length > 0}
+					<div class="chip-row">
+						<span class="chip-label">Topic:</span>
+						{#each availableTopics as topic}
+							<button
+								class="chip"
+								class:active={activeTopics.has(topic)}
+								onclick={() => toggleTopic(topic)}
+							>
+								{topic}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Intel list -->
+		{#if items.length === 0 && hasActiveFilters}
+			<div class="empty-state">No items match filters</div>
+		{:else}
+			<div class="intel-list">
+				{#each items as item (item.id)}
+					<div class="intel-item" class:priority={item.isPriority}>
+						<div class="intel-header">
+							<span class="intel-source">{item.source}</span>
+							<div class="intel-tags">
+								<Badge
+									text={item.sourceType.toUpperCase()}
+									variant={getSourceBadgeVariant(item.sourceType)}
+								/>
+								{#each item.regions.slice(0, 2) as region}
+									<Badge text={region} variant="info" />
+								{/each}
+								{#each item.topics.slice(0, 2) as topic}
+									<Badge text={topic} />
+								{/each}
+							</div>
+						</div>
+						<a href={item.link} target="_blank" rel="noopener noreferrer" class="intel-title">
+							{item.title}
+						</a>
+						{#if item.pubDate}
+							<div class="intel-meta">
+								<span>{getRelativeTime(item.pubDate)}</span>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
 	{/if}
 </Panel>
 
 <style>
+	.filter-toolbar {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		padding-bottom: 0.4rem;
+		margin-bottom: 0.4rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.search-row {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.search-input {
+		flex: 1;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		color: var(--text);
+		font-size: 0.6rem;
+		padding: 0.25rem 0.4rem;
+		outline: none;
+		transition: border-color 0.15s;
+	}
+
+	.search-input::placeholder {
+		color: var(--text-muted);
+	}
+
+	.search-input:focus {
+		border-color: var(--indigo);
+	}
+
+	.clear-btn {
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 3px;
+		color: var(--text-muted);
+		font-size: 0.7rem;
+		line-height: 1;
+		padding: 0.2rem 0.35rem;
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s;
+	}
+
+	.clear-btn:hover {
+		color: var(--red);
+		border-color: var(--red);
+	}
+
+	.chip-row {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		flex-wrap: wrap;
+	}
+
+	.chip-label {
+		font-size: 0.5rem;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		min-width: 2.5rem;
+	}
+
+	.chip {
+		font-size: 0.5rem;
+		padding: 0.1rem 0.35rem;
+		border-radius: 2px;
+		border: 1px solid var(--border-light);
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		transition: all 0.15s;
+	}
+
+	.chip:hover {
+		border-color: var(--indigo);
+		color: var(--text);
+	}
+
+	.chip.active {
+		background: rgba(79, 70, 229, 0.2);
+		border-color: var(--indigo);
+		color: white;
+	}
+
 	.intel-list {
 		display: flex;
 		flex-direction: column;

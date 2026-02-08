@@ -64,7 +64,7 @@ function enrichNewsItem(item: NewsItem): NewsItem {
 		isAlert: alertResult.isAlert,
 		alertKeyword: alertResult.keyword,
 		region: item.region ?? detectRegion(text) ?? undefined,
-		topics: item.topics ?? detectTopics(text)
+		topics: item.topics?.length ? item.topics : detectTopics(text)
 	};
 }
 

@@ -60,7 +60,7 @@ export interface CompoundPattern {
 export const COMPOUND_PATTERNS: CompoundPattern[] = [
 	{
 		id: 'trade-war-escalation',
-		topics: ['tariffs', 'china-tensions'],
+		topics: ['tariffs', 'china-tensions', 'supply-chain'],
 		minTopics: 2,
 		name: 'Trade War Escalation',
 		prediction: 'Expect market volatility and supply chain disruption',

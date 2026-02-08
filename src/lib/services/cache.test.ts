@@ -8,7 +8,10 @@ describe('CacheManager', () => {
 		cache = new CacheManager({ prefix: 'test_', maxMemorySize: 5 });
 		// Clear any previous localStorage entries
 		if (typeof localStorage !== 'undefined') {
-			localStorage.clear();
+			for (let i = localStorage.length - 1; i >= 0; i--) {
+				const key = localStorage.key(i);
+				if (key) localStorage.removeItem(key);
+			}
 		}
 	});
 

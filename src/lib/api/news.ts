@@ -93,6 +93,7 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 
 		// Check for alerts
 		const alert = containsAlertKeyword(title);
+		const detectText = `${title} ${description}`;
 
 		items.push({
 			id,
@@ -105,8 +106,8 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 			category,
 			isAlert: !!alert,
 			alertKeyword: alert?.keyword || undefined,
-			region: detectRegion(title) ?? undefined,
-			topics: detectTopics(title)
+			region: detectRegion(detectText) ?? undefined,
+			topics: detectTopics(detectText)
 		});
 	});
 

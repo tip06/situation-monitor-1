@@ -74,7 +74,64 @@ export const TOPIC_KEYWORDS: Record<string, string[]> = {
 	CONFLICT: ['war', 'military', 'troops', 'invasion', 'strike', 'missile', 'combat', 'offensive'],
 	INTEL: ['intelligence', 'espionage', 'spy', 'cia', 'mossad', 'fsb', 'covert'],
 	DEFENSE: ['pentagon', 'dod', 'defense', 'military', 'army', 'navy', 'air force'],
-	DIPLO: ['diplomat', 'embassy', 'treaty', 'sanctions', 'talks', 'summit', 'bilateral']
+	DIPLO: ['diplomat', 'embassy', 'treaty', 'sanctions', 'talks', 'summit', 'bilateral'],
+	ECON: [
+		'economy',
+		'economic',
+		'inflation',
+		'recession',
+		'gdp',
+		'interest rate',
+		'fiscal',
+		'currency',
+		'central bank',
+		'imf',
+		'world bank',
+		'unemployment'
+	],
+	ELECTIONS: [
+		'election',
+		'vote',
+		'ballot',
+		'candidate',
+		'campaign',
+		'runoff',
+		'referendum',
+		'incumbent',
+		'polling'
+	],
+	UNREST: [
+		'protest',
+		'riot',
+		'uprising',
+		'unrest',
+		'crackdown',
+		'dissident',
+		'revolt',
+		'demonstration'
+	],
+	TRADE: [
+		'tariff',
+		'trade war',
+		'embargo',
+		'mercosur',
+		'brics',
+		'free trade',
+		'export ban',
+		'trade deal',
+		'trade agreement'
+	],
+	ENERGY: [
+		'oil',
+		'pipeline',
+		'opec',
+		'petroleum',
+		'mining',
+		'lithium',
+		'renewable',
+		'natural gas',
+		'energy crisis'
+	]
 };
 
 /**
