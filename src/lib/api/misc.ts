@@ -24,6 +24,7 @@ interface PolymarketMarket {
 	id: string;
 	question: string;
 	slug: string;
+	events?: { slug: string }[];
 	volumeNum: number;
 	volume24hr: number;
 	outcomePrices: string; // JSON string like '["0.65","0.35"]'
@@ -32,7 +33,7 @@ interface PolymarketMarket {
 }
 
 // Reliable tag IDs for fetching markets
-const POLYMARKET_FETCH_TAGS = [2, 100265, 120]; // politics, geopolitics, finance
+const POLYMARKET_FETCH_TAGS = [2, 100265, 120, 100056, 100001]; // politics, geopolitics, finance, tech, elections
 
 // Keywords for categorizing markets by content
 const CATEGORY_KEYWORDS: Record<PredictionCategory, RegExp> = {
@@ -192,7 +193,7 @@ export async function fetchPolymarket(): Promise<Prediction[]> {
 	try {
 		// Fetch from reliable tags in parallel
 		const tagResults = await Promise.allSettled(
-			POLYMARKET_FETCH_TAGS.map((tagId) => fetchMarketsForTag(tagId, 25))
+			POLYMARKET_FETCH_TAGS.map((tagId) => fetchMarketsForTag(tagId, 50))
 		);
 
 		// Combine results, filtering out failed requests and deduplicating
@@ -220,13 +221,13 @@ export async function fetchPolymarket(): Promise<Prediction[]> {
 				yes: parseYesProbability(market.outcomePrices, market.outcomes),
 				volume: market.volumeNum || 0,
 				volume24hr: market.volume24hr || 0,
-				url: `https://polymarket.com/event/${market.slug}`,
+				url: `https://polymarket.com/event/${market.events?.[0]?.slug || market.slug}`,
 				endDate: market.endDate,
 				category: categorizeMarket(market.question)
 			}))
-			// Sort by volume (highest first) and take top 20
+			// Sort by volume (highest first) and take top 75
 			.sort((a, b) => b.volume - a.volume)
-			.slice(0, 20);
+			.slice(0, 75);
 
 		// Cache successful results
 		cacheManager.set(POLYMARKET_CACHE_KEY, predictions, POLYMARKET_CACHE_TTL);

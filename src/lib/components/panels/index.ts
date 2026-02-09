@@ -7,6 +7,7 @@ export { default as CryptoPanel } from './CryptoPanel.svelte';
 export { default as MainCharPanel } from './MainCharPanel.svelte';
 export { default as PrinterPanel } from './PrinterPanel.svelte';
 export { default as PolymarketPanel } from './PolymarketPanel.svelte';
+export { default as PolymarketSection } from './PolymarketSection.svelte';
 export { default as WhalePanel } from './WhalePanel.svelte';
 export { default as ContractsPanel } from './ContractsPanel.svelte';
 export { default as LayoffsPanel } from './LayoffsPanel.svelte';

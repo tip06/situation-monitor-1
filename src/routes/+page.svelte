@@ -12,7 +12,7 @@
 		NarrativePanel,
 		MonitorsPanel,
 		MapPanel,
-		PolymarketPanel,
+		PolymarketSection,
 		IntelPanel,
 		SituationPanel
 	} from '$lib/components/panels';
@@ -336,9 +336,7 @@
 					</div>
 
 					{#if isPanelVisible('polymarket')}
-						<div class="panel-slot">
-							<PolymarketPanel {predictions} />
-						</div>
+						<PolymarketSection {predictions} />
 					{/if}
 				</div>
 			{:else if $activeTab === 'technology'}
