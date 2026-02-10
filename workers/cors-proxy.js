@@ -28,6 +28,14 @@ const ALLOWED_DOMAINS = [
 	'arxiv.org',
 	'rss.arxiv.org',
 
+	// Politics
+	'feeds.washingtonpost.com',
+	'www.foreignaffairs.com',
+	'rss.politico.com',
+	'foreignpolicy.com',
+	'www.economist.com',
+	'www.aljazeera.com',
+
 	// Finance
 	'api.coingecko.com',
 	'www.cnbc.com',
@@ -35,6 +43,10 @@ const ALLOWED_DOMAINS = [
 	'finance.yahoo.com',
 	'www.ft.com',
 	'fred.stlouisfed.org',
+	'www.reuters.com',
+	'feeds.bloomberg.com',
+	'feeds.wsj.com',
+	'www.investing.com',
 
 	// Government
 	'www.whitehouse.gov',
@@ -56,6 +68,13 @@ const ALLOWED_DOMAINS = [
 	'www.bellingcat.com',
 	'krebsonsecurity.com',
 
+	// Intel/Defense
+	'www.defensenews.com',
+	'www.realcleardefense.com',
+	'www.chathamhouse.org',
+	'www.iiss.org',
+	'www.military.com',
+
 	// AI/Tech
 	'openai.com',
 	'venturebeat.com',
@@ -63,6 +82,48 @@ const ALLOWED_DOMAINS = [
 	'news.mit.edu',
 	'huggingface.co',
 	'deepmind.google',
+
+	// Brazil
+	'g1.globo.com',
+	'valor.globo.com',
+	'feeds.folha.uol.com.br',
+	'www.gazetadopovo.com.br',
+	'www.cnnbrasil.com.br',
+	'www.poder360.com.br',
+	'agenciabrasil.ebc.com.br',
+	'www.infomoney.com.br',
+	'www.defesanet.com.br',
+	'www.zona-militar.com',
+
+	// LATAM
+	'www.americasquarterly.org',
+	'feeds.elpais.com',
+	'www.infobae.com',
+
+	// Iran
+	'www.tehrantimes.com',
+	'en.radiofarda.com',
+	'en.mehrnews.com',
+	'en.isna.ir',
+	'ifpnews.com',
+	'iranwire.com',
+
+	// Venezuela
+	'www.caracaschronicles.com',
+	'www.elnacional.com',
+	'venezuelanalysis.com',
+	'www.vozdeamerica.com',
+
+	// Greenland/Arctic
+	'www.arctictoday.com',
+	'en.highnorthnews.com',
+	'www.thearcticinstitute.org',
+	'arctic-council.org',
+	'www.rcinet.ca',
+
+	// Fringe
+	'dailycaller.com',
+	'www.theepochtimes.com',
 
 	// Other data sources
 	'earthquake.usgs.gov',

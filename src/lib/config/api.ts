@@ -38,7 +38,7 @@ const isDev = browser ? (import.meta.env?.DEV ?? false) : false;
  * Fallback: corsproxy.io (public, may rate limit)
  */
 export const CORS_PROXIES = {
-	primary: 'https://situation-monitor-proxy.seanthielen-e.workers.dev/?url=',
+	primary: 'https://situation-monitor-proxy.tip06.workers.dev/?url=',
 	fallback: 'https://corsproxy.io/?url='
 } as const;
 
