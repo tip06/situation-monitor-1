@@ -97,6 +97,8 @@ Unique business logic for intelligence analysis:
 ## TODO
 
 - Improve map interface
+- Insert canaltech feed
+- possibility to manually insert feeds
 
 ## General Guidance
 

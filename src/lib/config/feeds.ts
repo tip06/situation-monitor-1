@@ -34,7 +34,12 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
 		{ name: 'MIT Tech Review', url: 'https://www.technologyreview.com/feed/' },
 		{ name: 'ArXiv AI', url: 'https://rss.arxiv.org/rss/cs.AI' },
-		{ name: 'OpenAI Blog', url: 'https://openai.com/news/rss.xml' }
+		{ name: 'OpenAI Blog', url: 'https://openai.com/news/rss.xml' },
+		{ name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
+		{ name: 'Wired', url: 'https://www.wired.com/feed/rss' },
+		{ name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
+		{ name: 'Gizmodo', url: 'https://gizmodo.com/rss' },
+		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' }
 	],
 	finance: [
 		{ name: 'Reuters Business', url: 'https://www.reuters.com/business/rss' },
@@ -85,6 +90,8 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'G1 Brasil', url: 'https://g1.globo.com/rss/g1/' },
 		{ name: 'Folha de S.Paulo', url: 'https://feeds.folha.uol.com.br/emcimadahora/rss091.xml' },
 		{ name: 'Reuters Brazil', url: 'https://www.reuters.com/world/americas/rss' },
+		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' },
+
 
 		// === POLITICS (5) ===
 		{ name: 'G1 Politica', url: 'https://g1.globo.com/rss/g1/politica/' },
