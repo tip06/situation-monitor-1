@@ -193,6 +193,182 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		name: 'Social Pressure',
 		prediction: 'Economic stress combining with political flashpoints',
 		boostFactor: 1.8
+	},
+
+	// === NEW COMPOUND SIGNALS ===
+
+	// Cyber & Geopolitical
+	{
+		id: 'cyber-warfare-escalation',
+		topics: ['state-hacking', 'russia-ukraine', 'china-tensions'],
+		minTopics: 2,
+		name: 'Cyber Warfare Escalation',
+		prediction: 'State-sponsored cyber operations intensifying',
+		boostFactor: 2.0
+	},
+	{
+		id: 'critical-infra-attack',
+		topics: ['cyberattack', 'energy-transition', 'supply-chain'],
+		minTopics: 2,
+		name: 'Critical Infrastructure Attack',
+		prediction: 'Infrastructure vulnerability exposure rising',
+		boostFactor: 2.2
+	},
+	{
+		id: 'cyber-financial-attack',
+		topics: ['cyberattack', 'bank-crisis', 'credit-stress'],
+		minTopics: 2,
+		name: 'Cyber-Financial Attack',
+		prediction: 'Financial system cyber vulnerability detected',
+		boostFactor: 2.0
+	},
+
+	// Energy & Geopolitical
+	{
+		id: 'energy-weaponization',
+		topics: ['oil-opec', 'sanctions', 'russia-ukraine'],
+		minTopics: 2,
+		name: 'Energy Weaponization',
+		prediction: 'Energy used as geopolitical leverage — price volatility expected',
+		boostFactor: 1.8
+	},
+	{
+		id: 'resource-war',
+		topics: ['rare-earths', 'china-tensions', 'sanctions'],
+		minTopics: 2,
+		name: 'Resource War',
+		prediction: 'Critical mineral supply under geopolitical pressure',
+		boostFactor: 1.7
+	},
+	{
+		id: 'green-transition-shock',
+		topics: ['energy-transition', 'rare-earths', 'china-tensions'],
+		minTopics: 2,
+		name: 'Green Transition Shock',
+		prediction: 'Energy transition supply chain bottleneck forming',
+		boostFactor: 1.5
+	},
+
+	// Food & Climate
+	{
+		id: 'food-crisis-spiral',
+		topics: ['food-security', 'extreme-weather', 'supply-chain'],
+		minTopics: 2,
+		name: 'Food Crisis Spiral',
+		prediction: 'Climate-driven food supply disruption accelerating',
+		boostFactor: 1.8
+	},
+	{
+		id: 'climate-migration',
+		topics: ['extreme-weather', 'refugee-crisis', 'civil-unrest'],
+		minTopics: 2,
+		name: 'Climate Migration Pressure',
+		prediction: 'Climate displacement triggering social instability',
+		boostFactor: 1.7
+	},
+	{
+		id: 'agricultural-collapse',
+		topics: ['agriculture', 'extreme-weather', 'inflation'],
+		minTopics: 2,
+		name: 'Agricultural Collapse Signal',
+		prediction: 'Crop failures feeding inflation pipeline',
+		boostFactor: 1.6
+	},
+
+	// Financial & Fiscal
+	{
+		id: 'sovereign-debt-crisis',
+		topics: ['sovereign-debt', 'fed-rates', 'credit-stress'],
+		minTopics: 2,
+		name: 'Sovereign Debt Crisis',
+		prediction: 'Government debt sustainability in question',
+		boostFactor: 2.0
+	},
+	{
+		id: 'credit-contagion',
+		topics: ['credit-stress', 'bank-crisis', 'housing'],
+		minTopics: 2,
+		name: 'Credit Contagion',
+		prediction: 'Credit stress spreading across sectors',
+		boostFactor: 1.9
+	},
+	{
+		id: 'dedollarization-signal',
+		topics: ['trade-blocs', 'sanctions', 'crypto'],
+		minTopics: 2,
+		name: 'Dedollarization Signal',
+		prediction: 'Alternative payment systems gaining traction',
+		boostFactor: 1.6
+	},
+
+	// Social & Political
+	{
+		id: 'social-tinderbox',
+		topics: ['civil-unrest', 'inflation', 'layoffs'],
+		minTopics: 2,
+		name: 'Social Tinderbox',
+		prediction: 'Economic pain fueling civil unrest risk',
+		boostFactor: 1.9
+	},
+	{
+		id: 'democratic-stress',
+		topics: ['election', 'political-violence', 'civil-unrest'],
+		minTopics: 2,
+		name: 'Democratic Stress',
+		prediction: 'Political institutions under pressure',
+		boostFactor: 1.8
+	},
+	{
+		id: 'global-protest-wave',
+		topics: ['civil-unrest', 'food-security', 'inflation'],
+		minTopics: 2,
+		name: 'Global Protest Wave',
+		prediction: 'Cost-of-living protests spreading',
+		boostFactor: 1.7
+	},
+
+	// Military & Escalation
+	{
+		id: 'arms-race-acceleration',
+		topics: ['arms-race', 'nato-defense', 'russia-ukraine'],
+		minTopics: 2,
+		name: 'Arms Race Acceleration',
+		prediction: 'Military spending and procurement surging',
+		boostFactor: 1.7
+	},
+	{
+		id: 'multi-domain-conflict',
+		topics: ['cyberattack', 'space-military', 'arms-race'],
+		minTopics: 2,
+		name: 'Multi-Domain Conflict',
+		prediction: 'Warfare expanding across cyber, space, and conventional domains',
+		boostFactor: 2.3
+	},
+	{
+		id: 'escalation-ladder',
+		topics: ['nuclear', 'arms-race', 'russia-ukraine', 'china-tensions'],
+		minTopics: 2,
+		name: 'Escalation Ladder',
+		prediction: 'Conflict intensity climbing across theaters',
+		boostFactor: 2.5
+	},
+
+	// Cross-Domain Red Alert
+	{
+		id: 'systemic-fragility',
+		topics: ['sovereign-debt', 'supply-chain', 'cyberattack', 'extreme-weather'],
+		minTopics: 3,
+		name: 'Systemic Fragility',
+		prediction: 'Multiple system stress points converging — cascading failure risk',
+		boostFactor: 2.5
+	},
+	{
+		id: 'polycrisis',
+		topics: ['civil-unrest', 'food-security', 'inflation', 'extreme-weather', 'refugee-crisis'],
+		minTopics: 3,
+		name: 'Polycrisis',
+		prediction: 'Simultaneous crises reinforcing each other — monitor all fronts',
+		boostFactor: 3.0
 	}
 ];
 

@@ -611,6 +611,116 @@ describe('Compound Pattern Detection', () => {
 		expect(tradeWarLow?.level).toBe('elevated');
 		expect(tradeWarHigh?.level).toBe('critical');
 	});
+
+	it('should detect cyber-warfare-escalation compound signal', () => {
+		const topicStats: Record<string, TopicStats> = {
+			'state-hacking': {
+				count: 3, weightedCount: 3.6,
+				sources: new Set(['BBC', 'CNN', 'NYT']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'russia-ukraine': {
+				count: 2, weightedCount: 2.4,
+				sources: new Set(['Reuters', 'AP']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			}
+		};
+		const signals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+		const signal = signals.find((s) => s.id === 'cyber-warfare-escalation');
+		expect(signal).toBeDefined();
+		expect(signal!.activeTopics).toContain('state-hacking');
+		expect(signal!.activeTopics).toContain('russia-ukraine');
+	});
+
+	it('should detect polycrisis compound signal requiring 3+ topics', () => {
+		const topicStats: Record<string, TopicStats> = {
+			'civil-unrest': {
+				count: 3, weightedCount: 3.0,
+				sources: new Set(['BBC']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'food-security': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(['Reuters']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'inflation': {
+				count: 4, weightedCount: 4.0,
+				sources: new Set(['CNN']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'extreme-weather': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(['NYT']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			}
+		};
+		const signals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+		const signal = signals.find((s) => s.id === 'polycrisis');
+		expect(signal).toBeDefined();
+		expect(signal!.activeTopics.length).toBeGreaterThanOrEqual(3);
+	});
+
+	it('should NOT detect polycrisis with only 2 topics active', () => {
+		const topicStats: Record<string, TopicStats> = {
+			'civil-unrest': {
+				count: 3, weightedCount: 3.0,
+				sources: new Set(['BBC']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'food-security': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(['Reuters']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			}
+		};
+		const signals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+		const signal = signals.find((s) => s.id === 'polycrisis');
+		expect(signal).toBeUndefined();
+	});
+
+	it('should detect sovereign-debt-crisis compound signal', () => {
+		const topicStats: Record<string, TopicStats> = {
+			'sovereign-debt': {
+				count: 3, weightedCount: 3.6,
+				sources: new Set(['Bloomberg']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'fed-rates': {
+				count: 2, weightedCount: 2.4,
+				sources: new Set(['Reuters']), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			}
+		};
+		const signals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+		const signal = signals.find((s) => s.id === 'sovereign-debt-crisis');
+		expect(signal).toBeDefined();
+		expect(signal!.score).toBe((3.6 + 2.4) * 2.0);
+	});
+
+	it('should apply 3.0 boost factor for polycrisis', () => {
+		const topicStats: Record<string, TopicStats> = {
+			'civil-unrest': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'food-security': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			},
+			'inflation': {
+				count: 2, weightedCount: 2.0,
+				sources: new Set(), headlines: [],
+				velocity: 0, acceleration: 0, zScore: 0
+			}
+		};
+		const signals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+		const signal = signals.find((s) => s.id === 'polycrisis');
+		expect(signal).toBeDefined();
+		expect(signal!.score).toBe((2.0 + 2.0 + 2.0) * 3.0);
+	});
 });
 
 describe('New Correlation Topics Coverage', () => {
