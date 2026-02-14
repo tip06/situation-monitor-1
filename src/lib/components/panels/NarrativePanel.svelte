@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Panel, Badge } from '$lib/components/common';
+	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
 	import { Modal } from '$lib/components/modals';
 	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
@@ -118,7 +118,7 @@
 		<div class="narrative-content">
 			{#if analysis.trendingNarratives.length > 0}
 				<div class="section">
-					<div class="section-title">Trending Narratives</div>
+					<div class="section-title">Trending Narratives<InfoTooltip text="Dominant stories across mainstream media right now, matched via regex patterns. Shows momentum (rising/falling) and sentiment for each narrative." /></div>
 					{#each analysis.trendingNarratives.slice(0, 6) as narrative}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -161,7 +161,7 @@
 
 			{#if analysis.emergingFringe.length > 0}
 				<div class="section">
-					<div class="section-title">Emerging Fringe</div>
+					<div class="section-title">Emerging Fringe<InfoTooltip text="Narratives originating from fringe or alternative sources, tracked by spread status: emerging, spreading, or viral based on mention volume." /></div>
 					{#each analysis.emergingFringe.slice(0, 4) as narrative}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -188,7 +188,7 @@
 
 			{#if analysis.fringeToMainstream.length > 0}
 				<div class="section">
-					<div class="section-title">Fringe → Mainstream Crossovers</div>
+					<div class="section-title">Fringe → Mainstream Crossovers<InfoTooltip text="Fringe narratives that have been picked up by mainstream outlets, indicating potential narrative laundering or legitimization. Shows crossover percentage." /></div>
 					{#each analysis.fringeToMainstream.slice(0, 3) as crossover}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -209,7 +209,7 @@
 
 			{#if analysis.narrativeWatch.length > 0}
 				<div class="section">
-					<div class="section-title">Narrative Watch</div>
+					<div class="section-title">Narrative Watch<InfoTooltip text="Fringe-pattern narratives detected from unclassified or mixed sources — a watchlist for topics that don't yet fit the emerging or crossover categories." /></div>
 					<div class="themes-grid">
 						{#each analysis.narrativeWatch.slice(0, 6) as narrative}
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -225,7 +225,7 @@
 
 			{#if analysis.disinfoSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Disinfo Signals</div>
+					<div class="section-title">Disinfo Signals<InfoTooltip text="Patterns flagged as known disinformation based on severity classification, regardless of source type." /></div>
 					{#each analysis.disinfoSignals.slice(0, 3) as signal}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->

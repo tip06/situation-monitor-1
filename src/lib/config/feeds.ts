@@ -26,7 +26,8 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Politico', url: 'https://rss.politico.com/politics-news.xml' },
 		{ name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/' },
 		{ name: 'The Economist', url: 'https://www.economist.com/the-world-this-week/rss.xml' },
-		{ name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' }
+		{ name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
+		{ name: 'WSJ Politics', url: 'https://feeds.wsj.com/xml/rss/3_7455.xml' }
 	],
 	tech: [
 		{ name: 'Hacker News', url: 'https://hnrss.org/frontpage' },
@@ -39,7 +40,8 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Wired', url: 'https://www.wired.com/feed/rss' },
 		{ name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
 		{ name: 'Gizmodo', url: 'https://gizmodo.com/rss' },
-		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' }
+		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' },
+		{ name: 'WSJ Tech', url: 'https://feeds.wsj.com/xml/rss/3_7014.xml' }
 	],
 	finance: [
 		{ name: 'Reuters Business', url: 'https://www.reuters.com/business/rss' },

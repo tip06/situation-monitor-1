@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Panel } from '$lib/components/common';
+	import { Panel, InfoTooltip } from '$lib/components/common';
 	import SpeedometerGauge from './SpeedometerGauge.svelte';
 	import type { PredictionCategory } from '$lib/api/misc';
 
@@ -100,7 +100,7 @@
 	<!-- Row 1: Top Geopolitical Markets -->
 	{#if topGeopolitical.length > 0}
 		<div class="section-block">
-			<div class="section-header">Top Geopolitical Markets</div>
+			<div class="section-header">Top Geopolitical Markets<InfoTooltip text="The 3 highest-volume geopolitical prediction markets on Polymarket, displayed as probability gauges." /></div>
 			<div class="speedometer-row">
 				{#each topGeopolitical as market (market.id)}
 					<div class="speedometer-cell">
@@ -118,7 +118,7 @@
 
 	<!-- Row 2: Category Feeds -->
 	<div class="section-block">
-		<div class="section-header">Category Feeds</div>
+		<div class="section-header">Category Feeds<InfoTooltip text="Top 10 prediction markets per category ranked by 24-hour trading volume, showing real-time market sentiment across topics." /></div>
 		<div class="category-feeds-row">
 			{#each Object.entries(categoryFeeds) as [category, items] (category)}
 				<div class="category-column">
