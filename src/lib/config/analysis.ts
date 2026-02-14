@@ -885,6 +885,193 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 		region: 'global'
 	},
 
+	// === NEW GLOBAL — Geopolitics & Security ===
+	{
+		id: 'new-cold-war',
+		name: 'New Cold War',
+		patterns: [/new cold war/i, /great power competition/i, /bloc rivalry/i],
+		category: 'Geopolitics',
+		region: 'global'
+	},
+	{
+		id: 'taiwan-contingency',
+		name: 'Taiwan Contingency',
+		patterns: [/taiwan strait/i, /taiwan invasion/i, /taiwan contingency/i, /cross.strait/i],
+		category: 'Geopolitics',
+		region: 'global'
+	},
+	{
+		id: 'arctic-competition',
+		name: 'Arctic Competition',
+		patterns: [/arctic race/i, /arctic military/i, /northern sea route/i, /arctic resource/i],
+		category: 'Geopolitics',
+		region: 'global'
+	},
+	{
+		id: 'nuclear-posture',
+		name: 'Nuclear Posture',
+		patterns: [/nuclear deterrent/i, /nuclear moderniz/i, /nuclear treaty/i, /arms control/i],
+		category: 'Security',
+		region: 'global'
+	},
+	{
+		id: 'cyber-threat-landscape',
+		name: 'Cyber Threat Landscape',
+		patterns: [/cyber threat/i, /ransomware wave/i, /state hacker/i, /cyber defense/i],
+		category: 'Security',
+		region: 'global'
+	},
+
+	// === NEW GLOBAL — Economy & Finance ===
+	{
+		id: 'debt-spiral',
+		name: 'Debt Spiral',
+		patterns: [/debt ceiling/i, /fiscal crisis/i, /national debt/i, /credit downgrade/i, /bond sell.off/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'de-globalization',
+		name: 'De-Globalization',
+		patterns: [/reshoring/i, /nearshoring/i, /friend.shoring/i, /onshoring/i, /supply chain diversif/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'crypto-regulation',
+		name: 'Crypto Regulation',
+		patterns: [/crypto regulat/i, /stablecoin law/i, /defi regulat/i, /sec.*crypto/i],
+		category: 'Finance',
+		region: 'global'
+	},
+	{
+		id: 'commodity-super-cycle',
+		name: 'Commodity Super Cycle',
+		patterns: [/commodity boom/i, /super cycle/i, /commodity rally/i, /resource nationalism/i],
+		category: 'Economy',
+		region: 'global'
+	},
+
+	// === NEW GLOBAL — Climate & Energy ===
+	{
+		id: 'energy-security',
+		name: 'Energy Security',
+		patterns: [/energy security/i, /energy independence/i, /energy crisis/i, /grid resilience/i],
+		category: 'Economy',
+		region: 'global'
+	},
+	{
+		id: 'climate-tipping-point',
+		name: 'Climate Tipping Point',
+		patterns: [/tipping point/i, /point of no return/i, /climate emergency/i, /record heat/i, /record warm/i],
+		category: 'Environment',
+		region: 'global'
+	},
+	{
+		id: 'extreme-weather-impact',
+		name: 'Extreme Weather Impact',
+		patterns: [/extreme weather/i, /unprecedented storm/i, /record flood/i, /climate disaster/i, /weather catastrophe/i],
+		category: 'Environment',
+		region: 'global'
+	},
+
+	// === NEW GLOBAL — Tech & Society ===
+	{
+		id: 'ai-arms-race',
+		name: 'AI Arms Race',
+		patterns: [/ai race/i, /ai competition/i, /ai supremacy/i, /ai dominance/i, /ai lead/i],
+		category: 'Tech',
+		region: 'global'
+	},
+	{
+		id: 'social-media-regulation',
+		name: 'Social Media Regulation',
+		patterns: [/social media ban/i, /platform regulation/i, /content moderation/i, /section 230/i],
+		category: 'Tech',
+		region: 'global'
+	},
+	{
+		id: 'space-race-narrative',
+		name: 'Space Race',
+		patterns: [/space race/i, /moon race/i, /mars race/i, /commercial space/i, /space economy/i],
+		category: 'Tech',
+		region: 'global'
+	},
+
+	// === GLOBAL — Partisan Framing ===
+	{
+		id: 'conservative-framing',
+		name: 'Conservative Framing',
+		patterns: [/\bwoke\b/i, /radical left/i, /socialist agenda/i, /government overreach/i, /nanny state/i, /war on freedom/i, /cancel culture/i, /leftist mob/i, /virtue signal/i],
+		category: 'Politics',
+		region: 'global'
+	},
+	{
+		id: 'progressive-framing',
+		name: 'Progressive Framing',
+		patterns: [/far.right/i, /maga extremis/i, /threat to democracy/i, /white nationalis/i, /climate denier/i, /book ban/i, /assault on rights/i, /\bfascis/i, /\bauthoritarian/i],
+		category: 'Politics',
+		region: 'global'
+	},
+
+	// === GLOBAL — Frame Battles ===
+	{
+		id: 'immigration-security-frame',
+		name: 'Immigration Security Frame',
+		patterns: [/border crisis/i, /illegal crossing/i, /illegal alien/i, /border invasion/i, /cartel threat/i, /migrant crime/i],
+		category: 'Politics',
+		region: 'global'
+	},
+	{
+		id: 'immigration-humanitarian-frame',
+		name: 'Immigration Humanitarian Frame',
+		patterns: [/asylum seeker/i, /refugee rights/i, /family separation/i, /\bdreamer/i, /undocumented worker/i, /humanitarian border/i],
+		category: 'Politics',
+		region: 'global'
+	},
+	{
+		id: 'climate-urgency-frame',
+		name: 'Climate Urgency Frame',
+		patterns: [/climate emergency/i, /climate crisis/i, /existential threat/i, /planet burning/i, /code red/i],
+		category: 'Environment',
+		region: 'global'
+	},
+	{
+		id: 'climate-skeptic-frame',
+		name: 'Climate Skeptic Frame',
+		patterns: [/climate hoax/i, /climate alarmis/i, /green scam/i, /climate hysteria/i, /climate grift/i],
+		category: 'Environment',
+		region: 'global'
+	},
+	{
+		id: 'gun-rights-frame',
+		name: 'Gun Rights Frame',
+		patterns: [/second amendment/i, /gun rights/i, /right to bear/i, /gun freedom/i, /armed citizen/i, /self defense/i],
+		category: 'Politics',
+		region: 'global'
+	},
+	{
+		id: 'gun-control-frame',
+		name: 'Gun Control Frame',
+		patterns: [/gun violence epidemic/i, /mass shooting/i, /gun reform/i, /gun safety/i, /ban assault/i],
+		category: 'Politics',
+		region: 'global'
+	},
+	{
+		id: 'ai-optimist-frame',
+		name: 'AI Optimist Frame',
+		patterns: [/ai breakthrough/i, /ai revolution/i, /ai opportunity/i, /ai potential/i, /ai benefit/i, /ai progress/i],
+		category: 'Tech',
+		region: 'global'
+	},
+	{
+		id: 'ai-alarmist-frame',
+		name: 'AI Alarmist Frame',
+		patterns: [/ai threat/i, /ai danger/i, /ai risk/i, /ai destroy/i, /ai replace/i, /ai out of control/i, /ai unsafe/i],
+		category: 'Tech',
+		region: 'global'
+	},
+
 	// === BRAZIL ===
 	{
 		id: 'lula-government',
@@ -952,6 +1139,96 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 			/militares.{0,15}investigad/i
 		],
 		category: 'Politics',
+		region: 'brazil'
+	},
+
+	// === NEW BRAZIL ===
+	{
+		id: 'brazil-cyber',
+		name: 'Brazil Cyber Threats',
+		patterns: [/ciberataque/i, /vazamento de dados/i, /hacker.*brasil/i, /seguran[çc]a digital/i],
+		category: 'Security',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-climate',
+		name: 'Brazil Climate Events',
+		patterns: [/\bseca\b/i, /enchente/i, /chuva extrema/i, /desastre clim[áa]tico/i, /evento extremo/i],
+		category: 'Environment',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-fiscal-crisis',
+		name: 'Brazil Fiscal Pressure',
+		patterns: [/d[íi]vida p[úu]blica/i, /risco fiscal/i, /nota de cr[ée]dito/i, /spread soberano/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-corruption',
+		name: 'Institutional Corruption',
+		patterns: [/corrup[çc][ãa]o/i, /propina/i, /lavagem de dinheiro/i, /desvio/i, /peculato/i, /improbidade/i, /dela[çc][ãa]o/i, /opera[çc][ãa]o.*policial federal/i, /licita[çc][ãa]o irregular/i, /superfaturamento/i, /caixa dois/i, /tr[áa]fico de influ[êe]ncia/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+
+	// === BRAZIL — Partisan Framing ===
+	{
+		id: 'brazil-right-framing',
+		name: 'Brazil Right Framing',
+		patterns: [/esquerdista/i, /comunista/i, /marxista/i, /doutrina[çc][ãa]o/i, /ideologia de g[êe]nero/i, /vagabundo/i, /mamata/i, /petralha/i, /bolivariano/i, /ditadura do judici[áa]rio/i, /ativismo judicial/i, /aparelhamento/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-left-framing',
+		name: 'Brazil Left Framing',
+		patterns: [/fascista/i, /golpista/i, /miliciano/i, /genocida/i, /negacionista/i, /bolsonarismo/i, /extrema direita/i, /amea[çc]a [àa] democracia/i, /discurso de [óo]dio/i, /ataque [àa]s institui[çc][õo]es/i, /desmatador/i, /entreguista/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+
+	// === BRAZIL — Frame Battles ===
+	{
+		id: 'brazil-security-hardline',
+		name: 'Brazil Security Hardline',
+		patterns: [/bandido bom [ée] bandido morto/i, /armar o cidad[ãa]o/i, /excludente de ilicitude/i, /redu[çc][ãa]o da maioridade/i, /toler[âa]ncia zero/i, /m[ãa]o dura/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-security-rights',
+		name: 'Brazil Security Rights',
+		patterns: [/viol[êe]ncia policial/i, /genoc[íi]dio da juventude negra/i, /encarceramento em massa/i, /desmilitariza[çc][ãa]o/i, /direitos humanos/i, /abuso de autoridade/i],
+		category: 'Politics',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-economy-liberal',
+		name: 'Brazil Free Market Frame',
+		patterns: [/privatiza[çc][ãa]o/i, /estado inchado/i, /carga tribut[áa]ria/i, /livre mercado/i, /desburocratiza[çc][ãa]o/i, /menos estado/i, /reforma administrativa/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-economy-statist',
+		name: 'Brazil Statist Frame',
+		patterns: [/papel do estado/i, /investimento p[úu]blico/i, /programa social/i, /soberania nacional/i, /empresa estrat[ée]gica/i, /neoliberal/i, /privataria/i, /desmonte/i],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-environment-dev',
+		name: 'Brazil Development Frame',
+		patterns: [/soberania sobre amaz[ôo]nia/i, /progresso/i, /agroneg[óo]cio/i, /marco temporal/i, /minera[çc][ãa]o/i, /desenvolvimento sustent[áa]vel/i, /regulariza[çc][ãa]o fundi[áa]ria/i],
+		category: 'Environment',
+		region: 'brazil'
+	},
+	{
+		id: 'brazil-environment-prot',
+		name: 'Brazil Environmentalist Frame',
+		patterns: [/desmatamento recorde/i, /ecoc[íi]dio/i, /crime ambiental/i, /terra ind[íi]gena/i, /prote[çc][ãa]o ambiental/i, /garimpo ilegal/i, /destrui[çc][ãa]o ambiental/i],
+		category: 'Environment',
 		region: 'brazil'
 	},
 

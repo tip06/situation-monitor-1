@@ -438,6 +438,171 @@ describe('Narrative Tracker', () => {
 		});
 	});
 
+	describe('New mainstream narrative patterns', () => {
+		beforeEach(() => {
+			clearNarrativeHistory();
+		});
+
+		it('should detect new-cold-war narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'New cold war rhetoric intensifies', source: 'Reuters' }),
+				createNewsItem({ title: 'Great power competition reshapes global order', source: 'FP' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'new-cold-war');
+			expect(narrative).toBeDefined();
+			expect(narrative!.category).toBe('Geopolitics');
+		});
+
+		it('should detect debt-spiral narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Debt ceiling crisis looms in Washington', source: 'WSJ' }),
+				createNewsItem({ title: 'National debt reaches unprecedented levels', source: 'Bloomberg' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'debt-spiral');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect climate-tipping-point narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Scientists warn of climate tipping point', source: 'BBC' }),
+				createNewsItem({ title: 'Record heat wave breaks all-time temperature records', source: 'CNN' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'climate-tipping-point');
+			expect(narrative).toBeDefined();
+			expect(narrative!.category).toBe('Environment');
+		});
+
+		it('should detect de-globalization narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Reshoring trend accelerates in manufacturing', source: 'Reuters' }),
+				createNewsItem({ title: 'Friend-shoring replaces global supply chains', source: 'FT' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'de-globalization');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect ai-arms-race narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'AI race between US and China intensifies', source: 'NYT' }),
+				createNewsItem({ title: 'AI supremacy becomes national priority', source: 'Reuters' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'ai-arms-race');
+			expect(narrative).toBeDefined();
+			expect(narrative!.category).toBe('Tech');
+		});
+	});
+
+	describe('Partisan framing and frame battle patterns', () => {
+		beforeEach(() => {
+			clearNarrativeHistory();
+		});
+
+		it('should detect conservative-framing narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Woke policies face growing backlash', source: 'NYPost' }),
+				createNewsItem({ title: 'Radical left agenda pushes voters away', source: 'Fox' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'conservative-framing');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect progressive-framing narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Far-right groups rally in major cities', source: 'CNN' }),
+				createNewsItem({ title: 'MAGA extremism concerns law enforcement', source: 'WaPo' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'progressive-framing');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect immigration frame battle (both sides)', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Border crisis worsens as crossings surge', source: 'Fox' }),
+				createNewsItem({ title: 'Illegal crossing numbers hit record', source: 'AP' }),
+				createNewsItem({ title: 'Asylum seeker rights at stake in new policy', source: 'NYT' }),
+				createNewsItem({ title: 'Family separation reports emerge from border', source: 'CNN' })
+			];
+			const results = analyzeNarratives(news);
+			const securityFrame = results!.trendingNarratives.find((n) => n.id === 'immigration-security-frame');
+			const humanFrame = results!.trendingNarratives.find((n) => n.id === 'immigration-humanitarian-frame');
+			expect(securityFrame).toBeDefined();
+			expect(humanFrame).toBeDefined();
+		});
+
+		it('should detect AI framing battle', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'AI breakthrough transforms drug discovery', source: 'MIT' }),
+				createNewsItem({ title: 'AI revolution creates new opportunities', source: 'Bloomberg' }),
+				createNewsItem({ title: 'AI threat to jobs grows as automation spreads', source: 'CNN' }),
+				createNewsItem({ title: 'AI danger warnings from leading researchers', source: 'NYT' })
+			];
+			const results = analyzeNarratives(news);
+			const optimist = results!.trendingNarratives.find((n) => n.id === 'ai-optimist-frame');
+			const alarmist = results!.trendingNarratives.find((n) => n.id === 'ai-alarmist-frame');
+			expect(optimist).toBeDefined();
+			expect(alarmist).toBeDefined();
+		});
+	});
+
+	describe('Brazil partisan framing and frame battles', () => {
+		beforeEach(() => {
+			clearNarrativeHistory();
+		});
+
+		it('should detect brazil-right-framing narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Esquerdistas dominam universidades, diz relatório', source: 'Gazeta' }),
+				createNewsItem({ title: 'Doutrinação nas escolas preocupa pais', source: 'Jovem Pan' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'brazil-right-framing');
+			expect(narrative).toBeDefined();
+			expect(narrative!.region).toBe('brazil');
+		});
+
+		it('should detect brazil-left-framing narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Golpistas enfrentam processo judicial', source: 'G1' }),
+				createNewsItem({ title: 'Bolsonarismo ameaça instituições democráticas', source: 'Folha' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'brazil-left-framing');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect brazil security frame battle', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Armar o cidadão é direito fundamental, diz deputado', source: 'Test' }),
+				createNewsItem({ title: 'Mão dura contra o crime organizado', source: 'Test2' }),
+				createNewsItem({ title: 'Violência policial mata jovens nas periferias', source: 'Test3' }),
+				createNewsItem({ title: 'Direitos humanos devem proteger todos', source: 'Test4' })
+			];
+			const results = analyzeNarratives(news);
+			const hardline = results!.trendingNarratives.find((n) => n.id === 'brazil-security-hardline');
+			const rights = results!.trendingNarratives.find((n) => n.id === 'brazil-security-rights');
+			expect(hardline).toBeDefined();
+			expect(rights).toBeDefined();
+		});
+
+		it('should detect brazil-corruption narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Nova operação investiga corrupção no governo', source: 'G1' }),
+				createNewsItem({ title: 'Delação premiada revela esquema de propina', source: 'Folha' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.trendingNarratives.find((n) => n.id === 'brazil-corruption');
+			expect(narrative).toBeDefined();
+			expect(narrative!.region).toBe('brazil');
+		});
+	});
+
 	describe('New fringe narrative patterns', () => {
 		beforeEach(() => {
 			clearNarrativeHistory();
