@@ -718,6 +718,91 @@ export const NARRATIVE_PATTERNS: NarrativePattern[] = [
 		keywords: ['energy crisis manufactured', 'green agenda', 'energy shortage'],
 		category: 'Economy',
 		severity: 'spreading'
+	},
+	// === NEW FRINGE NARRATIVES ===
+	{
+		id: 'grid-collapse',
+		keywords: ['grid collapse', 'power grid attack', 'blackout agenda', 'emp attack'],
+		category: 'Economy',
+		severity: 'emerging'
+	},
+	{
+		id: 'water-wars',
+		keywords: ['water privatization', 'water crisis engineered', 'water shortage agenda'],
+		category: 'Economy',
+		severity: 'watch'
+	},
+	{
+		id: 'lab-grown-food',
+		keywords: ['lab grown meat danger', 'fake food', 'synthetic food agenda', 'bug diet'],
+		category: 'Health',
+		severity: 'watch'
+	},
+	{
+		id: 'weather-manipulation',
+		keywords: ['weather weapon', 'haarp', 'geoengineering', 'chemtrail', 'weather control'],
+		category: 'Environment',
+		severity: 'disinfo'
+	},
+	{
+		id: '15-minute-city',
+		keywords: ['15 minute city', 'climate lockdown', 'movement restriction', 'open air prison'],
+		category: 'Society',
+		severity: 'spreading'
+	},
+	{
+		id: 'digital-id-control',
+		keywords: ['digital id', 'digital passport', 'biometric control', 'surveillance state'],
+		category: 'Society',
+		severity: 'watch'
+	},
+	{
+		id: 'bank-bail-in',
+		keywords: ['bail in', 'bank confiscation', 'savings seizure', 'bank theft'],
+		category: 'Finance',
+		severity: 'watch'
+	},
+	{
+		id: 'ai-takeover',
+		keywords: ['ai takeover', 'ai control', 'ai overlord', 'machine uprising', 'skynet'],
+		category: 'Tech',
+		severity: 'watch'
+	},
+	{
+		id: 'space-hoax',
+		keywords: ['space fake', 'moon landing hoax', 'flat earth', 'nasa lie'],
+		category: 'Tech',
+		severity: 'disinfo'
+	},
+	{
+		id: 'cyber-false-flag',
+		keywords: ['cyber false flag', 'staged cyberattack', 'internet kill switch'],
+		category: 'Security',
+		severity: 'watch'
+	},
+	{
+		id: 'demographic-replacement',
+		keywords: ['great replacement', 'replacement migration', 'demographic engineering'],
+		category: 'Society',
+		severity: 'disinfo'
+	},
+	{
+		id: 'pharma-conspiracy',
+		keywords: ['big pharma conspiracy', 'suppressed cure', 'medical coverup'],
+		category: 'Health',
+		severity: 'watch'
+	},
+	{
+		id: 'controlled-demolition',
+		keywords: ['controlled demolition economy', 'planned collapse', 'intentional crash'],
+		category: 'Finance',
+		severity: 'watch'
+	},
+	{
+		id: 'sovereignty-erosion',
+		keywords: ['sovereignty erosion', 'who treaty', 'un takeover', 'global governance'],
+		category: 'Political',
+		severity: 'emerging'
 	}
 ];
 

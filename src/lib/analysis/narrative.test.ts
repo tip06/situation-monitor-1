@@ -437,4 +437,57 @@ describe('Narrative Tracker', () => {
 			expect(results).not.toBeNull();
 		});
 	});
+
+	describe('New fringe narrative patterns', () => {
+		beforeEach(() => {
+			clearNarrativeHistory();
+		});
+
+		it('should detect weather-manipulation disinfo narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'HAARP weather weapon conspiracy resurfaces', source: 'ZeroHedge' }),
+				createNewsItem({ title: 'Chemtrail theory gains followers online', source: 'Infowars' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative = results!.disinfoSignals.find((n) => n.id === 'weather-manipulation');
+			expect(narrative).toBeDefined();
+			expect(narrative!.severity).toBe('disinfo');
+		});
+
+		it('should detect sovereignty-erosion emerging narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'WHO treaty threatens national sovereignty', source: 'Test' }),
+				createNewsItem({ title: 'UN takeover fears grow among critics', source: 'Test2' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative =
+				results!.emergingFringe.find((n) => n.id === 'sovereignty-erosion') ||
+				results!.narrativeWatch.find((n) => n.id === 'sovereignty-erosion');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect 15-minute-city narrative', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: '15 minute city plans spark backlash', source: 'Test' }),
+				createNewsItem({ title: 'Climate lockdown conspiracy spreads', source: 'Test2' })
+			];
+			const results = analyzeNarratives(news);
+			const narrative =
+				results!.emergingFringe.find((n) => n.id === '15-minute-city') ||
+				results!.narrativeWatch.find((n) => n.id === '15-minute-city');
+			expect(narrative).toBeDefined();
+		});
+
+		it('should detect demographic-replacement as disinfo', () => {
+			const news: NewsItem[] = [
+				createNewsItem({ title: 'Great replacement theory spreads online', source: 'Infowars' }),
+				createNewsItem({ title: 'Replacement migration claims debunked', source: 'BBC News' })
+			];
+			const results = analyzeNarratives(news);
+			const inDisinfo = results!.disinfoSignals.find((n) => n.id === 'demographic-replacement');
+			const inCrossover = results!.fringeToMainstream.find((n) => n.id === 'demographic-replacement');
+			// Should appear in either disinfo or crossover (since BBC is mainstream)
+			expect(inDisinfo || inCrossover).toBeDefined();
+		});
+	});
 });
