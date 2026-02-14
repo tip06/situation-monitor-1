@@ -108,7 +108,9 @@ Unique business logic for intelligence analysis:
 
 - Improve map interface
 - possibility to manually insert feeds
-- check out world monitor for ideas.
+- check out world monitor for ideas
+- investigate ways to speed up refreshes
+- ask to explain the difference between trending narratives and narrative watch.
 
 ## General Guidance
 
