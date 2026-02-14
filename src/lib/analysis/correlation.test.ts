@@ -17,6 +17,18 @@ import {
 import type { NewsItem } from '$lib/types';
 import { getSourceWeight, COMPOUND_PATTERNS } from '$lib/config/analysis';
 
+function createCorrelationNewsItem(overrides: Partial<NewsItem> = {}): NewsItem {
+	return {
+		id: `news-${Math.random()}`,
+		title: 'Test headline',
+		link: 'https://example.com/news',
+		timestamp: Date.now(),
+		source: 'Reuters',
+		category: 'politics',
+		...overrides
+	};
+}
+
 describe('Correlation Engine', () => {
 	beforeEach(() => {
 		clearCorrelationHistory();
@@ -598,5 +610,112 @@ describe('Compound Pattern Detection', () => {
 
 		expect(tradeWarLow?.level).toBe('elevated');
 		expect(tradeWarHigh?.level).toBe('critical');
+	});
+});
+
+describe('New Correlation Topics Coverage', () => {
+	beforeEach(() => {
+		clearCorrelationHistory();
+		clearPersistedHistory();
+	});
+
+	it('should detect cyberattack topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Major ransomware attack hits hospitals' }),
+			createCorrelationNewsItem({ title: 'Data breach exposes millions' }),
+			createCorrelationNewsItem({ title: 'Zero-day exploit discovered in router firmware' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'cyberattack');
+		expect(pattern).toBeDefined();
+		expect(pattern!.count).toBeGreaterThanOrEqual(3);
+	});
+
+	it('should detect sanctions topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'New sanctions imposed on Russian oligarchs' }),
+			createCorrelationNewsItem({ title: 'Export control restrictions tighten on chip exports' }),
+			createCorrelationNewsItem({ title: 'SWIFT ban extended to more banks' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'sanctions');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect food-security topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Food crisis worsens in East Africa' }),
+			createCorrelationNewsItem({ title: 'Grain export ban causes price spike' }),
+			createCorrelationNewsItem({ title: 'Famine warnings issued by UN' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'food-security');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect sovereign-debt topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Debt ceiling negotiations stall in Congress' }),
+			createCorrelationNewsItem({ title: 'National debt reaches new milestone' }),
+			createCorrelationNewsItem({ title: 'Bond yield spikes on fiscal deficit concerns' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'sovereign-debt');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect civil-unrest topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Massive protests erupt in capital' }),
+			createCorrelationNewsItem({ title: 'Riot police deployed after demonstrations' }),
+			createCorrelationNewsItem({ title: 'Civil unrest spreads to neighboring cities' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'civil-unrest');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect extreme-weather topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Record temperature breaks all-time high' }),
+			createCorrelationNewsItem({ title: 'Devastating typhoon makes landfall' }),
+			createCorrelationNewsItem({ title: 'Extreme weather batters coastal regions' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'extreme-weather');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect arms-race topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Major arms deal signed between allies' }),
+			createCorrelationNewsItem({ title: 'Defense spending surges across NATO' }),
+			createCorrelationNewsItem({ title: 'Military buildup accelerates near border' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'arms-race');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect energy-transition topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Renewable energy investment hits record' }),
+			createCorrelationNewsItem({ title: 'Solar power capacity doubles in Asia' }),
+			createCorrelationNewsItem({ title: 'Clean energy transition accelerates globally' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'energy-transition');
+		expect(pattern).toBeDefined();
+	});
+
+	it('should detect rare-earths topic', () => {
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Rare earth export restrictions spark concern' }),
+			createCorrelationNewsItem({ title: 'Lithium shortage threatens EV production' }),
+			createCorrelationNewsItem({ title: 'Critical mineral supply chain under pressure' })
+		];
+		const results = analyzeCorrelations(news);
+		const pattern = results?.emergingPatterns.find((p) => p.id === 'rare-earths');
+		expect(pattern).toBeDefined();
 	});
 });

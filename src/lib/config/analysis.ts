@@ -309,6 +309,140 @@ export const CORRELATION_TOPICS: CorrelationTopic[] = [
 		id: 'deepfake',
 		patterns: [/deepfake/i, /ai.*misinformation/i, /synthetic media/i],
 		category: 'Tech'
+	},
+
+	// === NEW DOMAINS ===
+
+	// Cyber & InfoSec
+	{
+		id: 'cyberattack',
+		patterns: [/cyberattack/i, /cyber attack/i, /data breach/i, /ransomware/i, /hacking/i, /zero.day/i],
+		category: 'Security'
+	},
+	{
+		id: 'state-hacking',
+		patterns: [/state.sponsored/i, /\bapt\b/i, /cyber espionage/i, /cyber warfare/i],
+		category: 'Security'
+	},
+
+	// Space & Satellites
+	{
+		id: 'space-military',
+		patterns: [/space force/i, /satellite weapon/i, /anti.satellite/i, /space militariz/i, /orbital weapon/i],
+		category: 'Security'
+	},
+	{
+		id: 'space-race',
+		patterns: [/space launch/i, /spacex/i, /moon mission/i, /mars mission/i, /space station/i],
+		category: 'Tech'
+	},
+
+	// Energy & Resources
+	{
+		id: 'energy-transition',
+		patterns: [/renewable energy/i, /\bsolar\b.*power/i, /wind power/i, /green energy/i, /clean energy/i, /energy transition/i],
+		category: 'Environment'
+	},
+	{
+		id: 'rare-earths',
+		patterns: [/rare earth/i, /lithium/i, /cobalt/i, /critical mineral/i, /semiconductor supply/i],
+		category: 'Economy'
+	},
+	{
+		id: 'oil-opec',
+		patterns: [/\bopec\b/i, /oil price/i, /oil production/i, /crude oil/i, /petroleum/i, /oil cut/i],
+		category: 'Economy'
+	},
+
+	// Sanctions & Economic Warfare
+	{
+		id: 'sanctions',
+		patterns: [/\bsanction/i, /swift ban/i, /asset freeze/i, /export control/i, /trade restriction/i, /\bembargo\b/i],
+		category: 'Geopolitics'
+	},
+	{
+		id: 'trade-blocs',
+		patterns: [/\bbrics\b/i, /g7 summit/i, /\bg20\b/i, /trade agreement/i, /trade bloc/i, /economic alliance/i],
+		category: 'Geopolitics'
+	},
+
+	// Food & Agriculture
+	{
+		id: 'food-security',
+		patterns: [/food crisis/i, /crop failure/i, /grain export/i, /food price/i, /\bfamine\b/i, /food shortage/i],
+		category: 'Economy'
+	},
+	{
+		id: 'agriculture',
+		patterns: [/fertilizer/i, /\bdrought\b/i, /\bharvest\b/i, /agriculture/i, /farming crisis/i],
+		category: 'Environment'
+	},
+
+	// Debt & Fiscal
+	{
+		id: 'sovereign-debt',
+		patterns: [/national debt/i, /debt ceiling/i, /fiscal deficit/i, /credit rating/i, /bond yield/i, /\btreasury\b/i],
+		category: 'Economy'
+	},
+	{
+		id: 'credit-stress',
+		patterns: [/credit crunch/i, /default risk/i, /junk bond/i, /high yield/i, /credit spread/i],
+		category: 'Finance'
+	},
+
+	// Social Unrest
+	{
+		id: 'civil-unrest',
+		patterns: [/\bprotest/i, /\briot/i, /civil unrest/i, /demonstration/i, /\bstrike\b/i, /\buprising\b/i],
+		category: 'Politics'
+	},
+	{
+		id: 'political-violence',
+		patterns: [/assassination/i, /political violence/i, /insurrection/i, /\bcoup\b/i, /\bextremism\b/i, /domestic terror/i],
+		category: 'Security'
+	},
+
+	// Biotech & Health
+	{
+		id: 'biotech',
+		patterns: [/gene therapy/i, /\bcrispr\b/i, /biotech breakthrough/i, /drug approval/i, /fda approval/i],
+		category: 'Health'
+	},
+	{
+		id: 'antimicrobial',
+		patterns: [/antibiotic resistance/i, /superbug/i, /antimicrobial/i, /drug.resistant/i],
+		category: 'Health'
+	},
+
+	// Migration & Demographics
+	{
+		id: 'refugee-crisis',
+		patterns: [/\brefugee/i, /\bdisplaced\b/i, /humanitarian crisis/i, /refugee camp/i, /migration crisis/i],
+		category: 'Politics'
+	},
+	{
+		id: 'demographics',
+		patterns: [/aging population/i, /birth rate/i, /fertility rate/i, /population decline/i, /brain drain/i],
+		category: 'Economy'
+	},
+
+	// Military & Defense
+	{
+		id: 'arms-race',
+		patterns: [/arms deal/i, /weapons sale/i, /military buildup/i, /defense spending/i, /arms race/i, /conscription/i],
+		category: 'Security'
+	},
+	{
+		id: 'nato-defense',
+		patterns: [/nato spending/i, /nato expansion/i, /european defense/i, /military alliance/i, /collective defense/i],
+		category: 'Geopolitics'
+	},
+
+	// Extreme Climate
+	{
+		id: 'extreme-weather',
+		patterns: [/extreme weather/i, /heat wave/i, /polar vortex/i, /\btornado\b/i, /\btyphoon\b/i, /\bcyclone\b/i, /ice storm/i, /record temperature/i, /climate emergency/i, /weather disaster/i],
+		category: 'Environment'
 	}
 ];
 
