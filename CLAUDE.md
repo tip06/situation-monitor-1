@@ -80,6 +80,16 @@ Unique business logic for intelligence analysis:
 - `feeds.ts`: 30+ RSS sources across 6 categories (politics, tech, finance, gov, ai, intel)
 - `keywords.ts`: Alert keywords, region detection, topic detection
 - `analysis.ts`: Correlation topics and narrative patterns with severity levels
+
+#### Analysis Coverage (as of 2026-02-13)
+
+| Category | Count |
+|---|---|
+| Correlation Topics | 42 |
+| Compound Signals | 36 |
+| Fringe Narratives | 30 |
+| Mainstream Narratives | 61 |
+| **Total** | **169** |
 - `panels.ts`: Panel registry with display order
 - `map.ts`: Geopolitical hotspots, conflict zones, strategic locations
 
@@ -97,8 +107,8 @@ Unique business logic for intelligence analysis:
 ## TODO
 
 - Improve map interface
-- Insert canaltech feed
 - possibility to manually insert feeds
+- check out world monitor for ideas.
 
 ## General Guidance
 
