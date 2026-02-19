@@ -15,6 +15,8 @@
 	} from '$lib/config/map';
 	import { CACHE_TTLS } from '$lib/config/api';
 	import { mapLayers, type MapLayersState } from '$lib/stores/mapLayers';
+	import { language } from '$lib/stores';
+	import { t, type MessageKey } from '$lib/i18n';
 	import type { CustomMonitor } from '$lib/types';
 
 	interface Props {
@@ -762,15 +764,20 @@
 	});
 
 	// Layer toggle configuration
-	const layerConfig: { key: keyof MapLayersState; label: string; icon: string; color: string }[] = [
-		{ key: 'hotspots', label: 'Hotspots', icon: '●', color: '#ff4444' },
-		{ key: 'conflictZones', label: 'Conflict Zones', icon: '▢', color: '#ff6666' },
-		{ key: 'chokepoints', label: 'Chokepoints', icon: '◆', color: '#00aaff' },
-		{ key: 'cableLandings', label: 'Cable Landings', icon: '◎', color: '#aa44ff' },
-		{ key: 'nuclearSites', label: 'Nuclear Sites', icon: '☢', color: '#ffff00' },
-		{ key: 'militaryBases', label: 'Military Bases', icon: '★', color: '#ff00ff' },
-		{ key: 'monitors', label: 'Monitors', icon: '📡', color: '#00ffff' },
-		{ key: 'customMarkers', label: 'Custom Markers', icon: '📍', color: '#00ff88' }
+	const layerConfig: {
+		key: keyof MapLayersState;
+		labelKey: MessageKey;
+		icon: string;
+		color: string;
+	}[] = [
+		{ key: 'hotspots', labelKey: 'map.layer.hotspots', icon: '●', color: '#ff4444' },
+		{ key: 'conflictZones', labelKey: 'map.layer.conflictZones', icon: '▢', color: '#ff6666' },
+		{ key: 'chokepoints', labelKey: 'map.layer.chokepoints', icon: '◆', color: '#00aaff' },
+		{ key: 'cableLandings', labelKey: 'map.layer.cableLandings', icon: '◎', color: '#aa44ff' },
+		{ key: 'nuclearSites', labelKey: 'map.layer.nuclearSites', icon: '☢', color: '#ffff00' },
+		{ key: 'militaryBases', labelKey: 'map.layer.militaryBases', icon: '★', color: '#ff00ff' },
+		{ key: 'monitors', labelKey: 'map.layer.monitors', icon: '📡', color: '#00ffff' },
+		{ key: 'customMarkers', labelKey: 'map.layer.customMarkers', icon: '📍', color: '#00ff88' }
 	];
 
 	onMount(() => {
@@ -778,7 +785,7 @@
 	});
 </script>
 
-<Panel id="map" title="Global Situation" {loading} {error}>
+<Panel id="map" title={t($language, 'map.title')} {loading} {error}>
 	<div class="map-container" bind:this={mapContainer}>
 		<svg class="map-svg"></svg>
 		{#if tooltipVisible && tooltipContent}
@@ -798,11 +805,11 @@
 			<button
 				class="layer-toggle-btn"
 				onclick={() => (layerPanelOpen = !layerPanelOpen)}
-				title="Toggle Layers"
+				title={t($language, 'map.toggleLayers')}
 			>
 				<span class="layer-icon">☰</span>
 				{#if !layerPanelOpen}
-					<span class="layer-label">Layers</span>
+					<span class="layer-label">{t($language, 'map.layers')}</span>
 				{/if}
 			</button>
 			{#if layerPanelOpen}
@@ -815,31 +822,35 @@
 								onchange={() => mapLayers.toggleLayer(layer.key)}
 							/>
 							<span class="layer-item-icon" style="color: {layer.color}">{layer.icon}</span>
-							<span class="layer-item-label">{layer.label}</span>
+							<span class="layer-item-label">{t($language, layer.labelKey)}</span>
 						</label>
 					{/each}
 					<div class="layer-actions">
-						<button class="layer-action-btn" onclick={() => mapLayers.showAll()}>Show All</button>
-						<button class="layer-action-btn" onclick={() => mapLayers.hideAll()}>Hide All</button>
+						<button class="layer-action-btn" onclick={() => mapLayers.showAll()}>
+							{t($language, 'map.showAll')}
+						</button>
+						<button class="layer-action-btn" onclick={() => mapLayers.hideAll()}>
+							{t($language, 'map.hideAll')}
+						</button>
 					</div>
 				</div>
 			{/if}
 		</div>
 
 		<div class="zoom-controls">
-			<button class="zoom-btn" onclick={zoomIn} title="Zoom in">+</button>
-			<button class="zoom-btn" onclick={zoomOut} title="Zoom out">−</button>
-			<button class="zoom-btn" onclick={resetZoom} title="Reset">⟲</button>
+			<button class="zoom-btn" onclick={zoomIn} title={t($language, 'map.zoomIn')}>+</button>
+			<button class="zoom-btn" onclick={zoomOut} title={t($language, 'map.zoomOut')}>−</button>
+			<button class="zoom-btn" onclick={resetZoom} title={t($language, 'map.reset')}>⟲</button>
 		</div>
 		<div class="map-legend">
 			<div class="legend-item">
-				<span class="legend-dot high"></span> High
+				<span class="legend-dot high"></span> {t($language, 'legend.high')}
 			</div>
 			<div class="legend-item">
-				<span class="legend-dot elevated"></span> Elevated
+				<span class="legend-dot elevated"></span> {t($language, 'legend.elevated')}
 			</div>
 			<div class="legend-item">
-				<span class="legend-dot low"></span> Low
+				<span class="legend-dot low"></span> {t($language, 'legend.low')}
 			</div>
 		</div>
 	</div>

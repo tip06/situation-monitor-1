@@ -16,6 +16,8 @@
 		greenlandNews,
 		fringeNews
 	} from '$lib/stores';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		category: NewsCategory;
@@ -128,7 +130,7 @@
 
 <Panel id={panelId} {title} {count} {loading} {error}>
 	{#if allItems.length === 0 && !loading && !error}
-		<div class="empty-state">No news available</div>
+		<div class="empty-state">{t($language, 'news.empty')}</div>
 	{:else}
 		<!-- Filter toolbar -->
 		{#if allItems.length > 0}
@@ -137,11 +139,11 @@
 					<input
 						type="text"
 						class="search-input"
-						placeholder="Search headlines..."
+						placeholder={t($language, 'common.searchHeadlines')}
 						bind:value={searchQuery}
 					/>
 					{#if hasActiveFilters}
-						<button class="clear-btn" onclick={clearFilters} title="Clear all filters">
+						<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
 							&times;
 						</button>
 					{/if}
@@ -149,7 +151,7 @@
 
 				{#if availableRegions.length > 0}
 					<div class="chip-row">
-						<span class="chip-label">Region:</span>
+						<span class="chip-label">{t($language, 'common.region')}</span>
 						{#each availableRegions as region}
 							<button
 								class="chip"
@@ -164,7 +166,7 @@
 
 				{#if availableTopics.length > 0}
 					<div class="chip-row">
-						<span class="chip-label">Topic:</span>
+						<span class="chip-label">{t($language, 'common.topic')}</span>
 						{#each availableTopics as topic}
 							<button
 								class="chip"
@@ -181,7 +183,7 @@
 
 		<!-- News list -->
 		{#if items.length === 0 && hasActiveFilters}
-			<div class="empty-state">No items match filters</div>
+			<div class="empty-state">{t($language, 'news.noMatches')}</div>
 		{:else}
 			<div class="news-list">
 				{#each items as item (item.id)}

@@ -2,6 +2,8 @@
  * Analysis configuration - correlation topics, narrative patterns, source classification
  */
 
+import type { Locale } from '$lib/i18n/types';
+
 export interface CorrelationTopic {
 	id: string;
 	patterns: RegExp[];
@@ -458,6 +460,120 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		boostFactor: 3
 	}
 ];
+
+const COMPOUND_NAME_OVERRIDES_PT_BR: Record<string, string> = {
+	'trade-war-escalation': 'Escalada da Guerra Comercial',
+	'stagflation-risk': 'Risco de Estagflação',
+	'geopolitical-crisis': 'Crise Geopolítica em Múltiplas Frentes',
+	'tech-regulatory-storm': 'Tempestade Regulatória em Tecnologia',
+	'financial-stress': 'Estresse no Setor Financeiro',
+	'nuclear-escalation': 'Escalada Nuclear',
+	'middle-east-escalation': 'Escalada no Oriente Médio',
+	'energy-supply-shock': 'Choque de Oferta de Energia',
+	'recession-signal': 'Sinal de Recessão',
+	'inflation-spiral': 'Espiral Inflacionária',
+	'dollar-stress': 'Estresse do Dólar',
+	'ai-disruption-wave': 'Onda de Disrupção por IA',
+	'disinfo-storm': 'Tempestade de Desinformação',
+	'pandemic-redux': 'Retorno da Pandemia',
+	'climate-shock': 'Choque Climático',
+	'social-pressure': 'Pressão Social',
+	'cyber-warfare-escalation': 'Escalada de Guerra Cibernética',
+	'critical-infra-attack': 'Ataque à Infraestrutura Crítica',
+	'cyber-financial-attack': 'Ataque Ciberfinanceiro',
+	'energy-weaponization': 'Arma de Energia',
+	'resource-war': 'Guerra por Recursos',
+	'green-transition-shock': 'Choque da Transição Verde',
+	'food-crisis-spiral': 'Espiral de Crise Alimentar',
+	'climate-migration': 'Pressão Migratória Climática',
+	'agricultural-collapse': 'Sinal de Colapso Agrícola',
+	'sovereign-debt-crisis': 'Crise de Dívida Soberana',
+	'credit-contagion': 'Contágio de Crédito',
+	'dedollarization-signal': 'Sinal de Desdolarização',
+	'social-tinderbox': 'Barril de Pólvora Social',
+	'democratic-stress': 'Estresse Democrático',
+	'global-protest-wave': 'Onda Global de Protestos',
+	'arms-race-acceleration': 'Aceleração da Corrida Armamentista',
+	'multi-domain-conflict': 'Conflito Multidomínio',
+	'escalation-ladder': 'Escada de Escalada',
+	'systemic-fragility': 'Fragilidade Sistêmica',
+	polycrisis: 'Policrise'
+};
+
+function translateCompoundIntelText(text: string): string {
+	const phraseReplacements: Array<[RegExp, string]> = [
+		[
+			/appears in multi-source daily coverage for at least two consecutive refresh windows\./gi,
+			'aparece em cobertura diária de múltiplas fontes por pelo menos duas janelas consecutivas de atualização.'
+		],
+		[
+			/is accompanied by cross-market stress signals \(energy, freight, credit, or policy risk premium\)\./gi,
+			'é acompanhado por sinais de estresse entre mercados (energia, frete, crédito ou prêmio de risco de política).'
+		],
+		[
+			/reinforces (.+?) rather than decoupling from the first two drivers\./gi,
+			'reforça $1, em vez de desacoplar dos dois primeiros vetores.'
+		],
+		[
+			/Primary drivers behind (.+?) remain active without a credible de-escalation agreement\./gi,
+			'Os vetores primários por trás de $1 permanecem ativos sem um acordo de desescalada crível.'
+		],
+		[
+			/Policy responses stay incremental and do not immediately neutralize (.+?) plus (.+?) pressure\./gi,
+			'As respostas de política permanecem incrementais e não neutralizam imediatamente a pressão de $1 mais $2.'
+		],
+		[
+			/Two core drivers of (.+?) fall below activation threshold across consecutive cycles\./gi,
+			'Dois vetores centrais de $1 caem abaixo do limiar de ativação em ciclos consecutivos.'
+		],
+		[
+			/A verifiable diplomatic, regulatory, or security breakthrough materially reduces (.+?) and (.+?) stress\./gi,
+			'Um avanço verificável diplomático, regulatório ou de segurança reduz materialmente o estresse de $1 e $2.'
+		],
+		[
+			/Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway\./gi,
+			'Indicadores específicos do Brasil desacoplam da direção da tendência global, invalidando o atual caminho de transmissão.'
+		],
+		[
+			/Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover\./gi,
+			'O impacto para as Forças Armadas brasileiras permanece indireto; continuar monitorando efeitos de transbordamento em logística, ciber e infraestrutura crítica.'
+		],
+		[
+			/Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness\./gi,
+			'As instituições militares e civis brasileiras mantêm capacidade de coordenação para monitoramento de transbordamentos e prontidão de resposta.'
+		],
+		[
+			/Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption\./gi,
+			'O Brasil absorve efeitos de segunda ordem por canais econômicos e de governança, sem disrupção imediata de segurança em escala nacional.'
+		],
+		[/Brazilian military should/gi, 'As Forças Armadas brasileiras devem'],
+		[/Brazil should/gi, 'O Brasil deve'],
+		[/cross-market stress signals/gi, 'sinais de estresse entre mercados'],
+		[/de-escalation/gi, 'desescalada'],
+		[/activation threshold/gi, 'limiar de ativação'],
+		[/consecutive cycles/gi, 'ciclos consecutivos'],
+		[/spillover/gi, 'transbordamento']
+	];
+
+	let translated = text;
+	for (const [pattern, replacement] of phraseReplacements) {
+		translated = translated.replace(pattern, replacement);
+	}
+	return translated;
+}
+
+const COMPOUND_PATTERNS_PT_BR: CompoundPattern[] = COMPOUND_PATTERNS.map((pattern) => ({
+	...pattern,
+	name: COMPOUND_NAME_OVERRIDES_PT_BR[pattern.id] ?? pattern.name,
+	keyJudgments: pattern.keyJudgments.map(translateCompoundIntelText),
+	indicators: pattern.indicators.map(translateCompoundIntelText),
+	assumptions: pattern.assumptions.map(translateCompoundIntelText),
+	changeTriggers: pattern.changeTriggers.map(translateCompoundIntelText)
+}));
+
+export function getCompoundPatterns(locale: Locale): CompoundPattern[] {
+	return locale === 'pt-BR' ? COMPOUND_PATTERNS_PT_BR : COMPOUND_PATTERNS;
+}
 
 export interface NarrativePattern {
 	id: string;

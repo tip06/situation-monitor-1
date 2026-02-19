@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
 	import { getRelativeTime } from '$lib/utils';
-	import { intelNews } from '$lib/stores';
+	import { intelNews, language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 	import type { NewsItem } from '$lib/types';
 
 	type SourceType = 'osint' | 'govt' | 'think-tank' | 'defense' | 'regional' | 'cyber';
@@ -144,9 +145,9 @@
 	}
 </script>
 
-<Panel id="intel" title="Intel Feed" {count} {loading} {error}>
+<Panel id="intel" title={t($language, 'panelName.intel')} {count} {loading} {error}>
 	{#if allItems.length === 0 && !loading && !error}
-		<div class="empty-state">No intel available</div>
+		<div class="empty-state">{t($language, 'panel.intelEmpty')}</div>
 	{:else}
 		<!-- Filter toolbar -->
 		{#if allItems.length > 0}
@@ -155,11 +156,11 @@
 					<input
 						type="text"
 						class="search-input"
-						placeholder="Search intel..."
+						placeholder={t($language, 'common.searchHeadlines')}
 						bind:value={searchQuery}
 					/>
 					{#if hasActiveFilters}
-						<button class="clear-btn" onclick={clearFilters} title="Clear all filters">
+						<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
 							&times;
 						</button>
 					{/if}
@@ -167,7 +168,7 @@
 
 				{#if availableRegions.length > 0}
 					<div class="chip-row">
-						<span class="chip-label">Region:</span>
+						<span class="chip-label">{t($language, 'common.region')}</span>
 						{#each availableRegions as region}
 							<button
 								class="chip"
@@ -182,7 +183,7 @@
 
 				{#if availableTopics.length > 0}
 					<div class="chip-row">
-						<span class="chip-label">Topic:</span>
+						<span class="chip-label">{t($language, 'common.topic')}</span>
 						{#each availableTopics as topic}
 							<button
 								class="chip"
@@ -199,7 +200,7 @@
 
 		<!-- Intel list -->
 		{#if items.length === 0 && hasActiveFilters}
-			<div class="empty-state">No items match filters</div>
+			<div class="empty-state">{t($language, 'news.noMatches')}</div>
 		{:else}
 			<div class="intel-list">
 				{#each items as item (item.id)}
@@ -224,7 +225,7 @@
 						</a>
 						{#if item.pubDate}
 							<div class="intel-meta">
-								<span>{getRelativeTime(item.pubDate)}</span>
+								<span>{getRelativeTime(item.pubDate, $language)}</span>
 							</div>
 						{/if}
 					</div>

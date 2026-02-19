@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Panel } from '$lib/components/common';
+	import { language } from '$lib/stores';
+	import { t, type MessageKey } from '$lib/i18n';
 	import type { PredictionCategory } from '$lib/api/misc';
 
 	type SortOption = 'volume' | 'probability' | 'volume24hr';
@@ -27,13 +29,13 @@
 	let sortBy = $state<SortOption>('volume');
 	let filterBy = $state<FilterOption>('all');
 
-	const filterOptions: { value: FilterOption; label: string }[] = [
-		{ value: 'all', label: 'All' },
-		{ value: 'politics', label: 'Politics' },
-		{ value: 'geopolitics', label: 'Geo' },
-		{ value: 'tech', label: 'Tech' },
-		{ value: 'finance', label: 'Finance' },
-		{ value: 'elections', label: 'Elections' }
+	const filterOptions: { value: FilterOption; label: MessageKey }[] = [
+		{ value: 'all', label: 'polymarket.filter.all' },
+		{ value: 'politics', label: 'polymarket.filter.politics' },
+		{ value: 'geopolitics', label: 'polymarket.filter.geopolitics' },
+		{ value: 'tech', label: 'polymarket.filter.tech' },
+		{ value: 'finance', label: 'polymarket.filter.finance' },
+		{ value: 'elections', label: 'polymarket.filter.elections' }
 	];
 
 	const filteredPredictions = $derived.by(() => {
@@ -73,14 +75,14 @@
 	}
 </script>
 
-<Panel id="polymarket" title="Polymarket" {count} {loading} {error}>
+<Panel id="polymarket" title={t($language, 'panelName.polymarket')} {count} {loading} {error}>
 	{#snippet headerExtra()}
 		<div class="sort-controls">
 			<button
 				class="sort-btn"
 				class:active={sortBy === 'volume'}
 				onclick={() => handleSort('volume')}
-				title="Sort by total volume"
+				title={t($language, 'polymarket.sort.volume')}
 			>
 				Vol
 			</button>
@@ -88,7 +90,7 @@
 				class="sort-btn"
 				class:active={sortBy === 'probability'}
 				onclick={() => handleSort('probability')}
-				title="Sort by Yes probability"
+				title={t($language, 'polymarket.sort.probability')}
 			>
 				%
 			</button>
@@ -96,7 +98,7 @@
 				class="sort-btn"
 				class:active={sortBy === 'volume24hr'}
 				onclick={() => handleSort('volume24hr')}
-				title="Sort by 24h volume"
+				title={t($language, 'polymarket.sort.volume24hr')}
 			>
 				24h
 			</button>
@@ -110,13 +112,13 @@
 				class:active={filterBy === option.value}
 				onclick={() => handleFilter(option.value)}
 			>
-				{option.label}
+				{t($language, option.label)}
 			</button>
 		{/each}
 	</div>
 
 	{#if sortedPredictions.length === 0 && !loading && !error}
-		<div class="empty-state">No predictions available</div>
+		<div class="empty-state">{t($language, 'panel.polymarketEmpty')}</div>
 	{:else}
 		<div class="predictions-list">
 			{#each sortedPredictions as pred (pred.id)}
@@ -124,9 +126,13 @@
 					<div class="prediction-info">
 						<div class="prediction-question">{pred.question}</div>
 						<div class="prediction-meta">
-							<span class="prediction-volume">Vol: {formatVolume(pred.volume)}</span>
+							<span class="prediction-volume">
+								{t($language, 'polymarket.volume')}: {formatVolume(pred.volume)}
+							</span>
 							{#if pred.volume24hr}
-								<span class="prediction-volume-24h">24h: {formatVolume(pred.volume24hr)}</span>
+								<span class="prediction-volume-24h">
+									{t($language, 'polymarket.volume24h')}: {formatVolume(pred.volume24hr)}
+								</span>
 							{/if}
 						</div>
 					</div>

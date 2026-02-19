@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TABS, type TabId } from '$lib/config';
-	import { activeTab } from '$lib/stores';
+	import { activeTab, language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	function handleTabClick(tabId: TabId) {
 		activeTab.setTab(tabId);
@@ -15,7 +16,7 @@
 				class:active={$activeTab === tab.id}
 				onclick={() => handleTabClick(tab.id)}
 			>
-				{tab.name}
+				{t($language, tab.nameKey)}
 			</button>
 		{/each}
 	</div>

@@ -3,28 +3,29 @@
  */
 
 import type { PanelId } from './panels';
+import type { MessageKey } from '$lib/i18n';
 
 export interface Preset {
 	id: string;
-	name: string;
+	nameKey: MessageKey;
 	icon: string;
-	description: string;
+	descriptionKey: MessageKey;
 	panels: PanelId[];
 }
 
 export const PRESETS: Record<string, Preset> = {
 	'news-junkie': {
 		id: 'news-junkie',
-		name: 'News Junkie',
+		nameKey: 'preset.newsJunkie.name',
 		icon: '📰',
-		description: 'Stay on top of breaking news across politics, tech, and finance',
+		descriptionKey: 'preset.newsJunkie.description',
 		panels: ['politics', 'tech', 'finance', 'gov', 'ai', 'mainchar', 'map']
 	},
 	trader: {
 		id: 'trader',
-		name: 'Trader',
+		nameKey: 'preset.trader.name',
 		icon: '📈',
-		description: 'Market-focused dashboard with stocks, crypto, and commodities',
+		descriptionKey: 'preset.trader.description',
 		panels: [
 			'markets',
 			'heatmap',
@@ -39,9 +40,9 @@ export const PRESETS: Record<string, Preset> = {
 	},
 	geopolitics: {
 		id: 'geopolitics',
-		name: 'Geopolitics Watcher',
+		nameKey: 'preset.geopolitics.name',
 		icon: '🌍',
-		description: 'Global situation awareness and regional hotspots',
+		descriptionKey: 'preset.geopolitics.description',
 		panels: [
 			'map',
 			'intel',
@@ -57,23 +58,23 @@ export const PRESETS: Record<string, Preset> = {
 	},
 	intel: {
 		id: 'intel',
-		name: 'Intelligence Analyst',
+		nameKey: 'preset.intel.name',
 		icon: '🔍',
-		description: 'Deep analysis, pattern detection, and narrative tracking',
+		descriptionKey: 'preset.intel.description',
 		panels: ['map', 'intel', 'leaders', 'correlation', 'narrative', 'mainchar', 'politics']
 	},
 	minimal: {
 		id: 'minimal',
-		name: 'Minimal',
+		nameKey: 'preset.minimal.name',
 		icon: '⚡',
-		description: 'Just the essentials - map, news, and markets',
+		descriptionKey: 'preset.minimal.description',
 		panels: ['map', 'politics', 'markets']
 	},
 	everything: {
 		id: 'everything',
-		name: 'Everything',
+		nameKey: 'preset.everything.name',
 		icon: '🎛️',
-		description: 'Kitchen sink - all panels enabled',
+		descriptionKey: 'preset.everything.description',
 		panels: [
 			'map',
 			'politics',

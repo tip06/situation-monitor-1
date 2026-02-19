@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Panel } from '$lib/components/common';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		data?: {
@@ -15,23 +17,23 @@
 	let { data = null, loading = false, error = null }: Props = $props();
 
 	const isExpanding = $derived(data && data.change > 0);
-	const status = $derived(isExpanding ? 'PRINTER ON' : 'PRINTER OFF');
+	const status = $derived(isExpanding ? t($language, 'panel.printerOn') : t($language, 'panel.printerOff'));
 	const statusClass = $derived(isExpanding ? 'critical' : 'monitoring');
 </script>
 
-<Panel id="printer" title="Money Printer" {status} {statusClass} {loading} {error}>
+<Panel id="printer" title={t($language, 'panelName.printer')} {status} {statusClass} {loading} {error}>
 	{#if !data && !loading && !error}
-		<div class="empty-state">No Fed data available</div>
+		<div class="empty-state">{t($language, 'panel.printerEmpty')}</div>
 	{:else if data}
 		<div class="printer-gauge">
-			<div class="printer-label">Federal Reserve Balance Sheet</div>
+			<div class="printer-label">{t($language, 'panel.printerLabel')}</div>
 			<div class="printer-value">
 				{data.value.toFixed(2)}<span class="printer-unit">T USD</span>
 			</div>
 			<div class="printer-change" class:up={isExpanding} class:down={!isExpanding}>
 				{data.change >= 0 ? '+' : ''}{(data.change * 1000).toFixed(0)}B ({data.changePercent >= 0
 					? '+'
-					: ''}{data.changePercent.toFixed(2)}%) WoW
+					: ''}{data.changePercent.toFixed(2)}%) {t($language, 'panel.wow')}
 			</div>
 			<div class="printer-bar">
 				<div class="printer-fill" style="width: {Math.min(data.percentOfMax, 100)}%"></div>

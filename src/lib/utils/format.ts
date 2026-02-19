@@ -2,15 +2,18 @@
  * Formatting utilities
  */
 
+import type { Locale } from '$lib/i18n/types';
+import { toIntlLocale } from '$lib/i18n/types';
+
 /**
  * Format relative time from a date
  */
-export function timeAgo(dateInput: string | number | Date): string {
+export function timeAgo(dateInput: string | number | Date, locale: Locale = 'en'): string {
 	const date = new Date(dateInput);
 	const now = new Date();
 	const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-	if (seconds < 60) return 'just now';
+	if (seconds < 60) return locale === 'pt-BR' ? 'agora' : 'just now';
 	if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
 	if (seconds < 86400) return Math.floor(seconds / 3600) + 'h';
 	return Math.floor(seconds / 86400) + 'd';
@@ -19,17 +22,17 @@ export function timeAgo(dateInput: string | number | Date): string {
 /**
  * Get relative time with more detail
  */
-export function getRelativeTime(dateInput: string | number | Date): string {
+export function getRelativeTime(dateInput: string | number | Date, locale: Locale = 'en'): string {
 	const date = new Date(dateInput);
 	const now = new Date();
 	const diff = now.getTime() - date.getTime();
 	const hours = Math.floor(diff / (1000 * 60 * 60));
 	const days = Math.floor(hours / 24);
 
-	if (hours < 1) return 'Just now';
-	if (hours < 24) return `${hours}h ago`;
-	if (days < 7) return `${days}d ago`;
-	return date.toLocaleDateString();
+	if (hours < 1) return locale === 'pt-BR' ? 'Agora' : 'Just now';
+	if (hours < 24) return locale === 'pt-BR' ? `há ${hours}h` : `${hours}h ago`;
+	if (days < 7) return locale === 'pt-BR' ? `há ${days}d` : `${days}d ago`;
+	return date.toLocaleDateString(toIntlLocale(locale));
 }
 
 /**
@@ -37,7 +40,8 @@ export function getRelativeTime(dateInput: string | number | Date): string {
  */
 export function formatCurrency(
 	value: number,
-	options: { decimals?: number; compact?: boolean; symbol?: string } = {}
+	options: { decimals?: number; compact?: boolean; symbol?: string } = {},
+	locale: Locale = 'en'
 ): string {
 	const { decimals = 2, compact = false, symbol = '$' } = options;
 
@@ -48,17 +52,20 @@ export function formatCurrency(
 		if (Math.abs(value) >= 1e3) return symbol + (value / 1e3).toFixed(0) + 'K';
 	}
 
-	return symbol + value.toLocaleString('en-US', { maximumFractionDigits: decimals });
+	return symbol + value.toLocaleString(toIntlLocale(locale), { maximumFractionDigits: decimals });
 }
 
 /**
  * Format number with compact notation
  */
-export function formatNumber(value: number, decimals = 2): string {
+export function formatNumber(value: number, decimals = 2, locale: Locale = 'en'): string {
 	if (Math.abs(value) >= 1e9) return (value / 1e9).toFixed(1) + 'B';
 	if (Math.abs(value) >= 1e6) return (value / 1e6).toFixed(1) + 'M';
 	if (Math.abs(value) >= 1e3) return (value / 1e3).toFixed(1) + 'K';
-	return value.toFixed(decimals);
+	return value.toLocaleString(toIntlLocale(locale), {
+		minimumFractionDigits: decimals,
+		maximumFractionDigits: decimals
+	});
 }
 
 /**

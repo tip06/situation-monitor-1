@@ -3,6 +3,8 @@
 	import { timeAgo } from '$lib/utils';
 	import type { CustomMonitor } from '$lib/types';
 	import type { MonitorMatch } from '$lib/stores/monitors';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		monitors?: CustomMonitor[];
@@ -34,18 +36,18 @@
 	}
 </script>
 
-<Panel id="monitors" title="Custom Monitors" {count} {loading} {error}>
+<Panel id="monitors" title={t($language, 'monitors.title')} {count} {loading} {error}>
 	<div class="monitors-content">
 		{#if monitors.length === 0 && !loading && !error}
 			<div class="empty-state">
-				<p>No monitors configured</p>
+				<p>{t($language, 'monitors.empty')}</p>
 				{#if onCreateMonitor}
-					<button class="create-btn" onclick={onCreateMonitor}> + Create Monitor </button>
+					<button class="create-btn" onclick={onCreateMonitor}>{t($language, 'monitors.create')}</button>
 				{/if}
 			</div>
 		{:else}
 			<div class="monitors-header">
-				<span class="active-count">{activeMonitors.length} active</span>
+				<span class="active-count">{t($language, 'monitors.active', { count: activeMonitors.length })}</span>
 				{#if onCreateMonitor}
 					<button class="add-btn" onclick={onCreateMonitor}>+</button>
 				{/if}
@@ -70,13 +72,19 @@
 										class="action-btn"
 										class:active={monitor.enabled}
 										onclick={() => onToggleMonitor?.(monitor.id)}
-										title={monitor.enabled ? 'Disable' : 'Enable'}
+										title={monitor.enabled
+											? t($language, 'monitors.disable')
+											: t($language, 'monitors.enable')}
 									>
 										{monitor.enabled ? '●' : '○'}
 									</button>
 								{/if}
 								{#if onEditMonitor}
-									<button class="action-btn" onclick={() => onEditMonitor?.(monitor)} title="Edit">
+									<button
+										class="action-btn"
+										onclick={() => onEditMonitor?.(monitor)}
+										title={t($language, 'monitors.edit')}
+									>
 										✎
 									</button>
 								{/if}
@@ -84,7 +92,7 @@
 									<button
 										class="action-btn delete"
 										onclick={() => onDeleteMonitor?.(monitor.id)}
-										title="Delete"
+										title={t($language, 'monitors.delete')}
 									>
 										×
 									</button>
@@ -123,7 +131,7 @@
 										</a>
 										<div class="match-meta">
 											<span class="match-keyword">"{match.matchedKeywords.join(', ')}"</span>
-											<span class="match-time">{timeAgo(match.item.timestamp)}</span>
+											<span class="match-time">{timeAgo(match.item.timestamp, $language)}</span>
 										</div>
 									</div>
 								{/each}

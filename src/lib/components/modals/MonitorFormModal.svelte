@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
-	import { monitors } from '$lib/stores';
+	import { monitors, language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 	import type { CustomMonitor } from '$lib/types';
 
 	interface Props {
@@ -42,12 +43,12 @@
 			.filter((k) => k.length > 0);
 
 		if (!trimmedName) {
-			error = 'Name is required';
+			error = t($language, 'monitor.nameRequired');
 			return;
 		}
 
 		if (keywordList.length === 0) {
-			error = 'At least one keyword is required';
+			error = t($language, 'monitor.keywordRequired');
 			return;
 		}
 
@@ -67,7 +68,7 @@
 			});
 
 			if (!result) {
-				error = 'Maximum number of monitors reached (20)';
+				error = t($language, 'monitor.maxReached');
 				return;
 			}
 		}
@@ -83,48 +84,54 @@
 	}
 </script>
 
-<Modal {open} title={editMonitor ? 'Edit Monitor' : 'Create Monitor'} {onClose}>
+<Modal
+	{open}
+	title={editMonitor ? t($language, 'monitor.edit') : t($language, 'monitor.create')}
+	{onClose}
+>
 	<form class="monitor-form" onsubmit={handleSubmit}>
 		{#if error}
 			<div class="form-error">{error}</div>
 		{/if}
 
 		<div class="form-group">
-			<label for="monitor-name">Name</label>
+			<label for="monitor-name">{t($language, 'monitor.name')}</label>
 			<input
 				id="monitor-name"
 				type="text"
 				bind:value={name}
-				placeholder="e.g., Ukraine Crisis"
+				placeholder={t($language, 'monitor.placeholderName')}
 				maxlength="50"
 			/>
 		</div>
 
 		<div class="form-group">
-			<label for="monitor-keywords">Keywords (comma separated)</label>
+			<label for="monitor-keywords">{t($language, 'monitor.keywords')}</label>
 			<input
 				id="monitor-keywords"
 				type="text"
 				bind:value={keywords}
-				placeholder="e.g., ukraine, zelensky, kyiv"
+				placeholder={t($language, 'monitor.placeholderKeywords')}
 			/>
-			<p class="form-hint">News matching any of these keywords will appear in your monitor</p>
+			<p class="form-hint">{t($language, 'monitor.hint')}</p>
 		</div>
 
 		<div class="form-group">
 			<label class="checkbox-label">
 				<input type="checkbox" bind:checked={enabled} />
-				<span>Enabled</span>
+				<span>{t($language, 'monitor.enabled')}</span>
 			</label>
 		</div>
 
 		<div class="form-actions">
 			{#if editMonitor}
-				<button type="button" class="delete-btn" onclick={handleDelete}> Delete </button>
+				<button type="button" class="delete-btn" onclick={handleDelete}>
+					{t($language, 'monitor.delete')}
+				</button>
 			{/if}
-			<button type="button" class="cancel-btn" onclick={onClose}> Cancel </button>
+			<button type="button" class="cancel-btn" onclick={onClose}>{t($language, 'monitor.cancel')}</button>
 			<button type="submit" class="submit-btn">
-				{editMonitor ? 'Save Changes' : 'Create Monitor'}
+				{editMonitor ? t($language, 'monitor.saveChanges') : t($language, 'monitor.createBtn')}
 			</button>
 		</div>
 	</form>

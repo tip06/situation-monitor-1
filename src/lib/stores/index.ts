@@ -102,3 +102,6 @@ export {
 	totalLayerCount,
 	type MapLayersState
 } from './mapLayers';
+
+// Language store
+export { language } from './language';

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
+
 	interface Props {
 		text: string;
 	}
@@ -14,7 +17,9 @@
 	onmouseenter={() => (visible = true)}
 	onmouseleave={() => (visible = false)}
 >
-	<button class="info-icon" onclick={() => (visible = !visible)} aria-label="More info">?</button>
+	<button class="info-icon" onclick={() => (visible = !visible)} aria-label={t($language, 'common.moreInfo')}>
+		?
+	</button>
 	{#if visible}
 		<span class="tooltip">{text}</span>
 	{/if}
