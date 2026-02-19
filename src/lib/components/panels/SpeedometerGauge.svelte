@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
+
 	/* eslint-disable @typescript-eslint/no-explicit-any */
 	let { value = 50, label = '', volume = '', url = '' }: {
 		value: number;
@@ -104,12 +107,13 @@
 			.attr('font-weight', '500')
 			.attr('text-transform', 'uppercase')
 			.attr('letter-spacing', '0.1em')
-			.text('YES');
+			.text(t($language, 'polymarket.yes'));
 	}
 
 	$effect(() => {
 		// Track value changes to re-render
 		void value;
+		void $language;
 		renderGauge();
 	});
 </script>

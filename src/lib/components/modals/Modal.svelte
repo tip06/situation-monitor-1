@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -37,7 +39,9 @@
 				{#if header}
 					{@render header()}
 				{/if}
-				<button class="modal-close" onclick={onClose} aria-label="Close">×</button>
+				<button class="modal-close" onclick={onClose} aria-label={t($language, 'modal.close')}>
+					×
+				</button>
 			</div>
 
 			<div class="modal-content">

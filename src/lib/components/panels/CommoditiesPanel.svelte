@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Panel, MarketItem } from '$lib/components/common';
-	import { commodities, vix } from '$lib/stores';
+	import { commodities, vix, language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	const items = $derived($commodities.items);
 	const loading = $derived($commodities.loading);
@@ -12,9 +13,9 @@
 
 	function getVixStatus(level: number | undefined): string {
 		if (level === undefined) return '';
-		if (level >= 30) return 'HIGH FEAR';
-		if (level >= 20) return 'ELEVATED';
-		return 'LOW';
+		if (level >= 30) return t($language, 'panel.vixHighFear');
+		if (level >= 20) return t($language, 'threat.elevated').toUpperCase();
+		return t($language, 'threat.low').toUpperCase();
 	}
 
 	function getVixClass(level: number | undefined): string {
@@ -27,14 +28,14 @@
 
 <Panel
 	id="commodities"
-	title="Commodities / VIX"
+	title={t($language, 'panelName.commodities')}
 	status={vixStatus}
 	statusClass={vixClass}
 	{loading}
 	{error}
 >
 	{#if items.length === 0 && !loading && !error}
-		<div class="empty-state">No commodity data available</div>
+		<div class="empty-state">{t($language, 'panel.commoditiesEmpty')}</div>
 	{:else}
 		<div class="commodities-list">
 			{#each items as item (item.symbol)}

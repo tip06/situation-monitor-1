@@ -3,6 +3,8 @@
 	import { timeAgo } from '$lib/utils';
 	import type { PanelId } from '$lib/config';
 	import type { NewsItem } from '$lib/types';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface SituationConfig {
 		title: string;
@@ -28,7 +30,7 @@
 		criticalKeywords: string[] = []
 	): { level: string; text: string } {
 		if (newsItems.length === 0) {
-			return { level: 'monitoring', text: 'MONITORING' };
+			return { level: 'monitoring', text: t($language, 'situation.monitoring') };
 		}
 
 		const now = Date.now();
@@ -42,12 +44,12 @@
 		);
 
 		if (hasCritical || recentNews.length >= 3) {
-			return { level: 'critical', text: 'CRITICAL' };
+			return { level: 'critical', text: t($language, 'situation.critical') };
 		}
 		if (recentNews.length >= 1) {
-			return { level: 'elevated', text: 'ELEVATED' };
+			return { level: 'elevated', text: t($language, 'situation.elevated') };
 		}
-		return { level: 'monitoring', text: 'MONITORING' };
+		return { level: 'monitoring', text: t($language, 'situation.monitoring') };
 	}
 </script>
 
@@ -66,7 +68,7 @@
 		</div>
 
 		{#if news.length === 0 && !loading && !error}
-			<div class="empty-state">No recent news</div>
+			<div class="empty-state">{t($language, 'situation.noRecent')}</div>
 		{:else}
 			<div class="situation-news">
 				{#each news as item (item.id)}
@@ -74,7 +76,7 @@
 						<a href={item.link} target="_blank" rel="noopener noreferrer" class="headline">
 							{item.title}
 						</a>
-						<div class="meta">{item.source} · {timeAgo(item.timestamp)}</div>
+						<div class="meta">{item.source} · {timeAgo(item.timestamp, $language)}</div>
 					</div>
 				{/each}
 			</div>

@@ -16,7 +16,18 @@
 		IntelPanel,
 		SituationPanel
 	} from '$lib/components/panels';
-	import { news, markets, monitors, settings, refresh, allNewsItems, activeTab } from '$lib/stores';
+	import {
+		news,
+		markets,
+		monitors,
+		settings,
+		sources,
+		refresh,
+		allNewsItems,
+		activeTab,
+		language
+	} from '$lib/stores';
+	import { t } from '$lib/i18n';
 	import { filterNews } from '$lib/utils';
 	import { fetchAllNews, fetchAllMarkets, fetchPolymarket } from '$lib/api';
 	import type { Prediction } from '$lib/api';
@@ -119,6 +130,7 @@
 	onMount(() => {
 		// Initialize tab store from localStorage
 		activeTab.init();
+		sources.init();
 
 		// Load initial data and track as refresh
 		async function initialLoad() {
@@ -140,8 +152,8 @@
 </script>
 
 <svelte:head>
-	<title>Situation Monitor</title>
-	<meta name="description" content="Real-time global situation monitoring dashboard" />
+	<title>{t($language, 'app.title')}</title>
+	<meta name="description" content={t($language, 'app.description')} />
 </svelte:head>
 
 <div class="app">
@@ -172,8 +184,8 @@
 								<SituationPanel
 									panelId="iran"
 									config={{
-										title: 'Iran Crisis',
-										subtitle: 'Revolution protests, regime instability & nuclear program',
+										title: t($language, 'situation.iran.title'),
+										subtitle: t($language, 'situation.iran.subtitle'),
 										criticalKeywords: [
 											'protest',
 											'uprising',
@@ -205,8 +217,8 @@
 								<SituationPanel
 									panelId="venezuela"
 									config={{
-										title: 'Venezuela Watch',
-										subtitle: 'Humanitarian crisis monitoring',
+										title: t($language, 'situation.venezuela.title'),
+										subtitle: t($language, 'situation.venezuela.subtitle'),
 										criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
 									}}
 									news={filterNews(
@@ -226,8 +238,8 @@
 								<SituationPanel
 									panelId="greenland"
 									config={{
-										title: 'Greenland Watch',
-										subtitle: 'Arctic geopolitics monitoring',
+										title: t($language, 'situation.greenland.title'),
+										subtitle: t($language, 'situation.greenland.subtitle'),
 										criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
 									}}
 									news={filterNews(
@@ -246,7 +258,11 @@
 					<div class="grid-row">
 						{#if isPanelVisible('politics')}
 							<div class="panel-slot">
-								<NewsPanel category="politics" panelId="politics" title="Politics" />
+								<NewsPanel
+									category="politics"
+									panelId="politics"
+									title={t($language, 'newsTitle.politics')}
+								/>
 							</div>
 						{/if}
 
@@ -275,13 +291,13 @@
 				<div class="side-by-side">
 					{#if isPanelVisible('brazil')}
 						<div class="panel-slot side-panel">
-							<NewsPanel category="brazil" panelId="brazil" title="Brazil" />
+							<NewsPanel category="brazil" panelId="brazil" title={t($language, 'newsTitle.brazil')} />
 						</div>
 					{/if}
 
 					{#if isPanelVisible('latam')}
 						<div class="panel-slot side-panel">
-							<NewsPanel category="latam" panelId="latam" title="Latin America" />
+							<NewsPanel category="latam" panelId="latam" title={t($language, 'newsTitle.latam')} />
 						</div>
 					{/if}
 				</div>
@@ -314,7 +330,11 @@
 
 					{#if isPanelVisible('finance')}
 						<div class="panel-slot panel-wide">
-							<NewsPanel category="finance" panelId="finance" title="Finance" />
+							<NewsPanel
+								category="finance"
+								panelId="finance"
+								title={t($language, 'newsTitle.finance')}
+							/>
 						</div>
 					{/if}
 				</div>
@@ -344,13 +364,13 @@
 				<div class="columns-layout">
 					{#if isPanelVisible('tech')}
 						<div class="panel-slot">
-							<NewsPanel category="tech" panelId="tech" title="Tech" />
+							<NewsPanel category="tech" panelId="tech" title={t($language, 'newsTitle.tech')} />
 						</div>
 					{/if}
 
 					{#if isPanelVisible('ai')}
 						<div class="panel-slot">
-							<NewsPanel category="ai" panelId="ai" title="AI" />
+							<NewsPanel category="ai" panelId="ai" title={t($language, 'newsTitle.ai')} />
 						</div>
 					{/if}
 				</div>

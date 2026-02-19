@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
 	import { getRelativeTime } from '$lib/utils';
-	import { fedNews, fedIndicators, fedVideos } from '$lib/stores';
+	import { fedNews, fedIndicators, fedVideos, language } from '$lib/stores';
 	import { isFredConfigured } from '$lib/api/fred';
 	import type { EconomicIndicator } from '$lib/api/fred';
+	import { t } from '$lib/i18n';
 
 	// Store state
 	const newsState = $derived($fedNews);
@@ -57,7 +58,7 @@
 	}
 </script>
 
-<Panel id="fed" title="Federal Reserve" count={newsState.items.length} {loading} {error}>
+<Panel id="fed" title={t($language, 'panelName.fed')} count={newsState.items.length} {loading} {error}>
 	<!-- Economic Indicators -->
 	{#if hasApiKey && indicatorList.length > 0}
 		<div class="indicators-section">
@@ -75,7 +76,7 @@
 		</div>
 	{:else if !hasApiKey && !loading}
 		<div class="no-api-key">
-			<span class="no-api-key-text">Add VITE_FRED_API_KEY for economic indicators</span>
+			<span class="no-api-key-text">{t($language, 'panel.fedNoApi')}</span>
 		</div>
 	{/if}
 
@@ -83,14 +84,14 @@
 	{#if videoItems.length > 0}
 		<div class="video-section">
 			<div class="section-header">
-				<span class="section-title">Speeches & Video</span>
+				<span class="section-title">{t($language, 'panel.fedSpeechVideo')}</span>
 				<a
 					href="https://www.federalreserve.gov/live-broadcast.htm"
 					target="_blank"
 					rel="noopener noreferrer"
 					class="live-link"
 				>
-					Live Broadcast
+					{t($language, 'panel.liveBroadcast')}
 				</a>
 			</div>
 			<div class="video-list">
@@ -103,10 +104,10 @@
 								{#if item.isPowellRelated}
 									<Badge text="POWELL" variant="warning" />
 								{/if}
-								<span>{getRelativeTime(item.pubDate)}</span>
+									<span>{getRelativeTime(item.pubDate, $language)}</span>
+								</div>
 							</div>
-						</div>
-					</a>
+						</a>
 				{/each}
 			</div>
 		</div>
@@ -115,7 +116,7 @@
 	<!-- News Feed -->
 	<div class="news-section">
 		{#if newsState.items.length === 0 && !loading && !error}
-			<div class="empty-state">No Fed news available</div>
+			<div class="empty-state">{t($language, 'panel.fedEmpty')}</div>
 		{:else}
 			<div class="fed-news-list">
 				{#each newsState.items as item (item.id)}
@@ -131,7 +132,7 @@
 								{/if}
 							</div>
 							{#if item.pubDate}
-								<span class="fed-news-time">{getRelativeTime(item.pubDate)}</span>
+								<span class="fed-news-time">{getRelativeTime(item.pubDate, $language)}</span>
 							{/if}
 						</div>
 						<a href={item.link} target="_blank" rel="noopener noreferrer" class="fed-news-title">

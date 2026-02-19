@@ -3,6 +3,7 @@
  */
 
 import type { PanelId } from './panels';
+import type { MessageKey } from '$lib/i18n';
 
 export type TabId = 'global' | 'regional' | 'economy' | 'social' | 'technology';
 
@@ -10,7 +11,7 @@ export type TabLayout = 'grid-2row' | 'side-by-side' | 'columns';
 
 export interface TabConfig {
 	id: TabId;
-	name: string;
+	nameKey: MessageKey;
 	layout: TabLayout;
 	panels?: PanelId[];
 	rows?: PanelId[][];
@@ -19,7 +20,7 @@ export interface TabConfig {
 export const TABS: TabConfig[] = [
 	{
 		id: 'global',
-		name: 'Global',
+		nameKey: 'tabs.global',
 		layout: 'grid-2row',
 		rows: [
 			['iran', 'venezuela', 'greenland'],
@@ -28,25 +29,25 @@ export const TABS: TabConfig[] = [
 	},
 	{
 		id: 'regional',
-		name: 'Regional',
+		nameKey: 'tabs.regional',
 		layout: 'side-by-side',
 		panels: ['brazil', 'latam']
 	},
 	{
 		id: 'economy',
-		name: 'Economy',
+		nameKey: 'tabs.economy',
 		layout: 'columns',
 		panels: ['crypto', 'markets', 'heatmap', 'commodities', 'finance']
 	},
 	{
 		id: 'social',
-		name: 'Trends and Analysis',
+		nameKey: 'tabs.social',
 		layout: 'columns',
 		panels: ['correlation', 'narrative', 'polymarket']
 	},
 	{
 		id: 'technology',
-		name: 'Technology',
+		nameKey: 'tabs.technology',
 		layout: 'columns',
 		panels: ['tech', 'ai']
 	}

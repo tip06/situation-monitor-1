@@ -2,8 +2,10 @@
  * Panel configuration
  */
 
+import type { MessageKey } from '$lib/i18n';
+
 export interface PanelConfig {
-	name: string;
+	nameKey: MessageKey;
 	priority: 1 | 2 | 3;
 }
 
@@ -37,33 +39,33 @@ export type PanelId =
 	| 'latam';
 
 export const PANELS: Record<PanelId, PanelConfig> = {
-	map: { name: 'Global Map', priority: 1 },
-	politics: { name: 'World / Geopolitical', priority: 1 },
-	tech: { name: 'Technology / AI', priority: 1 },
-	finance: { name: 'Financial', priority: 1 },
-	gov: { name: 'Government / Policy', priority: 2 },
-	heatmap: { name: 'Sector Heatmap', priority: 1 },
-	markets: { name: 'Markets', priority: 1 },
-	monitors: { name: 'My Monitors', priority: 1 },
-	commodities: { name: 'Commodities / VIX', priority: 2 },
-	crypto: { name: 'Crypto', priority: 2 },
-	polymarket: { name: 'Polymarket', priority: 2 },
-	whales: { name: 'Whale Watch', priority: 3 },
-	mainchar: { name: 'Main Character', priority: 2 },
-	printer: { name: 'Money Printer', priority: 2 },
-	contracts: { name: 'Gov Contracts', priority: 3 },
-	ai: { name: 'AI Arms Race', priority: 3 },
-	layoffs: { name: 'Layoffs Tracker', priority: 3 },
-	venezuela: { name: 'Venezuela Situation', priority: 2 },
-	greenland: { name: 'Greenland Situation', priority: 2 },
-	iran: { name: 'Iran Situation', priority: 2 },
-	leaders: { name: 'World Leaders', priority: 1 },
-	intel: { name: 'Intel Feed', priority: 2 },
-	correlation: { name: 'Correlation Engine', priority: 1 },
-	narrative: { name: 'Narrative Tracker', priority: 1 },
-	fed: { name: 'Federal Reserve', priority: 1 },
-	brazil: { name: 'Brazil News', priority: 1 },
-	latam: { name: 'Latin America', priority: 1 }
+	map: { nameKey: 'panelName.map', priority: 1 },
+	politics: { nameKey: 'panelName.politics', priority: 1 },
+	tech: { nameKey: 'panelName.tech', priority: 1 },
+	finance: { nameKey: 'panelName.finance', priority: 1 },
+	gov: { nameKey: 'panelName.gov', priority: 2 },
+	heatmap: { nameKey: 'panelName.heatmap', priority: 1 },
+	markets: { nameKey: 'panelName.markets', priority: 1 },
+	monitors: { nameKey: 'monitors.title', priority: 1 },
+	commodities: { nameKey: 'panelName.commodities', priority: 2 },
+	crypto: { nameKey: 'panel.crypto', priority: 2 },
+	polymarket: { nameKey: 'panelName.polymarket', priority: 2 },
+	whales: { nameKey: 'panel.whaleTitle', priority: 3 },
+	mainchar: { nameKey: 'panelName.mainchar', priority: 2 },
+	printer: { nameKey: 'panelName.printer', priority: 2 },
+	contracts: { nameKey: 'panelName.contracts', priority: 3 },
+	ai: { nameKey: 'panelName.ai', priority: 3 },
+	layoffs: { nameKey: 'panelName.layoffs', priority: 3 },
+	venezuela: { nameKey: 'panelName.venezuela', priority: 2 },
+	greenland: { nameKey: 'panelName.greenland', priority: 2 },
+	iran: { nameKey: 'panelName.iran', priority: 2 },
+	leaders: { nameKey: 'panelName.leaders', priority: 1 },
+	intel: { nameKey: 'panelName.intel', priority: 2 },
+	correlation: { nameKey: 'panelName.correlation', priority: 1 },
+	narrative: { nameKey: 'narrative.title', priority: 1 },
+	fed: { nameKey: 'panelName.fed', priority: 1 },
+	brazil: { nameKey: 'panelName.brazil', priority: 1 },
+	latam: { nameKey: 'panelName.latam', priority: 1 }
 };
 
 export const NON_DRAGGABLE_PANELS: PanelId[] = ['map'];

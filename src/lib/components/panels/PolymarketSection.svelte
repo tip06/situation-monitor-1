@@ -2,6 +2,8 @@
 	import { Panel, InfoTooltip } from '$lib/components/common';
 	import SpeedometerGauge from './SpeedometerGauge.svelte';
 	import type { PredictionCategory } from '$lib/api/misc';
+	import { language } from '$lib/stores';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	type SortOption = 'volume' | 'probability' | 'volume24hr';
 	type FilterOption = 'all' | PredictionCategory;
@@ -29,21 +31,21 @@
 	let sortBy = $state<SortOption>('volume');
 	let filterBy = $state<FilterOption>('all');
 
-	const filterOptions: { value: FilterOption; label: string }[] = [
-		{ value: 'all', label: 'All' },
-		{ value: 'politics', label: 'Politics' },
-		{ value: 'geopolitics', label: 'Geo' },
-		{ value: 'tech', label: 'Tech' },
-		{ value: 'finance', label: 'Finance' },
-		{ value: 'elections', label: 'Elections' }
+	const filterOptions: { value: FilterOption; label: MessageKey }[] = [
+		{ value: 'all', label: 'polymarket.filter.all' },
+		{ value: 'politics', label: 'polymarket.filter.politics' },
+		{ value: 'geopolitics', label: 'polymarket.filter.geopolitics' },
+		{ value: 'tech', label: 'polymarket.filter.tech' },
+		{ value: 'finance', label: 'polymarket.filter.finance' },
+		{ value: 'elections', label: 'polymarket.filter.elections' }
 	];
 
-	const categoryLabels: Record<PredictionCategory, string> = {
-		politics: 'Politics',
-		geopolitics: 'Geopolitics',
-		tech: 'Tech',
-		finance: 'Finance',
-		elections: 'Elections'
+	const categoryLabels: Record<PredictionCategory, MessageKey> = {
+		politics: 'polymarket.filter.politics',
+		geopolitics: 'polymarket.filter.geopolitics',
+		tech: 'polymarket.filter.tech',
+		finance: 'polymarket.filter.finance',
+		elections: 'polymarket.filter.elections'
 	};
 
 	// Row 1: Top 3 geopolitical markets by volume
@@ -100,7 +102,7 @@
 	<!-- Row 1: Top Geopolitical Markets -->
 	{#if topGeopolitical.length > 0}
 		<div class="section-block">
-			<div class="section-header">Top Geopolitical Markets<InfoTooltip text="The 3 highest-volume geopolitical prediction markets on Polymarket, displayed as probability gauges." /></div>
+			<div class="section-header">{t($language, 'polymarket.topGeopolitical')}<InfoTooltip text={t($language, 'tooltip.polymarket.topGeopolitical')} /></div>
 			<div class="speedometer-row">
 				{#each topGeopolitical as market (market.id)}
 					<div class="speedometer-cell">
@@ -118,14 +120,14 @@
 
 	<!-- Row 2: Category Feeds -->
 	<div class="section-block">
-		<div class="section-header">Category Feeds<InfoTooltip text="Top 10 prediction markets per category ranked by 24-hour trading volume, showing real-time market sentiment across topics." /></div>
+		<div class="section-header">{t($language, 'polymarket.categoryFeeds')}<InfoTooltip text={t($language, 'tooltip.polymarket.categoryFeeds')} /></div>
 		<div class="category-feeds-row">
 			{#each Object.entries(categoryFeeds) as [category, items] (category)}
 				<div class="category-column">
-					<div class="category-title">{categoryLabels[category as PredictionCategory]}</div>
+					<div class="category-title">{t($language, categoryLabels[category as PredictionCategory])}</div>
 					<div class="category-list">
 						{#if items.length === 0}
-							<div class="empty-category">No markets</div>
+							<div class="empty-category">{t($language, 'polymarket.noMarkets')}</div>
 						{:else}
 							{#each items as item (item.id)}
 								<a href={item.url} target="_blank" rel="noopener noreferrer" class="feed-item">
@@ -144,14 +146,14 @@
 	</div>
 
 	<!-- Row 3: Filterable Table -->
-	<Panel id="polymarket" title="Polymarket" count={tableCount} {loading} {error}>
+	<Panel id="polymarket" title={t($language, 'panelName.polymarket')} count={tableCount} {loading} {error}>
 		{#snippet headerExtra()}
 			<div class="sort-controls">
 				<button
 					class="sort-btn"
 					class:active={sortBy === 'volume'}
 					onclick={() => (sortBy = 'volume')}
-					title="Sort by total volume"
+					title={t($language, 'polymarket.sort.volume')}
 				>
 					Vol
 				</button>
@@ -159,7 +161,7 @@
 					class="sort-btn"
 					class:active={sortBy === 'probability'}
 					onclick={() => (sortBy = 'probability')}
-					title="Sort by Yes probability"
+					title={t($language, 'polymarket.sort.probability')}
 				>
 					%
 				</button>
@@ -167,7 +169,7 @@
 					class="sort-btn"
 					class:active={sortBy === 'volume24hr'}
 					onclick={() => (sortBy = 'volume24hr')}
-					title="Sort by 24h volume"
+					title={t($language, 'polymarket.sort.volume24hr')}
 				>
 					24h
 				</button>
@@ -181,13 +183,13 @@
 					class:active={filterBy === option.value}
 					onclick={() => (filterBy = option.value)}
 				>
-					{option.label}
+					{t($language, option.label)}
 				</button>
 			{/each}
 		</div>
 
 		{#if filteredPredictions.length === 0 && !loading && !error}
-			<div class="empty-state">No predictions available</div>
+			<div class="empty-state">{t($language, 'panel.polymarketEmpty')}</div>
 		{:else}
 			<div class="predictions-list">
 				{#each filteredPredictions as pred (pred.id)}
@@ -195,9 +197,13 @@
 						<div class="prediction-info">
 							<div class="prediction-question">{pred.question}</div>
 							<div class="prediction-meta">
-								<span class="prediction-volume">Vol: {formatVolume(pred.volume)}</span>
+								<span class="prediction-volume">
+									{t($language, 'polymarket.volume')}: {formatVolume(pred.volume)}
+								</span>
 								{#if pred.volume24hr}
-									<span class="prediction-volume-24h">24h: {formatVolume(pred.volume24hr)}</span>
+									<span class="prediction-volume-24h">
+										{t($language, 'polymarket.volume24h')}: {formatVolume(pred.volume24hr)}
+									</span>
 								{/if}
 							</div>
 						</div>

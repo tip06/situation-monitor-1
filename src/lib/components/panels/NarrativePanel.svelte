@@ -3,6 +3,9 @@
 	import { Modal } from '$lib/components/modals';
 	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
+	import { toIntlLocale } from '$lib/i18n/types';
 
 	interface Props {
 		news?: NewsItem[];
@@ -111,14 +114,14 @@
 	}
 </script>
 
-<Panel id="narrative" title="Narrative Tracker" {loading} {error}>
+<Panel id="narrative" title={t($language, 'narrative.title')} {loading} {error}>
 	{#if news.length === 0 && !loading && !error}
-		<div class="empty-state">Insufficient data for narrative analysis</div>
+		<div class="empty-state">{t($language, 'narrative.insufficient')}</div>
 	{:else if analysis}
 		<div class="narrative-content">
 			{#if analysis.trendingNarratives.length > 0}
 				<div class="section">
-					<div class="section-title">Trending Narratives<InfoTooltip text="Dominant stories across mainstream media right now, matched via regex patterns. Shows momentum (rising/falling) and sentiment for each narrative." /></div>
+					<div class="section-title">{t($language, 'narrative.trending')}<InfoTooltip text={t($language, 'tooltip.narrative.trending')} /></div>
 					{#each analysis.trendingNarratives.slice(0, 6) as narrative}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -133,20 +136,20 @@
 								<div class="trending-indicators">
 									<span
 										class="momentum-indicator {getMomentumClass(narrative.momentum)}"
-										title="Momentum: {narrative.momentum}"
+										title={t($language, 'narrative.momentumTitle', { value: narrative.momentum })}
 									>
 										{getMomentumIcon(narrative.momentum)}
 									</span>
 									<span
 										class="sentiment-indicator {getSentimentClass(narrative.sentiment)}"
-										title="Sentiment: {narrative.sentiment}"
+										title={t($language, 'narrative.sentimentTitle', { value: narrative.sentiment })}
 									>
 										{getSentimentIndicator(narrative.sentiment)}
 									</span>
 								</div>
 							</div>
 							<div class="trending-meta">
-								<span class="mention-count">{narrative.count} mentions</span>
+								<span class="mention-count">{t($language, 'narrative.mentions', { count: narrative.count })}</span>
 								<span class="category-tag">{narrative.category}</span>
 							</div>
 							{#if narrative.sources.length > 0}
@@ -161,7 +164,7 @@
 
 			{#if analysis.emergingFringe.length > 0}
 				<div class="section">
-					<div class="section-title">Emerging Fringe<InfoTooltip text="Narratives originating from fringe or alternative sources, tracked by spread status: emerging, spreading, or viral based on mention volume." /></div>
+					<div class="section-title">{t($language, 'narrative.emergingFringe')}<InfoTooltip text={t($language, 'tooltip.narrative.emergingFringe')} /></div>
 					{#each analysis.emergingFringe.slice(0, 4) as narrative}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -174,7 +177,7 @@
 								/>
 							</div>
 							<div class="narrative-meta">
-								<span class="mention-count">{narrative.count} mentions</span>
+								<span class="mention-count">{t($language, 'narrative.mentions', { count: narrative.count })}</span>
 							</div>
 							{#if narrative.sources.length > 0}
 								<div class="narrative-sources">
@@ -188,19 +191,21 @@
 
 			{#if analysis.fringeToMainstream.length > 0}
 				<div class="section">
-					<div class="section-title">Fringe → Mainstream Crossovers<InfoTooltip text="Fringe narratives that have been picked up by mainstream outlets, indicating potential narrative laundering or legitimization. Shows crossover percentage." /></div>
+					<div class="section-title">{t($language, 'narrative.crossovers')}<InfoTooltip text={t($language, 'tooltip.narrative.crossovers')} /></div>
 					{#each analysis.fringeToMainstream.slice(0, 3) as crossover}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div class="crossover-item clickable" onclick={() => openHeadlines(crossover.name, crossover.headlines)}>
 							<div class="crossover-narrative">{crossover.name}</div>
 							<div class="crossover-path">
-								<span class="from">Fringe ({crossover.fringeCount})</span>
+								<span class="from">{t($language, 'narrative.fringe', { count: crossover.fringeCount })}</span>
 								<span class="arrow">→</span>
-								<span class="to">Mainstream ({crossover.mainstreamCount})</span>
+								<span class="to">{t($language, 'narrative.mainstream', { count: crossover.mainstreamCount })}</span>
 							</div>
 							<div class="crossover-level">
-								Crossover level: {Math.round(crossover.crossoverLevel * 100)}%
+								{t($language, 'narrative.crossoverLevel', {
+									value: Math.round(crossover.crossoverLevel * 100)
+								})}
 							</div>
 						</div>
 					{/each}
@@ -209,7 +214,7 @@
 
 			{#if analysis.narrativeWatch.length > 0}
 				<div class="section">
-					<div class="section-title">Narrative Watch<InfoTooltip text="Fringe-pattern narratives detected from unclassified or mixed sources — a watchlist for topics that don't yet fit the emerging or crossover categories." /></div>
+					<div class="section-title">{t($language, 'narrative.watch')}<InfoTooltip text={t($language, 'tooltip.narrative.watch')} /></div>
 					<div class="themes-grid">
 						{#each analysis.narrativeWatch.slice(0, 6) as narrative}
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -225,7 +230,7 @@
 
 			{#if analysis.disinfoSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Disinfo Signals<InfoTooltip text="Patterns flagged as known disinformation based on severity classification, regardless of source type." /></div>
+					<div class="section-title">{t($language, 'narrative.disinfo')}<InfoTooltip text={t($language, 'tooltip.narrative.disinfo')} /></div>
 					{#each analysis.disinfoSignals.slice(0, 3) as signal}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -237,7 +242,7 @@
 									variant={getSeverityVariant(signal.severity)}
 								/>
 							</div>
-							<div class="disinfo-meta">{signal.count} mentions</div>
+							<div class="disinfo-meta">{t($language, 'narrative.mentions', { count: signal.count })}</div>
 						</div>
 					{/each}
 				</div>
@@ -245,15 +250,15 @@
 
 			{#if analysis.trendingNarratives.length === 0 && analysis.emergingFringe.length === 0 && analysis.fringeToMainstream.length === 0}
 				<div class="empty-state">
-					No significant narratives detected in current data.
+					{t($language, 'narrative.noSignificantCurrent')}
 					{#if news.length < 50}
-						<br /><span class="hint">Try refreshing to load more articles.</span>
+						<br /><span class="hint">{t($language, 'narrative.tryRefreshing')}</span>
 					{/if}
 				</div>
 			{/if}
 		</div>
 	{:else}
-		<div class="empty-state">No significant narratives detected</div>
+		<div class="empty-state">{t($language, 'narrative.noSignificant')}</div>
 	{/if}
 </Panel>
 
@@ -265,13 +270,20 @@
 					<span class="headline-source">{headline.source}</span>
 					<a href={headline.link} target="_blank" rel="noopener noreferrer" class="headline-link">{headline.title}</a>
 					{#if headline.pubDate}
-						<span class="headline-date">{new Date(headline.pubDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+						<span class="headline-date">
+							{new Date(headline.pubDate).toLocaleDateString(toIntlLocale($language), {
+								month: 'short',
+								day: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit'
+							})}
+						</span>
 					{/if}
 				</div>
 			{/each}
 		</div>
 	{:else}
-		<p class="empty-state">No headlines available for this narrative.</p>
+		<p class="empty-state">{t($language, 'narrative.noHeadlines')}</p>
 	{/if}
 </Modal>
 

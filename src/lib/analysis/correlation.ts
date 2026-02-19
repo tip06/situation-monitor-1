@@ -5,11 +5,12 @@
 import type { NewsItem } from '$lib/types';
 import {
 	CORRELATION_TOPICS,
-	COMPOUND_PATTERNS,
+	getCompoundPatterns,
 	getSourceWeight,
 	type CorrelationTopic,
 	type CompoundPattern
 } from '$lib/config/analysis';
+import type { Locale } from '$lib/i18n/types';
 
 // Types for correlation results
 export interface TopicStats {
@@ -289,7 +290,10 @@ function detectCompoundPatterns(
 /**
  * Analyze correlations across all news items
  */
-export function analyzeCorrelations(allNews: NewsItem[]): CorrelationResults | null {
+export function analyzeCorrelations(
+	allNews: NewsItem[],
+	locale: Locale = 'en'
+): CorrelationResults | null {
 	if (!allNews || allNews.length === 0) return null;
 
 	const now = Date.now();
@@ -469,7 +473,7 @@ export function analyzeCorrelations(allNews: NewsItem[]): CorrelationResults | n
 	}
 
 	// Detect compound patterns
-	results.compoundSignals = detectCompoundPatterns(topicStats, COMPOUND_PATTERNS);
+	results.compoundSignals = detectCompoundPatterns(topicStats, getCompoundPatterns(locale));
 
 	// Expose topicStats for headline lookups
 	results.topicStats = topicStats;

@@ -1,5 +1,5 @@
 /**
- * Settings store - panel visibility, order, and sizes
+ * Settings store - panel visibility, order, and UI preferences
  */
 
 import { writable, derived, get } from 'svelte/store';
@@ -13,39 +13,49 @@ import {
 	type PanelId
 } from '$lib/config';
 
-// Storage keys
+type ThemeMode = 'dark' | 'light';
+
 const STORAGE_KEYS = {
 	panels: 'situationMonitorPanels',
 	order: 'panelOrder',
 	sizes: 'panelSizes',
-	fringeFeeds: 'enableFringeFeeds'
+	fringeFeeds: 'enableFringeFeeds',
+	theme: 'uiThemePreference'
 } as const;
 
-// Types
 export interface PanelSettings {
 	enabled: Record<PanelId, boolean>;
 	order: PanelId[];
 	sizes: Record<PanelId, { width?: number; height?: number }>;
 	enableFringeFeeds: boolean;
+	theme: ThemeMode;
 }
 
 export interface SettingsState extends PanelSettings {
 	initialized: boolean;
 }
 
-// Default settings
+function applyTheme(theme: ThemeMode): void {
+	if (!browser) return;
+	document.documentElement.dataset.theme = theme;
+}
+
+function getSystemTheme(): ThemeMode {
+	if (!browser || typeof window.matchMedia !== 'function') return 'dark';
+	return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
 function getDefaultSettings(): PanelSettings {
 	const allPanelIds = Object.keys(PANELS) as PanelId[];
-
 	return {
 		enabled: Object.fromEntries(allPanelIds.map((id) => [id, true])) as Record<PanelId, boolean>,
 		order: allPanelIds,
 		sizes: {} as Record<PanelId, { width?: number; height?: number }>,
-		enableFringeFeeds: false
+		enableFringeFeeds: false,
+		theme: 'dark'
 	};
 }
 
-// Load from localStorage
 function loadFromStorage(): Partial<PanelSettings> {
 	if (!browser) return {};
 
@@ -54,12 +64,14 @@ function loadFromStorage(): Partial<PanelSettings> {
 		const order = localStorage.getItem(STORAGE_KEYS.order);
 		const sizes = localStorage.getItem(STORAGE_KEYS.sizes);
 		const fringeFeeds = localStorage.getItem(STORAGE_KEYS.fringeFeeds);
+		const theme = localStorage.getItem(STORAGE_KEYS.theme);
 
 		return {
 			enabled: panels ? JSON.parse(panels) : undefined,
 			order: order ? JSON.parse(order) : undefined,
 			sizes: sizes ? JSON.parse(sizes) : undefined,
-			enableFringeFeeds: fringeFeeds ? JSON.parse(fringeFeeds) : undefined
+			enableFringeFeeds: fringeFeeds ? JSON.parse(fringeFeeds) : undefined,
+			theme: theme === 'light' || theme === 'dark' ? theme : undefined
 		};
 	} catch (e) {
 		console.warn('Failed to load settings from localStorage:', e);
@@ -67,53 +79,83 @@ function loadFromStorage(): Partial<PanelSettings> {
 	}
 }
 
-// Save to localStorage
 function saveToStorage(key: keyof typeof STORAGE_KEYS, value: unknown): void {
 	if (!browser) return;
-
 	try {
+		if (key === 'theme') {
+			localStorage.setItem(STORAGE_KEYS.theme, String(value));
+			return;
+		}
 		localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(value));
 	} catch (e) {
 		console.warn(`Failed to save ${key} to localStorage:`, e);
 	}
 }
 
-// Create the store
 function createSettingsStore() {
 	const defaults = getDefaultSettings();
 	const saved = loadFromStorage();
+	const initialTheme = saved.theme ?? defaults.theme;
 
 	const initialState: SettingsState = {
 		enabled: { ...defaults.enabled, ...saved.enabled },
 		order: saved.order ?? defaults.order,
 		sizes: { ...defaults.sizes, ...saved.sizes },
 		enableFringeFeeds: saved.enableFringeFeeds ?? defaults.enableFringeFeeds,
+		theme: initialTheme,
 		initialized: false
 	};
+
+	if (browser) {
+		applyTheme(initialTheme);
+	}
 
 	const { subscribe, set, update } = writable<SettingsState>(initialState);
 
 	return {
 		subscribe,
 
-		/**
-		 * Initialize store (call after hydration)
-		 */
 		init() {
 			update((state) => ({ ...state, initialized: true }));
 		},
 
-		/**
-		 * Check if a panel is enabled
-		 */
+		initThemeFromSystem() {
+			if (!browser) return;
+			const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+			if (savedTheme === 'dark' || savedTheme === 'light') {
+				applyTheme(savedTheme);
+				update((state) => ({ ...state, theme: savedTheme }));
+				return;
+			}
+
+			const systemTheme = getSystemTheme();
+			saveToStorage('theme', systemTheme);
+			applyTheme(systemTheme);
+			update((state) => ({ ...state, theme: systemTheme }));
+		},
+
+		setTheme(theme: ThemeMode) {
+			update((state) => {
+				saveToStorage('theme', theme);
+				applyTheme(theme);
+				return { ...state, theme };
+			});
+		},
+
+		toggleTheme() {
+			update((state) => {
+				const nextTheme: ThemeMode = state.theme === 'dark' ? 'light' : 'dark';
+				saveToStorage('theme', nextTheme);
+				applyTheme(nextTheme);
+				return { ...state, theme: nextTheme };
+			});
+		},
+
 		isPanelEnabled(panelId: PanelId): boolean {
 			const state = get({ subscribe });
 			return state.enabled[panelId] ?? true;
 		},
 
-		/**
-		 * Toggle panel visibility
-		 */
 		togglePanel(panelId: PanelId) {
 			update((state) => {
 				const newEnabled = {
@@ -125,9 +167,6 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Enable a specific panel
-		 */
 		enablePanel(panelId: PanelId) {
 			update((state) => {
 				const newEnabled = { ...state.enabled, [panelId]: true };
@@ -136,9 +175,6 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Disable a specific panel
-		 */
 		disablePanel(panelId: PanelId) {
 			update((state) => {
 				const newEnabled = { ...state.enabled, [panelId]: false };
@@ -147,9 +183,6 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Update panel order (for drag-drop)
-		 */
 		updateOrder(newOrder: PanelId[]) {
 			update((state) => {
 				saveToStorage('order', newOrder);
@@ -157,11 +190,7 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Move a panel to a new position
-		 */
 		movePanel(panelId: PanelId, toIndex: number) {
-			// Don't allow moving non-draggable panels
 			if (NON_DRAGGABLE_PANELS.includes(panelId)) return;
 
 			update((state) => {
@@ -177,9 +206,6 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Update panel size
-		 */
 		updateSize(panelId: PanelId, size: { width?: number; height?: number }) {
 			update((state) => {
 				const newSizes = {
@@ -191,9 +217,6 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Toggle fringe feeds on/off
-		 */
 		toggleFringeFeeds() {
 			update((state) => {
 				const newValue = !state.enableFringeFeeds;
@@ -202,17 +225,11 @@ function createSettingsStore() {
 			});
 		},
 
-		/**
-		 * Check if fringe feeds are enabled
-		 */
 		isFringeFeedsEnabled(): boolean {
 			const state = get({ subscribe });
 			return state.enableFringeFeeds;
 		},
 
-		/**
-		 * Reset all settings to defaults
-		 */
 		reset() {
 			const defaults = getDefaultSettings();
 			if (browser) {
@@ -220,37 +237,27 @@ function createSettingsStore() {
 				localStorage.removeItem(STORAGE_KEYS.order);
 				localStorage.removeItem(STORAGE_KEYS.sizes);
 				localStorage.removeItem(STORAGE_KEYS.fringeFeeds);
+				localStorage.removeItem(STORAGE_KEYS.theme);
 			}
+			applyTheme(defaults.theme);
 			set({ ...defaults, initialized: true });
 		},
 
-		/**
-		 * Get panel size
-		 */
 		getPanelSize(panelId: PanelId): { width?: number; height?: number } | undefined {
 			const state = get({ subscribe });
 			return state.sizes[panelId];
 		},
 
-		/**
-		 * Check if onboarding is complete
-		 */
 		isOnboardingComplete(): boolean {
 			if (!browser) return true;
 			return localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true';
 		},
 
-		/**
-		 * Get selected preset
-		 */
 		getSelectedPreset(): string | null {
 			if (!browser) return null;
 			return localStorage.getItem(PRESET_STORAGE_KEY);
 		},
 
-		/**
-		 * Apply a preset configuration
-		 */
 		applyPreset(presetId: string) {
 			const preset = PRESETS[presetId];
 			if (!preset) {
@@ -258,7 +265,6 @@ function createSettingsStore() {
 				return;
 			}
 
-			// Build panel settings - disable all panels first, then enable preset panels
 			const allPanelIds = Object.keys(PANELS) as PanelId[];
 			const newEnabled = Object.fromEntries(
 				allPanelIds.map((id) => [id, preset.panels.includes(id)])
@@ -269,16 +275,12 @@ function createSettingsStore() {
 				return { ...state, enabled: newEnabled };
 			});
 
-			// Mark onboarding complete and save preset
 			if (browser) {
 				localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
 				localStorage.setItem(PRESET_STORAGE_KEY, presetId);
 			}
 		},
 
-		/**
-		 * Reset onboarding to show modal again
-		 */
 		resetOnboarding() {
 			if (browser) {
 				localStorage.removeItem(ONBOARDING_STORAGE_KEY);
@@ -288,10 +290,8 @@ function createSettingsStore() {
 	};
 }
 
-// Export singleton store
 export const settings = createSettingsStore();
 
-// Derived stores for convenience
 export const enabledPanels = derived(settings, ($settings) =>
 	$settings.order.filter((id) => $settings.enabled[id])
 );

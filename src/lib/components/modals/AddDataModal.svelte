@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
-	import { monitors } from '$lib/stores';
+	import { monitors, language } from '$lib/stores';
+	import { t, type MessageKey } from '$lib/i18n';
 	import type { MarkerType, ThreatLevel } from '$lib/types';
 
 	interface Props {
@@ -20,20 +21,20 @@
 	let error = $state('');
 
 	// Marker type options with icons and colors
-	const markerTypes: { value: MarkerType; label: string; icon: string; color: string }[] = [
-		{ value: 'hotspot', label: 'Hotspot', icon: '●', color: '#ff4444' },
-		{ value: 'chokepoint', label: 'Chokepoint', icon: '◆', color: '#00aaff' },
-		{ value: 'cable', label: 'Cable Landing', icon: '◎', color: '#aa44ff' },
-		{ value: 'nuclear', label: 'Nuclear Site', icon: '☢', color: '#ffff00' },
-		{ value: 'military', label: 'Military Base', icon: '★', color: '#ff00ff' }
+	const markerTypes: { value: MarkerType; label: MessageKey; icon: string; color: string }[] = [
+		{ value: 'hotspot', label: 'marker.hotspot', icon: '●', color: '#ff4444' },
+		{ value: 'chokepoint', label: 'marker.chokepoint', icon: '◆', color: '#00aaff' },
+		{ value: 'cable', label: 'marker.cable', icon: '◎', color: '#aa44ff' },
+		{ value: 'nuclear', label: 'marker.nuclear', icon: '☢', color: '#ffff00' },
+		{ value: 'military', label: 'marker.military', icon: '★', color: '#ff00ff' }
 	];
 
 	// Threat level options
-	const threatLevels: { value: ThreatLevel; label: string; color: string }[] = [
-		{ value: 'critical', label: 'Critical', color: '#ff0000' },
-		{ value: 'high', label: 'High', color: '#ff4444' },
-		{ value: 'elevated', label: 'Elevated', color: '#ffcc00' },
-		{ value: 'low', label: 'Low', color: '#00ff88' }
+	const threatLevels: { value: ThreatLevel; label: MessageKey; color: string }[] = [
+		{ value: 'critical', label: 'threat.critical', color: '#ff0000' },
+		{ value: 'high', label: 'threat.high', color: '#ff4444' },
+		{ value: 'elevated', label: 'threat.elevated', color: '#ffcc00' },
+		{ value: 'low', label: 'threat.low', color: '#00ff88' }
 	];
 
 	// Reset form when modal opens
@@ -68,17 +69,17 @@
 
 		// Validation
 		if (!trimmedName) {
-			error = 'Name is required';
+			error = t($language, 'addData.nameRequired');
 			return;
 		}
 
 		if (isNaN(latNum) || latNum < -90 || latNum > 90) {
-			error = 'Latitude must be between -90 and 90';
+			error = t($language, 'addData.latError');
 			return;
 		}
 
 		if (isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
-			error = 'Longitude must be between -180 and 180';
+			error = t($language, 'addData.lonError');
 			return;
 		}
 
@@ -94,7 +95,7 @@
 		});
 
 		if (!result) {
-			error = 'Maximum number of markers reached (20)';
+			error = t($language, 'addData.maxReached');
 			return;
 		}
 
@@ -102,25 +103,25 @@
 	}
 </script>
 
-<Modal {open} title="Add Map Data" {onClose}>
+<Modal {open} title={t($language, 'addData.title')} {onClose}>
 	<form class="add-data-form" onsubmit={handleSubmit}>
 		{#if error}
 			<div class="form-error">{error}</div>
 		{/if}
 
 		<div class="form-group">
-			<label for="marker-name">Name <span class="required">*</span></label>
+			<label for="marker-name">{t($language, 'addData.name')} <span class="required">*</span></label>
 			<input
 				id="marker-name"
 				type="text"
 				bind:value={name}
-				placeholder="e.g., Strategic Location"
+				placeholder={t($language, 'addData.placeholderName')}
 				maxlength="50"
 			/>
 		</div>
 
 		<div class="form-group">
-			<label for="marker-type">Type</label>
+			<label for="marker-type">{t($language, 'addData.type')}</label>
 			<div class="type-selector">
 				{#each markerTypes as type}
 					<button
@@ -130,7 +131,7 @@
 						onclick={() => (markerType = type.value)}
 					>
 						<span class="type-icon" style="color: {type.color}">{type.icon}</span>
-						<span class="type-label">{type.label}</span>
+						<span class="type-label">{t($language, type.label)}</span>
 					</button>
 				{/each}
 			</div>
@@ -138,7 +139,7 @@
 
 		{#if markerType === 'hotspot'}
 			<div class="form-group">
-				<label for="threat-level">Threat Level</label>
+				<label for="threat-level">{t($language, 'addData.threatLevel')}</label>
 				<div class="threat-selector">
 					{#each threatLevels as level}
 						<button
@@ -149,7 +150,7 @@
 							style="--threat-color: {level.color}"
 						>
 							<span class="threat-dot" style="background: {level.color}"></span>
-							<span>{level.label}</span>
+							<span>{t($language, level.label)}</span>
 						</button>
 					{/each}
 				</div>
@@ -158,7 +159,7 @@
 
 		<div class="form-row">
 			<div class="form-group half">
-				<label for="marker-lat">Latitude <span class="required">*</span></label>
+				<label for="marker-lat">{t($language, 'addData.latitude')} <span class="required">*</span></label>
 				<input
 					id="marker-lat"
 					type="number"
@@ -166,12 +167,12 @@
 					min="-90"
 					max="90"
 					bind:value={lat}
-					placeholder="-90 to 90"
+					placeholder={t($language, 'addData.placeholderLat')}
 				/>
 			</div>
 
 			<div class="form-group half">
-				<label for="marker-lon">Longitude <span class="required">*</span></label>
+				<label for="marker-lon">{t($language, 'addData.longitude')} <span class="required">*</span></label>
 				<input
 					id="marker-lon"
 					type="number"
@@ -179,25 +180,25 @@
 					min="-180"
 					max="180"
 					bind:value={lon}
-					placeholder="-180 to 180"
+					placeholder={t($language, 'addData.placeholderLon')}
 				/>
 			</div>
 		</div>
 
 		<div class="form-group">
-			<label for="marker-description">Description</label>
+			<label for="marker-description">{t($language, 'addData.description')}</label>
 			<textarea
 				id="marker-description"
 				bind:value={description}
-				placeholder="Optional description for tooltip"
+				placeholder={t($language, 'addData.placeholderDesc')}
 				rows="2"
 				maxlength="200"
 			></textarea>
 		</div>
 
 		<div class="form-actions">
-			<button type="button" class="cancel-btn" onclick={onClose}>Cancel</button>
-			<button type="submit" class="submit-btn">Add to Map</button>
+			<button type="button" class="cancel-btn" onclick={onClose}>{t($language, 'addData.cancel')}</button>
+			<button type="submit" class="submit-btn">{t($language, 'addData.addToMap')}</button>
 		</div>
 	</form>
 </Modal>

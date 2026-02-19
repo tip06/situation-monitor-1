@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { MarketItem as MarketItemType } from '$lib/types';
 	import { formatPercentChange, getChangeClass } from '$lib/utils';
+	import { language } from '$lib/stores';
+	import { toIntlLocale } from '$lib/i18n/types';
 
 	interface Props {
 		item: MarketItemType;
@@ -24,7 +26,7 @@
 		!isDataAvailable
 			? '—'
 			: item.price > 100
-				? item.price.toLocaleString('en-US', { maximumFractionDigits: 0 })
+				? item.price.toLocaleString(toIntlLocale($language), { maximumFractionDigits: 0 })
 				: item.price.toFixed(2)
 	);
 	const changeText = $derived(isDataAvailable ? formatPercentChange(item.changePercent) : '—');

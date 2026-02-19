@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Panel } from '$lib/components/common';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface WhaleTransaction {
 		coin: string;
@@ -29,9 +31,9 @@
 	}
 </script>
 
-<Panel id="whales" title="Whale Watch" {count} {loading} {error}>
+<Panel id="whales" title={t($language, 'panel.whaleTitle')} {count} {loading} {error}>
 	{#if whales.length === 0 && !loading && !error}
-		<div class="empty-state">No whale transactions detected</div>
+		<div class="empty-state">{t($language, 'panel.whaleEmpty')}</div>
 	{:else}
 		<div class="whale-list">
 			{#each whales as whale, i (whale.hash + i)}

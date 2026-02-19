@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
+
 	interface Props {
 		message: string;
 		retry?: () => void;
@@ -11,7 +14,7 @@
 	<div class="error-icon">⚠</div>
 	<div class="error-message">{message}</div>
 	{#if retry}
-		<button class="retry-btn" onclick={retry}>Retry</button>
+		<button class="retry-btn" onclick={retry}>{t($language, 'common.retry')}</button>
 	{/if}
 </div>
 

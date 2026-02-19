@@ -3,6 +3,8 @@
 	import { Modal } from '$lib/components/modals';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
 	import type { NewsItem } from '$lib/types';
+	import { language } from '$lib/stores';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		news?: NewsItem[];
@@ -12,7 +14,7 @@
 
 	let { news = [], loading = false, error = null }: Props = $props();
 
-	const analysis = $derived(analyzeCorrelations(news));
+	const analysis = $derived(analyzeCorrelations(news, $language));
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -81,16 +83,17 @@
 	function formatTopicName(id: string): string {
 		return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	}
+
 </script>
 
-<Panel id="correlation" title="Pattern Analysis" {loading} {error}>
+<Panel id="correlation" title={t($language, 'correlation.title')} {loading} {error}>
 	{#if news.length === 0 && !loading && !error}
-		<div class="empty-state">Insufficient data for analysis</div>
+		<div class="empty-state">{t($language, 'correlation.insufficient')}</div>
 	{:else if analysis}
 		<div class="correlation-content">
 			{#if analysis.compoundSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Compound Signals<InfoTooltip text="Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks" /></div>
+					<div class="section-title">{t($language, 'correlation.compoundSignals')}<InfoTooltip text={t($language, 'tooltip.correlation.compoundSignals')} /></div>
 					{#each analysis.compoundSignals.slice(0, 5) as signal}
 						<div class="compound-item" class:critical={signal.level === 'critical'}>
 							<div class="compound-header">
@@ -105,19 +108,21 @@
 							</div>
 							<div class="compound-actions">
 								<button class="compound-action-btn" onclick={() => toggleCompoundDetails(signal.id)}>
-									{expandedSignals[signal.id] ? 'Hide intelligence' : 'Show intelligence'}
+									{expandedSignals[signal.id]
+										? t($language, 'correlation.hideIntelligence')
+										: t($language, 'correlation.showIntelligence')}
 								</button>
 								<button
 									class="compound-action-btn secondary"
 									onclick={() => openCompoundHeadlines(signal.name, signal.activeTopics)}
 								>
-									View headlines
+									{t($language, 'correlation.viewHeadlines')}
 								</button>
 							</div>
 							{#if expandedSignals[signal.id]}
 								<div class="compound-intel">
 									<div class="intel-block">
-										<div class="intel-heading">Key Judgments</div>
+										<div class="intel-heading">{t($language, 'correlation.keyJudgments')}</div>
 										<ul class="intel-list">
 											{#each signal.keyJudgments as judgment}
 												<li>{judgment}</li>
@@ -125,7 +130,7 @@
 										</ul>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">Indicators</div>
+										<div class="intel-heading">{t($language, 'correlation.indicators')}</div>
 										<div class="indicator-chips">
 											{#each signal.indicators as indicator}
 												<span class="indicator-chip">{indicator}</span>
@@ -133,7 +138,7 @@
 										</div>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">Assumptions</div>
+										<div class="intel-heading">{t($language, 'correlation.assumptions')}</div>
 										<ul class="intel-list">
 											{#each signal.assumptions as assumption}
 												<li>{assumption}</li>
@@ -141,7 +146,7 @@
 										</ul>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">Change Triggers</div>
+										<div class="intel-heading">{t($language, 'correlation.changeTriggers')}</div>
 										<ul class="intel-list">
 											{#each signal.changeTriggers as trigger}
 												<li>{trigger}</li>
@@ -157,7 +162,7 @@
 
 			{#if analysis.emergingPatterns.length > 0}
 				<div class="section">
-					<div class="section-title">Emerging Patterns<InfoTooltip text="Topics with unusual mention spikes detected via z-score analysis against 7-day historical averages" /></div>
+					<div class="section-title">{t($language, 'correlation.emergingPatterns')}<InfoTooltip text={t($language, 'tooltip.correlation.emergingPatterns')} /></div>
 					{#each analysis.emergingPatterns.slice(0, 3) as pattern}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -170,7 +175,8 @@
 								/>
 							</div>
 							<div class="pattern-sources">
-								{pattern.sources.slice(0, 3).join(' · ')} ({pattern.count} items)
+								{pattern.sources.slice(0, 3).join(' · ')}
+								({t($language, 'correlation.items', { count: pattern.count })})
 								{#if pattern.zScore > 1}
 									<span class="z-score" class:high={pattern.zScore >= 2}>
 										z={pattern.zScore.toFixed(1)}
@@ -184,7 +190,7 @@
 
 			{#if analysis.momentumSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Momentum Signals<InfoTooltip text="Topics with rising velocity and acceleration in mention frequency, showing real-time traction changes" /></div>
+					<div class="section-title">{t($language, 'correlation.momentumSignals')}<InfoTooltip text={t($language, 'tooltip.correlation.momentumSignals')} /></div>
 					{#each analysis.momentumSignals.slice(0, 3) as signal}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -212,7 +218,7 @@
 
 			{#if analysis.crossSourceCorrelations.length > 0}
 				<div class="section">
-					<div class="section-title">Cross-Source Links<InfoTooltip text="Topics receiving independent coverage from 3+ news sources, indicating broad awareness and credibility" /></div>
+					<div class="section-title">{t($language, 'correlation.crossSourceLinks')}<InfoTooltip text={t($language, 'tooltip.correlation.crossSourceLinks')} /></div>
 					{#each analysis.crossSourceCorrelations.slice(0, 3) as corr}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -220,7 +226,10 @@
 							<div class="correlation-sources">
 								{corr.sources.slice(0, 2).join(' ↔ ')}
 							</div>
-							<div class="correlation-topic">{corr.name} ({corr.sourceCount} sources)</div>
+							<div class="correlation-topic">
+								{corr.name}
+								({t($language, 'correlation.sources', { count: corr.sourceCount })})
+							</div>
 						</div>
 					{/each}
 				</div>
@@ -228,14 +237,14 @@
 
 			{#if analysis.predictiveSignals.length > 0}
 				<div class="section">
-					<div class="section-title">Predictive Signals<InfoTooltip text="AI-generated outcome predictions based on weighted scoring of source credibility, multi-source confirmation, and statistical significance" /></div>
+					<div class="section-title">{t($language, 'correlation.predictiveSignals')}<InfoTooltip text={t($language, 'tooltip.correlation.predictiveSignals')} /></div>
 					{#each analysis.predictiveSignals.slice(0, 2) as signal}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div class="predictive-item clickable" onclick={() => openHeadlines(signal.name, signal.headlines)}>
 							<div class="predictive-pattern">{signal.prediction}</div>
 							<div class="predictive-confidence">
-								Confidence: {Math.round(signal.confidence)}%
+								{t($language, 'correlation.confidence', { value: Math.round(signal.confidence) })}
 							</div>
 						</div>
 					{/each}
@@ -243,11 +252,11 @@
 			{/if}
 
 			{#if analysis.emergingPatterns.length === 0 && analysis.momentumSignals.length === 0 && analysis.compoundSignals.length === 0}
-				<div class="empty-state">No significant patterns detected</div>
+				<div class="empty-state">{t($language, 'correlation.noPatterns')}</div>
 			{/if}
 		</div>
 	{:else}
-		<div class="empty-state">No significant patterns detected</div>
+		<div class="empty-state">{t($language, 'correlation.noPatterns')}</div>
 	{/if}
 </Panel>
 
@@ -262,7 +271,7 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="empty-state">No headlines available for this pattern.</p>
+		<p class="empty-state">{t($language, 'correlation.noHeadlines')}</p>
 	{/if}
 </Modal>
 
@@ -400,10 +409,41 @@
 		cursor: pointer;
 	}
 
+	.compound-action-btn:hover {
+		background: rgba(255, 165, 0, 0.14);
+	}
+
 	.compound-action-btn.secondary {
 		border-color: var(--text-secondary);
 		background: rgba(255, 255, 255, 0.03);
 		color: var(--text-secondary);
+	}
+
+	:global(html[data-theme='light']) .compound-action-btn {
+		border-color: #b45309;
+		background: #f59e0b;
+		color: #3b1f00;
+	}
+
+	:global(html[data-theme='light']) .compound-action-btn:hover {
+		background: #d97706;
+		color: #fff7ed;
+	}
+
+	:global(html[data-theme='light']) .compound-intel {
+		background: #fef3c7;
+		border-color: #d97706;
+		color: #7c2d12;
+	}
+
+	:global(html[data-theme='light']) .intel-heading {
+		color: #7c2d12;
+	}
+
+	:global(html[data-theme='light']) .indicator-chip {
+		border-color: #d97706;
+		background: #fde68a;
+		color: #7c2d12;
 	}
 
 	.pattern-item {

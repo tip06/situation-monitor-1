@@ -6,6 +6,8 @@ import type { NewsItem, NewsCategory } from '$lib/types';
 import { FEEDS } from '$lib/config/feeds';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { fetchWithProxy, API_DELAYS, logger } from '$lib/config/api';
+import { classifyRegionalItem } from '$lib/utils/regional-filter';
+import { getEnabledSourcesForCategory } from '$lib/stores/sources';
 
 /** Categories that use RSS feeds only (no GDELT) */
 const RSS_ONLY_CATEGORIES: NewsCategory[] = ['politics', 'brazil', 'latam', 'finance'];
@@ -38,6 +40,8 @@ function delay(ms: number): Promise<void> {
  */
 function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): NewsItem[] {
 	const items: NewsItem[] = [];
+	let regionalDropped = 0;
+	const regionalDropReasons: Record<string, number> = {};
 	const parser = new DOMParser();
 	const doc = parser.parseFromString(xml, 'text/xml');
 
@@ -94,6 +98,14 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 		// Check for alerts
 		const alert = containsAlertKeyword(title);
 		const detectText = `${title} ${description}`;
+		const regionalDecision = classifyRegionalItem({ title, description, category });
+		if (!regionalDecision.accepted) {
+			regionalDropped += 1;
+			for (const reason of regionalDecision.reasons) {
+				regionalDropReasons[reason] = (regionalDropReasons[reason] || 0) + 1;
+			}
+			return;
+		}
 
 		items.push({
 			id,
@@ -110,6 +122,13 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 			topics: detectTopics(detectText)
 		});
 	});
+
+	if ((category === 'brazil' || category === 'latam') && regionalDropped > 0) {
+		logger.log(
+			'Regional Filter',
+			`${category}/${sourceName}: kept ${items.length}, dropped ${regionalDropped}, reasons=${JSON.stringify(regionalDropReasons)}`
+		);
+	}
 
 	return items;
 }
@@ -143,9 +162,13 @@ async function fetchRssFeed(
  * Fetch news from RSS feeds for a category
  */
 async function fetchRssNews(category: NewsCategory): Promise<NewsItem[]> {
-	const feeds = FEEDS[category] || [];
+	const feeds = getEnabledSourcesForCategory(category);
 	if (feeds.length === 0) {
-		logger.warn('RSS', `No feeds configured for ${category}`);
+		if ((FEEDS[category] || []).length > 0) {
+			logger.warn('RSS', `No enabled feeds for ${category}`);
+		} else {
+			logger.warn('RSS', `No feeds configured for ${category}`);
+		}
 		return [];
 	}
 

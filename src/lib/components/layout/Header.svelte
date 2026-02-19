@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { isRefreshing, lastRefresh } from '$lib/stores';
+	import { isRefreshing, lastRefresh, language } from '$lib/stores';
+	import { t } from '$lib/i18n';
+	import { toIntlLocale } from '$lib/i18n/types';
 
 	interface Props {
 		onSettingsClick?: () => void;
@@ -8,22 +10,28 @@
 
 	let { onSettingsClick, onAddDataClick }: Props = $props();
 
+	const intlLocale = $derived(toIntlLocale($language));
 	const lastRefreshText = $derived(
 		$lastRefresh
-			? `Last updated: ${new Date($lastRefresh).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-			: 'Never refreshed'
+			? t($language, 'header.lastUpdated', {
+					time: new Date($lastRefresh).toLocaleTimeString(intlLocale, {
+						hour: 'numeric',
+						minute: '2-digit'
+					})
+				})
+			: t($language, 'header.neverRefreshed')
 	);
 </script>
 
 <header class="header">
 	<div class="header-left">
-		<h1 class="logo">SITUATION MONITOR</h1>
+		<h1 class="logo">{t($language, 'header.brand')}</h1>
 	</div>
 
 	<div class="header-center">
 		<div class="refresh-status">
 			{#if $isRefreshing}
-				<span class="status-text loading">Refreshing...</span>
+				<span class="status-text loading">{t($language, 'header.refreshing')}</span>
 			{:else}
 				<span class="status-text">{lastRefreshText}</span>
 			{/if}
@@ -31,13 +39,21 @@
 	</div>
 
 	<div class="header-right">
-		<button class="header-btn add-data-btn" onclick={onAddDataClick} title="Add Map Data">
+		<button
+			class="header-btn add-data-btn"
+			onclick={onAddDataClick}
+			title={t($language, 'header.addDataTitle')}
+		>
 			<span class="btn-icon">+</span>
-			<span class="btn-label">Add Data</span>
+			<span class="btn-label">{t($language, 'header.addData')}</span>
 		</button>
-		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
+		<button
+			class="header-btn settings-btn"
+			onclick={onSettingsClick}
+			title={t($language, 'header.settings')}
+		>
 			<span class="btn-icon">⚙</span>
-			<span class="btn-label">Settings</span>
+			<span class="btn-label">{t($language, 'header.settings')}</span>
 		</button>
 	</div>
 </header>
