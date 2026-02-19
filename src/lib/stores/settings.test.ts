@@ -138,4 +138,24 @@ describe('Settings Store', () => {
 		expect(enabled).toContain('map');
 		expect(enabled).toContain('politics');
 	});
+
+	it('should initialize theme from system preference when no saved theme exists', async () => {
+		Object.defineProperty(window, 'matchMedia', {
+			writable: true,
+			value: vi.fn().mockImplementation((query: string) => ({
+				matches: query.includes('light'),
+				media: query,
+				onchange: null,
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				dispatchEvent: vi.fn()
+			}))
+		});
+
+		const { settings } = await import('./settings');
+		settings.initThemeFromSystem();
+		expect(get(settings).theme).toBe('light');
+	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import { language } from '$lib/stores';
+	import { onMount } from 'svelte';
+	import { language, settings } from '$lib/stores';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -10,6 +11,10 @@
 
 	$effect(() => {
 		document.documentElement.lang = $language === 'pt-BR' ? 'pt-BR' : 'en';
+	});
+
+	onMount(() => {
+		settings.initThemeFromSystem();
 	});
 </script>
 

@@ -40,13 +40,6 @@
 
 	<div class="header-right">
 		<button
-			class="lang-btn"
-			onclick={() => language.toggleLocale()}
-			title={t($language, 'header.languageToggle')}
-		>
-			{$language === 'en' ? 'EN' : 'PT'}
-		</button>
-		<button
 			class="header-btn add-data-btn"
 			onclick={onAddDataClick}
 			title={t($language, 'header.addDataTitle')}
@@ -142,23 +135,6 @@
 		cursor: pointer;
 		transition: all 0.15s ease;
 		font-size: 0.65rem;
-	}
-
-	.lang-btn {
-		min-height: 2.75rem;
-		padding: 0.4rem 0.65rem;
-		background: rgba(99, 102, 241, 0.15);
-		border: 1px solid rgba(99, 102, 241, 0.4);
-		border-radius: 4px;
-		color: #ffffff;
-		font-weight: 700;
-		font-size: 0.65rem;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.lang-btn:hover {
-		background: rgba(99, 102, 241, 0.3);
 	}
 
 	.header-btn:hover {

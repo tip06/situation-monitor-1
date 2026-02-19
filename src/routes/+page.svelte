@@ -21,6 +21,7 @@
 		markets,
 		monitors,
 		settings,
+		sources,
 		refresh,
 		allNewsItems,
 		activeTab,
@@ -129,6 +130,7 @@
 	onMount(() => {
 		// Initialize tab store from localStorage
 		activeTab.init();
+		sources.init();
 
 		// Load initial data and track as refresh
 		async function initialLoad() {

@@ -105,3 +105,6 @@ export {
 
 // Language store
 export { language } from './language';
+
+// Sources store
+export { sources, getEnabledSourcesForCategory, type SourceRecord } from './sources';

@@ -7,6 +7,7 @@ import { FEEDS } from '$lib/config/feeds';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { fetchWithProxy, API_DELAYS, logger } from '$lib/config/api';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
+import { getEnabledSourcesForCategory } from '$lib/stores/sources';
 
 /** Categories that use RSS feeds only (no GDELT) */
 const RSS_ONLY_CATEGORIES: NewsCategory[] = ['politics', 'brazil', 'latam', 'finance'];
@@ -161,9 +162,13 @@ async function fetchRssFeed(
  * Fetch news from RSS feeds for a category
  */
 async function fetchRssNews(category: NewsCategory): Promise<NewsItem[]> {
-	const feeds = FEEDS[category] || [];
+	const feeds = getEnabledSourcesForCategory(category);
 	if (feeds.length === 0) {
-		logger.warn('RSS', `No feeds configured for ${category}`);
+		if ((FEEDS[category] || []).length > 0) {
+			logger.warn('RSS', `No enabled feeds for ${category}`);
+		} else {
+			logger.warn('RSS', `No feeds configured for ${category}`);
+		}
 		return [];
 	}
 
