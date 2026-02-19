@@ -287,6 +287,10 @@ describe('Correlation Engine', () => {
 		expect(tradeWarSignal).toBeDefined();
 		expect(tradeWarSignal!.activeTopics).toContain('tariffs');
 		expect(tradeWarSignal!.activeTopics).toContain('china-tensions');
+		expect(tradeWarSignal!.keyJudgments.length).toBe(3);
+		expect(tradeWarSignal!.indicators.length).toBe(3);
+		expect(tradeWarSignal!.assumptions.length).toBe(3);
+		expect(tradeWarSignal!.changeTriggers.length).toBe(3);
 	});
 });
 
@@ -450,6 +454,19 @@ describe('Statistical Functions', () => {
 });
 
 describe('Compound Pattern Detection', () => {
+	it('should provide structured intelligence sections for all compound patterns', () => {
+		for (const pattern of COMPOUND_PATTERNS) {
+			expect(pattern.keyJudgments.length).toBe(3);
+			expect(pattern.indicators.length).toBe(3);
+			expect(pattern.assumptions.length).toBe(3);
+			expect(pattern.changeTriggers.length).toBe(3);
+			expect(pattern.keyJudgments.every((v) => v.trim().length > 0)).toBe(true);
+			expect(pattern.indicators.every((v) => v.trim().length > 0)).toBe(true);
+			expect(pattern.assumptions.every((v) => v.trim().length > 0)).toBe(true);
+			expect(pattern.changeTriggers.every((v) => v.trim().length > 0)).toBe(true);
+		}
+	});
+
 	it('should detect compound patterns when topics co-occur', () => {
 		const topicStats: Record<string, TopicStats> = {
 			tariffs: {

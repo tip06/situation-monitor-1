@@ -53,7 +53,10 @@ export interface CompoundPattern {
 	topics: string[]; // Topic IDs that must co-occur
 	minTopics: number; // Minimum topics required (default: all)
 	name: string;
-	prediction: string;
+	keyJudgments: string[];
+	indicators: string[];
+	assumptions: string[];
+	changeTriggers: string[];
 	boostFactor: number; // Score multiplier when detected
 }
 
@@ -63,7 +66,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['tariffs', 'china-tensions', 'supply-chain'],
 		minTopics: 2,
 		name: 'Trade War Escalation',
-		prediction: 'Expect market volatility and supply chain disruption',
+		keyJudgments: ['Tariff expansion between major blocs disrupts shipping routes and supplier lead times.', 'Export planning should expect commodity price swings and imported input volatility.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Tariff And Trade Barrier Announcements appears in multi-source daily coverage for at least two consecutive refresh windows.', 'US-China Strategic Friction is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Logistics Disruption And Port Congestion reinforces trade war escalation rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind trade war escalation remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize tariff and trade barrier announcements plus US-China strategic friction pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of trade war escalation fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces tariff and trade barrier announcements and US-China strategic friction stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.5
 	},
 	{
@@ -71,7 +77,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['inflation', 'fed-rates', 'layoffs'],
 		minTopics: 2,
 		name: 'Stagflation Risk',
-		prediction: 'Economic headwinds combining - defensive positioning advised',
+		keyJudgments: ['Sticky inflation with weaker labor conditions raises probability of low-growth, high-cost conditions.', 'Household pressure can rise through higher financing costs, weaker growth, and lower purchasing power.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Headline And Core Inflation Persistence appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Restrictive Central Bank Rate Guidance is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Broad Labor Market Downsizing reinforces stagflation risk rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind stagflation risk remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize headline and core inflation persistence plus restrictive central bank rate guidance pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of stagflation risk fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces headline and core inflation persistence and restrictive central bank rate guidance stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
 	{
@@ -79,15 +88,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['russia-ukraine', 'israel-gaza', 'china-tensions'],
 		minTopics: 2,
 		name: 'Multi-Front Geopolitical Crisis',
-		prediction: 'Multiple conflict zones active - risk-off sentiment likely',
-		boostFactor: 2.0
+		keyJudgments: ['Simultaneous conflict theaters increase chance of supply disruptions and market risk-off behavior.', 'Brazil should prepare for volatility in energy, freight, and agricultural export channels.', 'Brazilian military should increase monitoring of maritime and cyber spillover risks.'],
+		indicators: ['Russia-Ukraine Battlefield Escalation appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Israel-Gaza Conflict Escalation is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'US-China Strategic Friction reinforces multi-front geopolitical crisis rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind multi-front geopolitical crisis remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize Russia-Ukraine battlefield escalation plus Israel-Gaza conflict escalation pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of multi-front geopolitical crisis fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces Russia-Ukraine battlefield escalation and Israel-Gaza conflict escalation stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 2
 	},
 	{
 		id: 'tech-regulatory-storm',
 		topics: ['ai-regulation', 'big-tech', 'crypto'],
 		minTopics: 2,
 		name: 'Tech Regulatory Storm',
-		prediction: 'Coordinated regulatory action may impact tech sector',
+		keyJudgments: ['Parallel regulatory moves on AI, platforms, and crypto tighten compliance and licensing conditions.', 'Digital businesses may face compliance cost increases and slower product launch cycles.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['AI Policy And Enforcement Actions appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Antitrust And Platform Litigation is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Crypto Market And Regulation Shocks reinforces tech regulatory storm rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind tech regulatory storm remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize AI policy and enforcement actions plus antitrust and platform litigation pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of tech regulatory storm fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces AI policy and enforcement actions and antitrust and platform litigation stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.4
 	},
 	{
@@ -95,17 +110,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['bank-crisis', 'fed-rates', 'housing'],
 		minTopics: 2,
 		name: 'Financial Sector Stress',
-		prediction: 'Banking sector under pressure - monitor closely',
+		keyJudgments: ['Rate pressure and housing weakness elevate probability of banking liquidity strain.', 'Credit conditions may tighten and external funding costs can rise for firms and households.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Bank Solvency And Liquidity Stress appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Restrictive Central Bank Rate Guidance is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Housing Financing Deterioration reinforces financial sector stress rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind financial sector stress remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize bank solvency and liquidity stress plus restrictive central bank rate guidance pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of financial sector stress fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces bank solvency and liquidity stress and restrictive central bank rate guidance stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
-
-	// Geopolitical/Security
 	{
 		id: 'nuclear-escalation',
 		topics: ['russia-ukraine', 'iran', 'nuclear'],
 		minTopics: 2,
 		name: 'Nuclear Escalation',
-		prediction: 'Heightened nuclear rhetoric - extreme risk-off likely',
+		keyJudgments: ['Escalatory nuclear signaling increases global crisis probability and emergency diplomacy pressure.', 'Brazil should expect renewed volatility in commodities and global transport risk perception.', 'Brazilian military should maintain elevated strategic awareness and contingency coordination.'],
+		indicators: ['Russia-Ukraine Battlefield Escalation appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Iran Regional Escalation Posture is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Nuclear Signaling And Doctrine Hardening reinforces nuclear escalation rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind nuclear escalation remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize Russia-Ukraine battlefield escalation plus Iran regional escalation posture pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of nuclear escalation fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces Russia-Ukraine battlefield escalation and Iran regional escalation posture stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 2.5
 	},
 	{
@@ -113,7 +132,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['israel-gaza', 'iran'],
 		minTopics: 2,
 		name: 'Middle East Escalation',
-		prediction: 'Regional conflict expansion risk',
+		keyJudgments: ['Regional conflict broadens through proxy activity and maritime chokepoint pressure.', 'Oil-linked inflation and shipping insurance costs can increase for Brazilian importers.', 'Brazilian military should track maritime security implications for logistics and fuel planning.'],
+		indicators: ['Israel-Gaza Conflict Escalation appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Iran Regional Escalation Posture is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Brazil-specific risk signals (pricing, logistics, governance, or cyber) track in the same direction as middle east escalation.'],
+		assumptions: ['Primary drivers behind middle east escalation remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize Israel-Gaza conflict escalation plus Iran regional escalation posture pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of middle east escalation fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces Israel-Gaza conflict escalation and Iran regional escalation posture stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
 	{
@@ -121,17 +143,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['russia-ukraine', 'iran', 'supply-chain'],
 		minTopics: 2,
 		name: 'Energy Supply Shock',
-		prediction: 'Energy price spikes and supply disruption expected',
+		keyJudgments: ['Conflict-driven supply interruptions create abrupt upward pressure on fuel benchmarks.', 'Fuel, freight, and electricity cost pressure can pass through to inflation and production.', 'Brazilian military should review fuel stock and logistics resilience assumptions.'],
+		indicators: ['Russia-Ukraine Battlefield Escalation appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Iran Regional Escalation Posture is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Logistics Disruption And Port Congestion reinforces energy supply shock rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind energy supply shock remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize Russia-Ukraine battlefield escalation plus Iran regional escalation posture pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of energy supply shock fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces Russia-Ukraine battlefield escalation and Iran regional escalation posture stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
-
-	// Economic
 	{
 		id: 'recession-signal',
 		topics: ['layoffs', 'housing', 'fed-rates'],
 		minTopics: 2,
 		name: 'Recession Signal',
-		prediction: 'Classic recession indicators aligning',
+		keyJudgments: ['Labor softening, housing stress, and restrictive rates align with downturn conditions.', 'Brazil may face weaker demand, slower investment flows, and greater household stress.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Broad Labor Market Downsizing appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Housing Financing Deterioration is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Restrictive Central Bank Rate Guidance reinforces recession signal rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind recession signal remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize broad labor market downsizing plus housing financing deterioration pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of recession signal fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces broad labor market downsizing and housing financing deterioration stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.9
 	},
 	{
@@ -139,7 +165,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['inflation', 'supply-chain', 'climate'],
 		minTopics: 2,
 		name: 'Inflation Spiral',
-		prediction: 'Multiple inflation drivers converging',
+		keyJudgments: ['Climate disruption and logistics friction reinforce persistent consumer and producer price pressure.', 'Food and transport inflation can intensify and reduce household purchasing power.', 'Brazilian military should monitor procurement cost pressures on sustained operations.'],
+		indicators: ['Headline And Core Inflation Persistence appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Logistics Disruption And Port Congestion is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Climate-Driven Disaster Intensity reinforces inflation spiral rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind inflation spiral remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize headline and core inflation persistence plus logistics disruption and port congestion pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of inflation spiral fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces headline and core inflation persistence and logistics disruption and port congestion stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.6
 	},
 	{
@@ -147,17 +176,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['fed-rates', 'crypto', 'china-tensions'],
 		minTopics: 2,
 		name: 'Dollar Stress',
-		prediction: 'Currency instability concerns rising',
+		keyJudgments: ['Dollar funding stress and payment-route uncertainty increase currency volatility risk.', 'FX volatility can pressure import pricing, debt servicing, and corporate hedging costs.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Restrictive Central Bank Rate Guidance appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Crypto Market And Regulation Shocks is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'US-China Strategic Friction reinforces dollar stress rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind dollar stress remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize restrictive central bank rate guidance plus crypto market and regulation shocks pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of dollar stress fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces restrictive central bank rate guidance and crypto market and regulation shocks stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.5
 	},
-
-	// Tech/AI
 	{
 		id: 'ai-disruption-wave',
 		topics: ['ai-regulation', 'layoffs', 'big-tech'],
 		minTopics: 2,
 		name: 'AI Disruption Wave',
-		prediction: 'AI-driven workforce disruption accelerating',
+		keyJudgments: ['Rapid automation and restructuring in major tech employers accelerate labor displacement trends.', 'Brazilian service and tech labor markets may see faster skill mismatch and wage dispersion.', 'Brazilian military should track AI labor shifts relevant to cyber and technical recruitment.'],
+		indicators: ['AI Policy And Enforcement Actions appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Broad Labor Market Downsizing is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Antitrust And Platform Litigation reinforces ai disruption wave rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind ai disruption wave remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize AI policy and enforcement actions plus broad labor market downsizing pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of ai disruption wave fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces AI policy and enforcement actions and broad labor market downsizing stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.6
 	},
 	{
@@ -165,25 +198,32 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['deepfake', 'election', 'ai-regulation'],
 		minTopics: 2,
 		name: 'Disinfo Storm',
-		prediction: 'AI-generated misinformation concerns surging',
+		keyJudgments: ['Election narratives face higher manipulation volume through synthetic media and coordinated amplification.', 'Public trust and institutional communication can degrade during sensitive political periods.', 'Brazilian military should strengthen verification and information integrity monitoring.'],
+		indicators: ['Synthetic Media Abuse Incidents appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Electoral Legitimacy And Security Stress is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'AI Policy And Enforcement Actions reinforces disinfo storm rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind disinfo storm remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize synthetic media abuse incidents plus electoral legitimacy and security stress pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of disinfo storm fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces synthetic media abuse incidents and electoral legitimacy and security stress stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
-
-	// Crisis Combinations
 	{
 		id: 'pandemic-redux',
 		topics: ['pandemic', 'supply-chain', 'inflation'],
 		minTopics: 2,
 		name: 'Pandemic Redux',
-		prediction: 'Health crisis with economic spillover',
-		boostFactor: 2.0
+		keyJudgments: ['Health-system stress combines with logistics disruption, reviving inflationary supply shocks.', 'Health and transport bottlenecks can raise costs and strain local service capacity.', 'Brazilian military should prepare to support logistics and emergency response if requested.'],
+		indicators: ['High-Concern Outbreak Progression appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Logistics Disruption And Port Congestion is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Headline And Core Inflation Persistence reinforces pandemic redux rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind pandemic redux remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize high-concern outbreak progression plus logistics disruption and port congestion pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of pandemic redux fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces high-concern outbreak progression and logistics disruption and port congestion stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 2
 	},
 	{
 		id: 'climate-shock',
 		topics: ['climate', 'supply-chain', 'inflation'],
 		minTopics: 2,
 		name: 'Climate Shock',
-		prediction: 'Weather events disrupting economy',
+		keyJudgments: ['Severe weather events damage infrastructure and interrupt freight corridors.', 'Agriculture, roads, and port operations may experience recurrent disruption and cost escalation.', 'Brazilian military should monitor potential demand for disaster logistics support.'],
+		indicators: ['Climate-Driven Disaster Intensity appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Logistics Disruption And Port Congestion is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Headline And Core Inflation Persistence reinforces climate shock rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind climate shock remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize climate-driven disaster intensity plus logistics disruption and port congestion pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of climate shock fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces climate-driven disaster intensity and logistics disruption and port congestion stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.6
 	},
 	{
@@ -191,27 +231,32 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['inflation', 'layoffs', 'immigration', 'election'],
 		minTopics: 3,
 		name: 'Social Pressure',
-		prediction: 'Economic stress combining with political flashpoints',
+		keyJudgments: ['Economic strain and political polarization increase probability of localized unrest events.', 'Urban service continuity and political volatility risk can rise in high-pressure regions.', 'Brazilian military should maintain situational awareness for civil support contingencies.'],
+		indicators: ['Headline And Core Inflation Persistence appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Broad Labor Market Downsizing is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Immigration reinforces social pressure rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind social pressure remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize headline and core inflation persistence plus broad labor market downsizing pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of social pressure fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces headline and core inflation persistence and broad labor market downsizing stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
-
-	// === NEW COMPOUND SIGNALS ===
-
-	// Cyber & Geopolitical
 	{
 		id: 'cyber-warfare-escalation',
 		topics: ['state-hacking', 'russia-ukraine', 'china-tensions'],
 		minTopics: 2,
 		name: 'Cyber Warfare Escalation',
-		prediction: 'State-sponsored cyber operations intensifying',
-		boostFactor: 2.0
+		keyJudgments: ['State-linked cyber campaigns expand targeting of critical public and private infrastructure.', 'Critical sectors can face higher operational disruption and incident response costs.', 'Brazilian military should increase cyber readiness and interagency threat-sharing cadence.'],
+		indicators: ['State-Aligned Cyber Intrusion Tempo appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Russia-Ukraine Battlefield Escalation is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'US-China Strategic Friction reinforces cyber warfare escalation rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind cyber warfare escalation remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize state-aligned cyber intrusion tempo plus Russia-Ukraine battlefield escalation pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of cyber warfare escalation fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces state-aligned cyber intrusion tempo and Russia-Ukraine battlefield escalation stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 2
 	},
 	{
 		id: 'critical-infra-attack',
 		topics: ['cyberattack', 'energy-transition', 'supply-chain'],
 		minTopics: 2,
 		name: 'Critical Infrastructure Attack',
-		prediction: 'Infrastructure vulnerability exposure rising',
+		keyJudgments: ['Cyber and supply-chain pressure raises risk of interruptions in power and logistics systems.', 'Grid and transport disruptions can affect industrial output and public services.', 'Brazilian military should monitor critical infrastructure resilience and fallback operations.'],
+		indicators: ['Critical Cyber Incident Frequency appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Energy-Transition Bottlenecks is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Logistics Disruption And Port Congestion reinforces critical infrastructure attack rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind critical infrastructure attack remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize critical cyber incident frequency plus energy-transition bottlenecks pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of critical infrastructure attack fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces critical cyber incident frequency and energy-transition bottlenecks stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 2.2
 	},
 	{
@@ -219,17 +264,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['cyberattack', 'bank-crisis', 'credit-stress'],
 		minTopics: 2,
 		name: 'Cyber-Financial Attack',
-		prediction: 'Financial system cyber vulnerability detected',
-		boostFactor: 2.0
+		keyJudgments: ['Financial institutions face concurrent cyber intrusion and liquidity stress conditions.', 'Payment reliability and confidence in digital banking rails may come under pressure.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Critical Cyber Incident Frequency appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Bank Solvency And Liquidity Stress is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Credit Spread Widening And Defaults reinforces cyber-financial attack rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind cyber-financial attack remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize critical cyber incident frequency plus bank solvency and liquidity stress pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of cyber-financial attack fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces critical cyber incident frequency and bank solvency and liquidity stress stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 2
 	},
-
-	// Energy & Geopolitical
 	{
 		id: 'energy-weaponization',
 		topics: ['oil-opec', 'sanctions', 'russia-ukraine'],
 		minTopics: 2,
 		name: 'Energy Weaponization',
-		prediction: 'Energy used as geopolitical leverage — price volatility expected',
+		keyJudgments: ['Energy exports are used as bargaining leverage, increasing abrupt supply repricing risk.', 'Fuel and transport costs can surge, pressuring inflation and fiscal management.', 'Brazilian military should review fuel availability assumptions for sustained deployments.'],
+		indicators: ['Oil Production Constraint Signals appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Sanctions Expansion And Enforcement is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Russia-Ukraine Battlefield Escalation reinforces energy weaponization rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind energy weaponization remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize oil production constraint signals plus sanctions expansion and enforcement pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of energy weaponization fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces oil production constraint signals and sanctions expansion and enforcement stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
 	{
@@ -237,7 +286,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['rare-earths', 'china-tensions', 'sanctions'],
 		minTopics: 2,
 		name: 'Resource War',
-		prediction: 'Critical mineral supply under geopolitical pressure',
+		keyJudgments: ['Critical mineral access tightens through sanctions, export controls, and bloc competition.', 'Industrial and energy-transition projects may face input shortages and higher procurement costs.', 'Brazilian military should monitor procurement exposure for high-tech components.'],
+		indicators: ['Critical Mineral Export Restriction Risk appears in multi-source daily coverage for at least two consecutive refresh windows.', 'US-China Strategic Friction is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Sanctions Expansion And Enforcement reinforces resource war rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind resource war remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize critical mineral export restriction risk plus US-China strategic friction pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of resource war fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces critical mineral export restriction risk and US-China strategic friction stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
 	{
@@ -245,17 +297,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['energy-transition', 'rare-earths', 'china-tensions'],
 		minTopics: 2,
 		name: 'Green Transition Shock',
-		prediction: 'Energy transition supply chain bottleneck forming',
+		keyJudgments: ['Energy-transition deployment slows as critical inputs and manufacturing capacity tighten.', 'Renewable projects can face schedule delays and higher capex requirements.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Energy-Transition Bottlenecks appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Critical Mineral Export Restriction Risk is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'US-China Strategic Friction reinforces green transition shock rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind green transition shock remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize energy-transition bottlenecks plus critical mineral export restriction risk pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of green transition shock fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces energy-transition bottlenecks and critical mineral export restriction risk stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.5
 	},
-
-	// Food & Climate
 	{
 		id: 'food-crisis-spiral',
 		topics: ['food-security', 'extreme-weather', 'supply-chain'],
 		minTopics: 2,
 		name: 'Food Crisis Spiral',
-		prediction: 'Climate-driven food supply disruption accelerating',
+		keyJudgments: ['Weather shocks and logistics constraints reduce food availability and increase price pressure.', 'Food inflation and regional supply instability can intensify social vulnerability.', 'Brazilian military should monitor potential support demand for emergency distribution.'],
+		indicators: ['Food Availability And Affordability Strain appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Extreme Weather Disruption Footprint is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Logistics Disruption And Port Congestion reinforces food crisis spiral rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind food crisis spiral remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize food availability and affordability strain plus extreme weather disruption footprint pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of food crisis spiral fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces food availability and affordability strain and extreme weather disruption footprint stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
 	{
@@ -263,7 +319,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['extreme-weather', 'refugee-crisis', 'civil-unrest'],
 		minTopics: 2,
 		name: 'Climate Migration Pressure',
-		prediction: 'Climate displacement triggering social instability',
+		keyJudgments: ['Climate-linked displacement increases pressure on border areas and urban service capacity.', 'Municipal infrastructure and social services can face concentrated demand shocks.', 'Brazilian military should track border and humanitarian support contingency needs.'],
+		indicators: ['Extreme Weather Disruption Footprint appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Cross-Border Displacement Flows is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Street Mobilization And Protest Intensity reinforces climate migration pressure rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind climate migration pressure remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize extreme weather disruption footprint plus cross-border displacement flows pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of climate migration pressure fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces extreme weather disruption footprint and cross-border displacement flows stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
 	{
@@ -271,25 +330,32 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['agriculture', 'extreme-weather', 'inflation'],
 		minTopics: 2,
 		name: 'Agricultural Collapse Signal',
-		prediction: 'Crop failures feeding inflation pipeline',
+		keyJudgments: ['Crop stress and climate volatility increase food-price pass-through across supply chains.', 'Agribusiness margins and domestic food affordability can deteriorate simultaneously.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Crop And Fertilizer Stress appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Extreme Weather Disruption Footprint is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Headline And Core Inflation Persistence reinforces agricultural collapse signal rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind agricultural collapse signal remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize crop and fertilizer stress plus extreme weather disruption footprint pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of agricultural collapse signal fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces crop and fertilizer stress and extreme weather disruption footprint stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.6
 	},
-
-	// Financial & Fiscal
 	{
 		id: 'sovereign-debt-crisis',
 		topics: ['sovereign-debt', 'fed-rates', 'credit-stress'],
 		minTopics: 2,
 		name: 'Sovereign Debt Crisis',
-		prediction: 'Government debt sustainability in question',
-		boostFactor: 2.0
+		keyJudgments: ['Higher refinancing costs and credit risk repricing increase sovereign funding stress.', 'Fiscal tradeoffs may tighten and borrowing costs can rise across the public sector.', 'Brazilian military should monitor budgetary pressure on capability and readiness programs.'],
+		indicators: ['Sovereign Refinancing Stress appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Restrictive Central Bank Rate Guidance is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Credit Spread Widening And Defaults reinforces sovereign debt crisis rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind sovereign debt crisis remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize sovereign refinancing stress plus restrictive central bank rate guidance pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of sovereign debt crisis fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces sovereign refinancing stress and restrictive central bank rate guidance stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 2
 	},
 	{
 		id: 'credit-contagion',
 		topics: ['credit-stress', 'bank-crisis', 'housing'],
 		minTopics: 2,
 		name: 'Credit Contagion',
-		prediction: 'Credit stress spreading across sectors',
+		keyJudgments: ['Credit deterioration spreads from financial institutions into housing and corporate borrowers.', 'Consumer and business financing can contract, weakening growth and employment conditions.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Credit Spread Widening And Defaults appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Bank Solvency And Liquidity Stress is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Housing Financing Deterioration reinforces credit contagion rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind credit contagion remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize credit spread widening and defaults plus bank solvency and liquidity stress pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of credit contagion fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces credit spread widening and defaults and bank solvency and liquidity stress stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.9
 	},
 	{
@@ -297,17 +363,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['trade-blocs', 'sanctions', 'crypto'],
 		minTopics: 2,
 		name: 'Dedollarization Signal',
-		prediction: 'Alternative payment systems gaining traction',
+		keyJudgments: ['Trade blocs accelerate settlement alternatives outside dollar-dominant rails.', 'Trade invoicing practices may diversify, affecting FX management and payment operations.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Bloc-Level Settlement Realignment appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Sanctions Expansion And Enforcement is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Crypto Market And Regulation Shocks reinforces dedollarization signal rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind dedollarization signal remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize bloc-level settlement realignment plus sanctions expansion and enforcement pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of dedollarization signal fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces bloc-level settlement realignment and sanctions expansion and enforcement stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.6
 	},
-
-	// Social & Political
 	{
 		id: 'social-tinderbox',
 		topics: ['civil-unrest', 'inflation', 'layoffs'],
 		minTopics: 2,
 		name: 'Social Tinderbox',
-		prediction: 'Economic pain fueling civil unrest risk',
+		keyJudgments: ['Income stress and unemployment concentration raise risk of frequent protest episodes.', 'Public-order management pressure can increase in urban and transport hubs.', 'Brazilian military should maintain readiness for support requests under legal mandate.'],
+		indicators: ['Street Mobilization And Protest Intensity appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Headline And Core Inflation Persistence is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Broad Labor Market Downsizing reinforces social tinderbox rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind social tinderbox remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize street mobilization and protest intensity plus headline and core inflation persistence pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of social tinderbox fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces street mobilization and protest intensity and headline and core inflation persistence stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.9
 	},
 	{
@@ -315,7 +385,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['election', 'political-violence', 'civil-unrest'],
 		minTopics: 2,
 		name: 'Democratic Stress',
-		prediction: 'Political institutions under pressure',
+		keyJudgments: ['Election disputes and violence indicators increase institutional trust and governance stress.', 'Institutional communication and public confidence can become more fragile during contested events.', 'Brazilian military should reinforce situational awareness and constitutional role clarity.'],
+		indicators: ['Electoral Legitimacy And Security Stress appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Political Violence Escalation is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Street Mobilization And Protest Intensity reinforces democratic stress rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind democratic stress remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize electoral legitimacy and security stress plus political violence escalation pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of democratic stress fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces electoral legitimacy and security stress and political violence escalation stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.8
 	},
 	{
@@ -323,17 +396,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['civil-unrest', 'food-security', 'inflation'],
 		minTopics: 2,
 		name: 'Global Protest Wave',
-		prediction: 'Cost-of-living protests spreading',
+		keyJudgments: ['Cost-of-living shocks synchronize protest dynamics across multiple regions.', 'Risk of contagion in protest narratives can increase pressure on local governance and transport.', 'Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover.'],
+		indicators: ['Street Mobilization And Protest Intensity appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Food Availability And Affordability Strain is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Headline And Core Inflation Persistence reinforces global protest wave rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind global protest wave remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize street mobilization and protest intensity plus food availability and affordability strain pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of global protest wave fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces street mobilization and protest intensity and food availability and affordability strain stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
-
-	// Military & Escalation
 	{
 		id: 'arms-race-acceleration',
 		topics: ['arms-race', 'nato-defense', 'russia-ukraine'],
 		minTopics: 2,
 		name: 'Arms Race Acceleration',
-		prediction: 'Military spending and procurement surging',
+		keyJudgments: ['Defense procurement acceleration among major powers shifts supply and technology priorities.', 'Global defense demand can affect acquisition lead times and pricing for strategic equipment.', 'Brazilian military should reassess procurement timelines and supplier concentration risks.'],
+		indicators: ['Accelerated Defense Procurement Cycles appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Alliance Posture And Force Commitments is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Russia-Ukraine Battlefield Escalation reinforces arms race acceleration rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind arms race acceleration remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize accelerated defense procurement cycles plus alliance posture and force commitments pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of arms race acceleration fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces accelerated defense procurement cycles and alliance posture and force commitments stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 1.7
 	},
 	{
@@ -341,7 +418,10 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['cyberattack', 'space-military', 'arms-race'],
 		minTopics: 2,
 		name: 'Multi-Domain Conflict',
-		prediction: 'Warfare expanding across cyber, space, and conventional domains',
+		keyJudgments: ['Conflict pressure expands across cyber, space, and conventional domains at the same time.', 'National critical services may face higher exposure to hybrid tactics and disruption attempts.', 'Brazilian military should integrate cross-domain alerting and response coordination drills.'],
+		indicators: ['Critical Cyber Incident Frequency appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Counter-Space Capability Signaling is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Accelerated Defense Procurement Cycles reinforces multi-domain conflict rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind multi-domain conflict remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize critical cyber incident frequency plus counter-space capability signaling pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of multi-domain conflict fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces critical cyber incident frequency and counter-space capability signaling stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 2.3
 	},
 	{
@@ -349,17 +429,21 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['nuclear', 'arms-race', 'russia-ukraine', 'china-tensions'],
 		minTopics: 2,
 		name: 'Escalation Ladder',
-		prediction: 'Conflict intensity climbing across theaters',
+		keyJudgments: ['Sequential escalatory steps across theaters increase probability of wider strategic confrontation.', 'External volatility can raise insurance, freight, and commodity risk premiums.', 'Brazilian military should monitor strategic escalation indicators and readiness implications.'],
+		indicators: ['Nuclear Signaling And Doctrine Hardening appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Accelerated Defense Procurement Cycles is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Russia-Ukraine Battlefield Escalation reinforces escalation ladder rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind escalation ladder remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize nuclear signaling and doctrine hardening plus accelerated defense procurement cycles pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of escalation ladder fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces nuclear signaling and doctrine hardening and accelerated defense procurement cycles stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 2.5
 	},
-
-	// Cross-Domain Red Alert
 	{
 		id: 'systemic-fragility',
 		topics: ['sovereign-debt', 'supply-chain', 'cyberattack', 'extreme-weather'],
 		minTopics: 3,
 		name: 'Systemic Fragility',
-		prediction: 'Multiple system stress points converging — cascading failure risk',
+		keyJudgments: ['Concurrent shocks across finance, logistics, cyber, and climate increase cascading disruption risk.', 'Cross-sector stress can reduce resilience in transport, food, energy, and public services.', 'Brazilian military should monitor multi-sector contingency demands and interoperability readiness.'],
+		indicators: ['Sovereign Refinancing Stress appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Logistics Disruption And Port Congestion is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Critical Cyber Incident Frequency reinforces systemic fragility rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind systemic fragility remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize sovereign refinancing stress plus logistics disruption and port congestion pressure.', 'Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness.'],
+		changeTriggers: ['Two core drivers of systemic fragility fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces sovereign refinancing stress and logistics disruption and port congestion stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
 		boostFactor: 2.5
 	},
 	{
@@ -367,8 +451,11 @@ export const COMPOUND_PATTERNS: CompoundPattern[] = [
 		topics: ['civil-unrest', 'food-security', 'inflation', 'extreme-weather', 'refugee-crisis'],
 		minTopics: 3,
 		name: 'Polycrisis',
-		prediction: 'Simultaneous crises reinforcing each other — monitor all fronts',
-		boostFactor: 3.0
+		keyJudgments: ['Interacting social, food, climate, and economic shocks amplify one another across regions.', 'Compound stress can raise humanitarian, inflation, and governance management burdens simultaneously.', 'Brazilian military should prepare for multi-agency support demands under concurrent crises.'],
+		indicators: ['Street Mobilization And Protest Intensity appears in multi-source daily coverage for at least two consecutive refresh windows.', 'Food Availability And Affordability Strain is accompanied by cross-market stress signals (energy, freight, credit, or policy risk premium).', 'Headline And Core Inflation Persistence reinforces polycrisis rather than decoupling from the first two drivers.'],
+		assumptions: ['Primary drivers behind polycrisis remain active without a credible de-escalation agreement.', 'Policy responses stay incremental and do not immediately neutralize street mobilization and protest intensity plus food availability and affordability strain pressure.', 'Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption.'],
+		changeTriggers: ['Two core drivers of polycrisis fall below activation threshold across consecutive cycles.', 'A verifiable diplomatic, regulatory, or security breakthrough materially reduces street mobilization and protest intensity and food availability and affordability strain stress.', 'Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway.'],
+		boostFactor: 3
 	}
 ];
 

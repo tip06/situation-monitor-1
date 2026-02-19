@@ -73,7 +73,10 @@ export interface CompoundSignal {
 	topics: string[];
 	activeTopics: string[]; // Which topics triggered
 	score: number;
-	prediction: string;
+	keyJudgments: string[];
+	indicators: string[];
+	assumptions: string[];
+	changeTriggers: string[];
 	level: 'critical' | 'high' | 'elevated';
 }
 
@@ -271,7 +274,10 @@ function detectCompoundPatterns(
 				topics: pattern.topics,
 				activeTopics,
 				score,
-				prediction: pattern.prediction,
+				keyJudgments: pattern.keyJudgments,
+				indicators: pattern.indicators,
+				assumptions: pattern.assumptions,
+				changeTriggers: pattern.changeTriggers,
 				level: score >= 30 ? 'critical' : score >= 20 ? 'high' : 'elevated'
 			});
 		}

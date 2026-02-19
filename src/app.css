@@ -25,6 +25,7 @@
 /* Base styles */
 html {
 	font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
+	font-size: 20px;
 	background-color: var(--bg);
 	color: var(--text);
 }

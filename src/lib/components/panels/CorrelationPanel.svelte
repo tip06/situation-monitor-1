@@ -18,6 +18,7 @@
 	let modalOpen = $state(false);
 	let modalTitle = $state('');
 	let modalHeadlines = $state<Array<{ title: string; link: string; source: string }>>([]);
+	let expandedSignals = $state<Record<string, boolean>>({});
 
 	function openHeadlines(title: string, headlines: Array<{ title: string; link: string; source: string }>) {
 		modalTitle = title;
@@ -41,6 +42,13 @@
 			}
 		}
 		openHeadlines(signalName, combined);
+	}
+
+	function toggleCompoundDetails(signalId: string) {
+		expandedSignals = {
+			...expandedSignals,
+			[signalId]: !expandedSignals[signalId]
+		};
 	}
 
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
@@ -83,10 +91,8 @@
 			{#if analysis.compoundSignals.length > 0}
 				<div class="section">
 					<div class="section-title">Compound Signals<InfoTooltip text="Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks" /></div>
-					{#each analysis.compoundSignals.slice(0, 2) as signal}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="compound-item clickable" class:critical={signal.level === 'critical'} onclick={() => openCompoundHeadlines(signal.name, signal.activeTopics)}>
+					{#each analysis.compoundSignals.slice(0, 5) as signal}
+						<div class="compound-item" class:critical={signal.level === 'critical'}>
 							<div class="compound-header">
 								<span class="compound-name">{signal.name}</span>
 								<Badge
@@ -97,7 +103,53 @@
 							<div class="compound-topics">
 								{signal.activeTopics.map((t) => formatTopicName(t)).join(' + ')}
 							</div>
-							<div class="compound-prediction">{signal.prediction}</div>
+							<div class="compound-actions">
+								<button class="compound-action-btn" onclick={() => toggleCompoundDetails(signal.id)}>
+									{expandedSignals[signal.id] ? 'Hide intelligence' : 'Show intelligence'}
+								</button>
+								<button
+									class="compound-action-btn secondary"
+									onclick={() => openCompoundHeadlines(signal.name, signal.activeTopics)}
+								>
+									View headlines
+								</button>
+							</div>
+							{#if expandedSignals[signal.id]}
+								<div class="compound-intel">
+									<div class="intel-block">
+										<div class="intel-heading">Key Judgments</div>
+										<ul class="intel-list">
+											{#each signal.keyJudgments as judgment}
+												<li>{judgment}</li>
+											{/each}
+										</ul>
+									</div>
+									<div class="intel-block">
+										<div class="intel-heading">Indicators</div>
+										<div class="indicator-chips">
+											{#each signal.indicators as indicator}
+												<span class="indicator-chip">{indicator}</span>
+											{/each}
+										</div>
+									</div>
+									<div class="intel-block">
+										<div class="intel-heading">Assumptions</div>
+										<ul class="intel-list">
+											{#each signal.assumptions as assumption}
+												<li>{assumption}</li>
+											{/each}
+										</ul>
+									</div>
+									<div class="intel-block">
+										<div class="intel-heading">Change Triggers</div>
+										<ul class="intel-list">
+											{#each signal.changeTriggers as trigger}
+												<li>{trigger}</li>
+											{/each}
+										</ul>
+									</div>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -274,10 +326,84 @@
 		margin-bottom: 0.15rem;
 	}
 
-	.compound-prediction {
-		font-size: 0.55rem;
-		color: var(--text-muted);
-		font-style: italic;
+	.compound-intel {
+		margin-top: 0.35rem;
+		padding: 0.45rem;
+		border-radius: 4px;
+		background: rgba(255, 165, 0, 0.1);
+		border: 1px solid rgba(255, 165, 0, 0.2);
+		font-size: 0.56rem;
+		color: var(--warning);
+		line-height: 1.4;
+	}
+
+	.intel-block {
+		margin-bottom: 0.45rem;
+	}
+
+	.intel-block:last-child {
+		margin-bottom: 0;
+	}
+
+	.intel-heading {
+		font-size: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--text-secondary);
+		margin-bottom: 0.22rem;
+	}
+
+	.intel-list {
+		margin: 0;
+		padding-left: 1rem;
+		color: var(--text-primary);
+	}
+
+	.intel-list li {
+		margin-bottom: 0.15rem;
+	}
+
+	.intel-list li:last-child {
+		margin-bottom: 0;
+	}
+
+	.indicator-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.indicator-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.12rem 0.45rem;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: rgba(255, 255, 255, 0.05);
+		color: var(--text-primary);
+		font-size: 0.54rem;
+	}
+
+	.compound-actions {
+		display: flex;
+		gap: 0.35rem;
+		margin-top: 0.3rem;
+	}
+
+	.compound-action-btn {
+		border: 1px solid var(--warning);
+		background: rgba(255, 165, 0, 0.08);
+		color: var(--warning);
+		font-size: 0.53rem;
+		padding: 0.2rem 0.35rem;
+		border-radius: 3px;
+		cursor: pointer;
+	}
+
+	.compound-action-btn.secondary {
+		border-color: var(--text-secondary);
+		background: rgba(255, 255, 255, 0.03);
+		color: var(--text-secondary);
 	}
 
 	.pattern-item {
