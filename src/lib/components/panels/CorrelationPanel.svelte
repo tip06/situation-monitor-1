@@ -409,10 +409,41 @@
 		cursor: pointer;
 	}
 
+	.compound-action-btn:hover {
+		background: rgba(255, 165, 0, 0.14);
+	}
+
 	.compound-action-btn.secondary {
 		border-color: var(--text-secondary);
 		background: rgba(255, 255, 255, 0.03);
 		color: var(--text-secondary);
+	}
+
+	:global(html[data-theme='light']) .compound-action-btn {
+		border-color: #b45309;
+		background: #f59e0b;
+		color: #3b1f00;
+	}
+
+	:global(html[data-theme='light']) .compound-action-btn:hover {
+		background: #d97706;
+		color: #fff7ed;
+	}
+
+	:global(html[data-theme='light']) .compound-intel {
+		background: #fef3c7;
+		border-color: #d97706;
+		color: #7c2d12;
+	}
+
+	:global(html[data-theme='light']) .intel-heading {
+		color: #7c2d12;
+	}
+
+	:global(html[data-theme='light']) .indicator-chip {
+		border-color: #d97706;
+		background: #fde68a;
+		color: #7c2d12;
 	}
 
 	.pattern-item {
