@@ -26,6 +26,7 @@
 	}
 
 	let { category, panelId, title }: Props = $props();
+	let isExpanded = $state(false);
 
 	// Filter state
 	let searchQuery = $state('');
@@ -126,75 +127,183 @@
 		activeRegions = new Set();
 		activeTopics = new Set();
 	}
+
+	function toggleExpanded() {
+		isExpanded = !isExpanded;
+	}
+
+	function closeExpanded() {
+		isExpanded = false;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && isExpanded) {
+			closeExpanded();
+		}
+	}
 </script>
 
-<Panel id={panelId} {title} {count} {loading} {error}>
-	{#if allItems.length === 0 && !loading && !error}
-		<div class="empty-state">{t($language, 'news.empty')}</div>
-	{:else}
-		<!-- Filter toolbar -->
-		{#if allItems.length > 0}
-			<div class="filter-toolbar">
-				<div class="search-row">
-					<input
-						type="text"
-						class="search-input"
-						placeholder={t($language, 'common.searchHeadlines')}
-						bind:value={searchQuery}
-					/>
-					{#if hasActiveFilters}
-						<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
-							&times;
-						</button>
+<svelte:window onkeydown={handleKeydown} />
+
+{#if isExpanded}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="expand-backdrop" onclick={closeExpanded}></div>
+{/if}
+
+<div class="news-panel-shell" class:expanded={isExpanded}>
+	<Panel id={panelId} {title} {count} {loading} {error} draggable={!isExpanded}>
+		{#snippet actions()}
+			<button
+				type="button"
+				class="expand-btn"
+				onclick={toggleExpanded}
+				aria-label={isExpanded ? t($language, 'panel.collapse') : t($language, 'panel.expand')}
+				title={isExpanded ? t($language, 'panel.collapse') : t($language, 'panel.expand')}
+			>
+				{#if isExpanded}
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path
+							fill="currentColor"
+							d="M4 4h16v16H4V4zm2 2v12h12V6H6zm4.5 2h5v5h-2V11.4l-4.3 4.3-1.4-1.4L12.6 10H10.5V8z"
+						/>
+					</svg>
+				{:else}
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path
+							fill="currentColor"
+							d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 8.4L12.6 10H10.5V8h5v5h-2v-1.6l-4.3 4.3-1.4-1.3z"
+						/>
+					</svg>
+				{/if}
+			</button>
+		{/snippet}
+
+		{#if allItems.length === 0 && !loading && !error}
+			<div class="empty-state">{t($language, 'news.empty')}</div>
+		{:else}
+			<!-- Filter toolbar -->
+			{#if allItems.length > 0}
+				<div class="filter-toolbar">
+					<div class="search-row">
+						<input
+							type="text"
+							class="search-input"
+							placeholder={t($language, 'common.searchHeadlines')}
+							bind:value={searchQuery}
+						/>
+						{#if hasActiveFilters}
+							<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
+								&times;
+							</button>
+						{/if}
+					</div>
+
+					{#if availableRegions.length > 0}
+						<div class="chip-row">
+							<span class="chip-label">{t($language, 'common.region')}</span>
+							{#each availableRegions as region}
+								<button
+									class="chip"
+									class:active={activeRegions.has(region)}
+									onclick={() => toggleRegion(region)}
+								>
+									{region}
+								</button>
+							{/each}
+						</div>
+					{/if}
+
+					{#if availableTopics.length > 0}
+						<div class="chip-row">
+							<span class="chip-label">{t($language, 'common.topic')}</span>
+							{#each availableTopics as topic}
+								<button
+									class="chip"
+									class:active={activeTopics.has(topic)}
+									onclick={() => toggleTopic(topic)}
+								>
+									{topic}
+								</button>
+							{/each}
+						</div>
 					{/if}
 				</div>
+			{/if}
 
-				{#if availableRegions.length > 0}
-					<div class="chip-row">
-						<span class="chip-label">{t($language, 'common.region')}</span>
-						{#each availableRegions as region}
-							<button
-								class="chip"
-								class:active={activeRegions.has(region)}
-								onclick={() => toggleRegion(region)}
-							>
-								{region}
-							</button>
-						{/each}
-					</div>
-				{/if}
-
-				{#if availableTopics.length > 0}
-					<div class="chip-row">
-						<span class="chip-label">{t($language, 'common.topic')}</span>
-						{#each availableTopics as topic}
-							<button
-								class="chip"
-								class:active={activeTopics.has(topic)}
-								onclick={() => toggleTopic(topic)}
-							>
-								{topic}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
+			<!-- News list -->
+			{#if items.length === 0 && hasActiveFilters}
+				<div class="empty-state">{t($language, 'news.noMatches')}</div>
+			{:else}
+				<div class="news-list">
+					{#each items as item (item.id)}
+						<NewsItem {item} />
+					{/each}
+				</div>
+			{/if}
 		{/if}
-
-		<!-- News list -->
-		{#if items.length === 0 && hasActiveFilters}
-			<div class="empty-state">{t($language, 'news.noMatches')}</div>
-		{:else}
-			<div class="news-list">
-				{#each items as item (item.id)}
-					<NewsItem {item} />
-				{/each}
-			</div>
-		{/if}
-	{/if}
-</Panel>
+	</Panel>
+</div>
 
 <style>
+	.expand-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 1100;
+	}
+
+	.news-panel-shell {
+		position: relative;
+		min-height: 100%;
+	}
+
+	.news-panel-shell.expanded {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: min(90vw, 1400px);
+		height: min(85vh, 1000px);
+		z-index: 1101;
+		animation: expand-pop 0.18s ease-out;
+	}
+
+	@keyframes expand-pop {
+		from {
+			opacity: 0;
+			transform: translate(-50%, -50%) scale(0.97);
+		}
+		to {
+			opacity: 1;
+			transform: translate(-50%, -50%) scale(1);
+		}
+	}
+
+	.expand-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.3rem;
+		height: 1.3rem;
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.45);
+		border-radius: 3px;
+		color: rgba(255, 255, 255, 0.9);
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.expand-btn:hover {
+		border-color: #ffffff;
+		color: #ffffff;
+	}
+
+	.expand-btn svg {
+		width: 0.8rem;
+		height: 0.8rem;
+	}
+
 	.filter-toolbar {
 		display: flex;
 		flex-direction: column;
@@ -294,6 +403,10 @@
 		padding-right: 0.25rem;
 	}
 
+	.news-panel-shell.expanded .news-list {
+		max-height: 68vh;
+	}
+
 	/* Custom scrollbar */
 	.news-list::-webkit-scrollbar {
 		width: 6px;
@@ -318,5 +431,12 @@
 		color: var(--text-secondary);
 		font-size: 0.7rem;
 		padding: 1rem;
+	}
+
+	@media (max-width: 768px) {
+		.news-panel-shell.expanded {
+			width: 96vw;
+			height: 88vh;
+		}
 	}
 </style>

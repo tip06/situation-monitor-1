@@ -55,6 +55,8 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'modal.close': 'Fechar',
 	'panel.loading': 'Carregando...',
 	'panel.toggle': 'Alternar painel',
+	'panel.expand': 'Expandir painel',
+	'panel.collapse': 'Recolher painel',
 	'common.retry': 'Tentar novamente',
 	'common.alert': 'ALERTA',
 	'common.region': 'Região:',

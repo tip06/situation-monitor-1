@@ -53,6 +53,8 @@ export const EN_MESSAGES = {
 	'modal.close': 'Close',
 	'panel.loading': 'Loading...',
 	'panel.toggle': 'Toggle panel',
+	'panel.expand': 'Expand panel',
+	'panel.collapse': 'Collapse panel',
 	'common.retry': 'Retry',
 	'common.alert': 'ALERT',
 	'common.region': 'Region:',
