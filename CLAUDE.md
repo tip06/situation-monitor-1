@@ -110,6 +110,10 @@ Unique business logic for intelligence analysis:
 - possibility to manually insert feeds
 - check out world monitor for ideas
 - investigate ways to speed up refreshes
+- prediction in compound patterns
+- why compound patterns show "critical" tag
+- Option to expand feeds
+- review settings panel
 
 ## General Guidance
 
