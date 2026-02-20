@@ -115,7 +115,7 @@ Unique business logic for intelligence analysis:
 - review settings panel
 - alerts for economic indicators
 - add analysis manually
-- expand compund patterns
+- expand compound patterns
 
 ## General Guidance
 

@@ -21,6 +21,7 @@
 	let modalTitle = $state('');
 	let modalHeadlines = $state<Array<{ title: string; link: string; source: string }>>([]);
 	let expandedSignals = $state<Record<string, boolean>>({});
+	let expandedCompoundId = $state<string | null>(null);
 
 	function openHeadlines(title: string, headlines: Array<{ title: string; link: string; source: string }>) {
 		modalTitle = title;
@@ -51,6 +52,20 @@
 			...expandedSignals,
 			[signalId]: !expandedSignals[signalId]
 		};
+	}
+
+	function toggleCompoundExpand(signalId: string) {
+		expandedCompoundId = expandedCompoundId === signalId ? null : signalId;
+	}
+
+	function closeExpandedCompound() {
+		expandedCompoundId = null;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && expandedCompoundId) {
+			closeExpandedCompound();
+		}
 	}
 
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
@@ -86,7 +101,15 @@
 
 </script>
 
-<Panel id="correlation" title={t($language, 'correlation.title')} {loading} {error}>
+<svelte:window onkeydown={handleKeydown} />
+
+{#if expandedCompoundId}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="compound-expand-backdrop" onclick={closeExpandedCompound}></div>
+{/if}
+
+<Panel id="correlation" title={t($language, 'correlation.title')} {loading} {error} draggable={!expandedCompoundId}>
 	{#if news.length === 0 && !loading && !error}
 		<div class="empty-state">{t($language, 'correlation.insufficient')}</div>
 	{:else if analysis}
@@ -95,13 +118,42 @@
 				<div class="section">
 					<div class="section-title">{t($language, 'correlation.compoundSignals')}<InfoTooltip text={t($language, 'tooltip.correlation.compoundSignals')} /></div>
 					{#each analysis.compoundSignals.slice(0, 5) as signal}
-						<div class="compound-item" class:critical={signal.level === 'critical'}>
+						<div
+							class="compound-item"
+							class:critical={signal.level === 'critical'}
+							class:expanded={expandedCompoundId === signal.id}
+						>
 							<div class="compound-header">
 								<span class="compound-name">{signal.name}</span>
-								<Badge
-									text={signal.level.toUpperCase()}
-									variant={signal.level === 'critical' ? 'danger' : 'warning'}
-								/>
+								<div class="compound-header-actions">
+									<button
+										type="button"
+										class="compound-expand-btn"
+										onclick={() => toggleCompoundExpand(signal.id)}
+										aria-label={expandedCompoundId === signal.id ? t($language, 'panel.collapse') : t($language, 'panel.expand')}
+										title={expandedCompoundId === signal.id ? t($language, 'panel.collapse') : t($language, 'panel.expand')}
+									>
+										{#if expandedCompoundId === signal.id}
+											<svg viewBox="0 0 24 24" aria-hidden="true">
+												<path
+													fill="currentColor"
+													d="M4 4h16v16H4V4zm2 2v12h12V6H6zm4.5 2h5v5h-2V11.4l-4.3 4.3-1.4-1.4L12.6 10H10.5V8z"
+												/>
+											</svg>
+										{:else}
+											<svg viewBox="0 0 24 24" aria-hidden="true">
+												<path
+													fill="currentColor"
+													d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 8.4L12.6 10H10.5V8h5v5h-2v-1.6l-4.3 4.3-1.4-1.3z"
+												/>
+											</svg>
+										{/if}
+									</button>
+									<Badge
+										text={signal.level.toUpperCase()}
+										variant={signal.level === 'critical' ? 'danger' : 'warning'}
+									/>
+								</div>
 							</div>
 							<div class="compound-topics">
 								{signal.activeTopics.map((t) => formatTopicName(t)).join(' + ')}
@@ -284,6 +336,13 @@
 </Modal>
 
 <style>
+	.compound-expand-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.7);
+		z-index: 1100;
+	}
+
 	.correlation-content {
 		display: flex;
 		flex-direction: column;
@@ -331,6 +390,36 @@
 		margin-bottom: 0.2rem;
 	}
 
+	.compound-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.compound-expand-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.2rem;
+		height: 1.2rem;
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 3px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.compound-expand-btn:hover {
+		border-color: var(--text-primary);
+		color: var(--text-primary);
+	}
+
+	.compound-expand-btn svg {
+		width: 0.75rem;
+		height: 0.75rem;
+	}
+
 	.compound-name {
 		font-size: 0.65rem;
 		font-weight: 600;
@@ -352,6 +441,50 @@
 		font-size: 0.56rem;
 		color: var(--warning);
 		line-height: 1.4;
+	}
+
+	.compound-item.expanded {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: min(90vw, 1100px);
+		max-height: min(85vh, 920px);
+		overflow: auto;
+		z-index: 1101;
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+		animation: expand-pop 0.18s ease-out;
+	}
+
+	@keyframes expand-pop {
+		from {
+			opacity: 0;
+			transform: translate(-50%, -50%) scale(0.97);
+		}
+		to {
+			opacity: 1;
+			transform: translate(-50%, -50%) scale(1);
+		}
+	}
+
+	.compound-item.expanded .compound-intel {
+		font-size: 0.68rem;
+	}
+
+	.compound-item.expanded .compound-name {
+		font-size: 0.78rem;
+	}
+
+	.compound-item.expanded .compound-topics {
+		font-size: 0.66rem;
+	}
+
+	.compound-item.expanded .intel-heading {
+		font-size: 0.58rem;
+	}
+
+	.compound-item.expanded .indicator-chip {
+		font-size: 0.64rem;
 	}
 
 	.intel-block {
