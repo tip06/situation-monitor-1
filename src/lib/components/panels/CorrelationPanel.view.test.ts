@@ -9,14 +9,16 @@ describe('CorrelationPanel compound signal rendering', () => {
 	});
 
 	it('renders structured intelligence sections', () => {
-		expect(panelSource).toContain('Key Judgments');
-		expect(panelSource).toContain('Indicators');
-		expect(panelSource).toContain('Assumptions');
-		expect(panelSource).toContain('Change Triggers');
-		expect(panelSource).toContain('Show intelligence');
-		expect(panelSource).toContain('View headlines');
+		expect(panelSource).toContain('correlation.keyJudgments');
+		expect(panelSource).toContain('correlation.indicators');
+		expect(panelSource).toContain('correlation.confirmationSignals');
+		expect(panelSource).toContain('correlation.assumptions');
+		expect(panelSource).toContain('correlation.changeTriggers');
+		expect(panelSource).toContain('correlation.showIntelligence');
+		expect(panelSource).toContain('correlation.viewHeadlines');
 		expect(panelSource).toContain('signal.keyJudgments');
 		expect(panelSource).toContain('signal.indicators');
+		expect(panelSource).toContain('signal.confirmationSignals');
 		expect(panelSource).toContain('signal.assumptions');
 		expect(panelSource).toContain('signal.changeTriggers');
 		expect(panelSource).toContain('indicator-chip');

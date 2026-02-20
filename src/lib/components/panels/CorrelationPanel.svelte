@@ -130,10 +130,10 @@
 										</ul>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.indicators')}</div>
+										<div class="intel-heading">{t($language, 'correlation.confirmationSignals')}</div>
 										<div class="indicator-chips">
-											{#each signal.indicators as indicator}
-												<span class="indicator-chip">{indicator}</span>
+											{#each signal.confirmationSignals as cs}
+												<span class="indicator-chip">{cs}</span>
 											{/each}
 										</div>
 									</div>
@@ -144,6 +144,14 @@
 												<li>{assumption}</li>
 											{/each}
 										</ul>
+									</div>
+									<div class="intel-block">
+										<div class="intel-heading">{t($language, 'correlation.indicators')}</div>
+										<div class="indicator-chips">
+											{#each signal.indicators as indicator}
+												<span class="indicator-chip">{indicator}</span>
+											{/each}
+										</div>
 									</div>
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.changeTriggers')}</div>

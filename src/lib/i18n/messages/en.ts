@@ -192,6 +192,7 @@ export const EN_MESSAGES = {
 	'correlation.viewHeadlines': 'View headlines',
 	'correlation.keyJudgments': 'Key Judgments',
 	'correlation.indicators': 'Indicators',
+	'correlation.confirmationSignals': 'Confirmation Signals',
 	'correlation.assumptions': 'Assumptions',
 	'correlation.changeTriggers': 'Change Triggers',
 	'correlation.items': '{count} items',

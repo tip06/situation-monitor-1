@@ -194,6 +194,7 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'correlation.viewHeadlines': 'Ver manchetes',
 	'correlation.keyJudgments': 'Julgamentos-chave',
 	'correlation.indicators': 'Indicadores',
+	'correlation.confirmationSignals': 'Sinais de confirmação',
 	'correlation.assumptions': 'Premissas',
 	'correlation.changeTriggers': 'Gatilhos de mudança',
 	'correlation.items': '{count} itens',

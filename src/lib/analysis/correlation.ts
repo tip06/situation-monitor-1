@@ -76,6 +76,7 @@ export interface CompoundSignal {
 	score: number;
 	keyJudgments: string[];
 	indicators: string[];
+	confirmationSignals: string[];
 	assumptions: string[];
 	changeTriggers: string[];
 	level: 'critical' | 'high' | 'elevated';
@@ -277,6 +278,7 @@ function detectCompoundPatterns(
 				score,
 				keyJudgments: pattern.keyJudgments,
 				indicators: pattern.indicators,
+				confirmationSignals: pattern.confirmationSignals,
 				assumptions: pattern.assumptions,
 				changeTriggers: pattern.changeTriggers,
 				level: score >= 30 ? 'critical' : score >= 20 ? 'high' : 'elevated'

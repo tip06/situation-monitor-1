@@ -289,6 +289,7 @@ describe('Correlation Engine', () => {
 		expect(tradeWarSignal!.activeTopics).toContain('china-tensions');
 		expect(tradeWarSignal!.keyJudgments.length).toBe(3);
 		expect(tradeWarSignal!.indicators.length).toBe(3);
+		expect(tradeWarSignal!.confirmationSignals.length).toBe(3);
 		expect(tradeWarSignal!.assumptions.length).toBe(3);
 		expect(tradeWarSignal!.changeTriggers.length).toBe(3);
 	});
@@ -458,10 +459,12 @@ describe('Compound Pattern Detection', () => {
 		for (const pattern of COMPOUND_PATTERNS) {
 			expect(pattern.keyJudgments.length).toBe(3);
 			expect(pattern.indicators.length).toBe(3);
+			expect(pattern.confirmationSignals.length).toBe(3);
 			expect(pattern.assumptions.length).toBe(3);
 			expect(pattern.changeTriggers.length).toBe(3);
 			expect(pattern.keyJudgments.every((v) => v.trim().length > 0)).toBe(true);
 			expect(pattern.indicators.every((v) => v.trim().length > 0)).toBe(true);
+			expect(pattern.confirmationSignals.every((v) => v.trim().length > 0)).toBe(true);
 			expect(pattern.assumptions.every((v) => v.trim().length > 0)).toBe(true);
 			expect(pattern.changeTriggers.every((v) => v.trim().length > 0)).toBe(true);
 		}

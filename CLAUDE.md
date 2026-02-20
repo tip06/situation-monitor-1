@@ -113,6 +113,7 @@ Unique business logic for intelligence analysis:
 - rerun intelligence with claude (indicators especially)
 - Option to expand feeds
 - review settings panel
+- alerts for economic indicators
 
 ## General Guidance
 
