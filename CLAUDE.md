@@ -107,15 +107,9 @@ Unique business logic for intelligence analysis:
 ## TODO
 
 - Improve map interface
-- possibility to manually insert feeds
 - check out world monitor for ideas
 - investigate ways to speed up refreshes
-- rerun intelligence with claude (indicators especially)
-- Option to expand feeds
-- review settings panel
 - alerts for economic indicators
-- add analysis manually
-- expand compound patterns
 
 ## General Guidance
 

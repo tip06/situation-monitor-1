@@ -10,7 +10,8 @@ export {
 	HeatmapCell,
 	LoadingSpinner,
 	ErrorMessage,
-	Badge
+	Badge,
+	AlertStack
 } from './common';
 
 // Layout components

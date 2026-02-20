@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { Header, TabBar } from '$lib/components/layout';
 	import { SettingsModal, MonitorFormModal, AddDataModal } from '$lib/components/modals';
+	import { AlertStack } from '$lib/components/common';
 	import {
 		NewsPanel,
 		MarketsPanel,
@@ -33,6 +35,8 @@
 	import type { Prediction } from '$lib/api';
 	import type { CustomMonitor } from '$lib/types';
 	import type { PanelId } from '$lib/config';
+	import { detectAlerts } from '$lib/alerts/engine';
+	import { alertPopups } from '$lib/stores/alertPopups';
 
 	// Modal state
 	let settingsOpen = $state(false);
@@ -96,6 +100,7 @@
 		refresh.startRefresh();
 		try {
 			await Promise.all([loadNews(), loadMarkets()]);
+			runAlertDetection();
 			refresh.endRefresh();
 		} catch (error) {
 			refresh.endRefresh([String(error)]);
@@ -126,6 +131,47 @@
 		return $settings.enabled[id] !== false;
 	}
 
+	function getPanelForNews(item: { category: string }): PanelId | undefined {
+		switch (item.category) {
+			case 'politics':
+				return 'politics';
+			case 'tech':
+				return 'tech';
+			case 'finance':
+				return 'finance';
+			case 'gov':
+				return 'gov';
+			case 'ai':
+				return 'ai';
+			case 'intel':
+				return 'intel';
+			case 'brazil':
+				return 'brazil';
+			case 'latam':
+				return 'latam';
+			case 'iran':
+				return 'iran';
+			case 'venezuela':
+				return 'venezuela';
+			case 'greenland':
+				return 'greenland';
+			case 'fringe':
+				return 'intel';
+			default:
+				return undefined;
+		}
+	}
+
+	function runAlertDetection() {
+		const popups = detectAlerts({
+			newsItems: get(allNewsItems),
+			marketsState: get(markets),
+			locale: get(language),
+			getPanelForNews
+		});
+		alertPopups.push(popups);
+	}
+
 	// Initial load
 	onMount(() => {
 		// Initialize tab store from localStorage
@@ -137,6 +183,7 @@
 			refresh.startRefresh();
 			try {
 				await Promise.all([loadNews(), loadMarkets(), loadMiscData()]);
+				runAlertDetection();
 				refresh.endRefresh();
 			} catch (error) {
 				refresh.endRefresh([String(error)]);
@@ -377,6 +424,8 @@
 			{/if}
 		</div>
 	</main>
+
+	<AlertStack />
 
 	<!-- Modals -->
 	<SettingsModal open={settingsOpen} onClose={() => (settingsOpen = false)} />

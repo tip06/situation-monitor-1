@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { isRefreshing, lastRefresh, language } from '$lib/stores';
+	import { alertPopups } from '$lib/stores/alertPopups';
 	import { t } from '$lib/i18n';
 	import { toIntlLocale } from '$lib/i18n/types';
 
@@ -11,6 +13,10 @@
 	let { onSettingsClick, onAddDataClick }: Props = $props();
 
 	const intlLocale = $derived(toIntlLocale($language));
+	let alertsOpen = $state(false);
+	const alertHistory = $derived($alertPopups.history);
+	const alertCount = $derived(alertHistory.length);
+	let alertsRef = $state<HTMLDivElement | null>(null);
 	const lastRefreshText = $derived(
 		$lastRefresh
 			? t($language, 'header.lastUpdated', {
@@ -21,6 +27,18 @@
 				})
 			: t($language, 'header.neverRefreshed')
 	);
+
+	onMount(() => {
+		function handleClick(event: MouseEvent) {
+			if (!alertsOpen || !alertsRef) return;
+			if (!alertsRef.contains(event.target as Node)) {
+				alertsOpen = false;
+			}
+		}
+
+		document.addEventListener('click', handleClick);
+		return () => document.removeEventListener('click', handleClick);
+	});
 </script>
 
 <header class="header">
@@ -39,6 +57,48 @@
 	</div>
 
 	<div class="header-right">
+		<div class="alerts-wrapper" bind:this={alertsRef}>
+			<button
+				class="header-btn alerts-btn"
+				onclick={() => (alertsOpen = !alertsOpen)}
+				title={t($language, 'header.alerts')}
+			>
+				<span class="btn-icon">!</span>
+				<span class="btn-label">{t($language, 'header.alerts')}</span>
+				{#if alertCount > 0}
+					<span class="alert-badge">{alertCount}</span>
+				{/if}
+			</button>
+			{#if alertsOpen}
+				<div class="alerts-panel">
+					<div class="alerts-panel-title">
+						{t($language, 'alerts.recent')}
+						<button class="alerts-clear" onclick={() => alertPopups.clearHistory()}>
+							{t($language, 'alerts.clear')}
+						</button>
+					</div>
+					{#if alertHistory.length === 0}
+						<div class="alerts-empty">{t($language, 'alerts.none')}</div>
+					{:else}
+						<ul class="alerts-list">
+							{#each alertHistory as alert (alert.id)}
+								<li class="alerts-item">
+									<div class="alerts-item-title">
+										{t($language, alert.titleKey)}
+										<span class="alerts-item-count">({alert.count})</span>
+									</div>
+									{#if alert.detail}
+										<div class="alerts-item-detail">
+											{t($language, 'alerts.example', { value: alert.detail })}
+										</div>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			{/if}
+		</div>
 		<button
 			class="header-btn add-data-btn"
 			onclick={onAddDataClick}
@@ -120,6 +180,106 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-shrink: 0;
+	}
+
+	.alerts-wrapper {
+		position: relative;
+	}
+
+	.alerts-btn {
+		position: relative;
+	}
+
+	.alert-badge {
+		background: var(--danger);
+		color: #fff;
+		font-size: 0.55rem;
+		padding: 0.05rem 0.35rem;
+		border-radius: 999px;
+	}
+
+	.alerts-panel {
+		position: absolute;
+		right: 0;
+		top: calc(100% + 0.4rem);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 0.6rem 0.7rem;
+		min-width: 260px;
+		max-width: 360px;
+		max-height: 320px;
+		overflow: auto;
+		box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+		z-index: 1300;
+	}
+
+	.alerts-panel-title {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		font-size: 0.6rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-secondary);
+		margin-bottom: 0.4rem;
+	}
+
+	.alerts-clear {
+		background: transparent;
+		border: none;
+		color: var(--text-secondary);
+		font-size: 0.55rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.alerts-clear:hover {
+		color: var(--text-primary);
+	}
+
+	.alerts-empty {
+		font-size: 0.62rem;
+		color: var(--text-muted);
+	}
+
+	.alerts-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.alerts-item {
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		padding-bottom: 0.5rem;
+	}
+
+	.alerts-item:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	.alerts-item-title {
+		font-size: 0.62rem;
+		color: var(--text-primary);
+		font-weight: 600;
+	}
+
+	.alerts-item-count {
+		margin-left: 0.35rem;
+		color: var(--text-secondary);
+		font-weight: 500;
+	}
+
+	.alerts-item-detail {
+		font-size: 0.58rem;
+		color: var(--text-secondary);
+		margin-top: 0.2rem;
 	}
 
 	.header-btn {
