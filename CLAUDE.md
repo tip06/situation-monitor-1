@@ -114,6 +114,8 @@ Unique business logic for intelligence analysis:
 - Option to expand feeds
 - review settings panel
 - alerts for economic indicators
+- add analysis manually
+- expand compund patterns
 
 ## General Guidance
 

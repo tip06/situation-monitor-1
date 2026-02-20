@@ -537,125 +537,1071 @@ const COMPOUND_NAME_OVERRIDES_PT_BR: Record<string, string> = {
 	polycrisis: 'Policrise'
 };
 
-function translateCompoundIntelText(text: string): string {
-	const phraseReplacements: Array<[RegExp, string]> = [
-		[
-			/appears in multi-source daily coverage for at least two consecutive refresh windows\./gi,
-			'aparece em cobertura diária de múltiplas fontes por pelo menos duas janelas consecutivas de atualização.'
+const COMPOUND_PATTERNS_PT_BR_BY_ID: Record<
+	string,
+	Pick<
+		CompoundPattern,
+		'name' | 'keyJudgments' | 'indicators' | 'confirmationSignals' | 'assumptions' | 'changeTriggers'
+	>
+> = {
+	'trade-war-escalation': {
+		name: 'Escalada da Guerra Comercial',
+		keyJudgments: [
+			'Rodadas crescentes de tarifas entre EUA, China e UE estão fragmentando cadeias globais de suprimento e forçando diversificação de fornecedores com custo elevado.',
+			'O Brasil enfrenta custos de insumos mais altos para manufaturados e volatilidade de preços de commodities à medida que fluxos comerciais são redirecionados por corredores alternativos.',
+			'As Forças Armadas brasileiras devem revisar a dependência de importações de componentes tecnológicos estratégicos à medida que canais de aquisição se estreitam.'
 		],
-		[
-			/is accompanied by cross-market stress signals \(energy, freight, credit, or policy risk premium\)\./gi,
-			'é acompanhado por sinais de estresse entre mercados (energia, frete, crédito ou prêmio de risco de política).'
+		indicators: [
+			'Cronogramas de tarifas bilaterais EUA-China e EUA-UE; frequência de disputas na OMC',
+			'Shanghai Containerized Freight Index (SCFI); Baltic Dry Index (BDI)',
+			'Variação mensal da arrecadação aduaneira brasileira; volume de desvio de exportações do MDIC por parceiro'
 		],
-		[
-			/reinforces (.+?) rather than decoupling from the first two drivers\./gi,
-			'reforça $1, em vez de desacoplar dos dois primeiros vetores.'
+		confirmationSignals: [
+			'Anúncios de tarifas recíprocas ou registros de disputas na OMC em múltiplos veículos confiáveis por dois ou mais ciclos consecutivos, confirmando a ativação do sinal.',
+			'Movimento na mesma direção de fretes de contêineres ou spreads de trade finance, descartando ruído isolado e confirmando transmissão entre domínios.',
+			'Volume de desvio de exportações ou dados de receita aduaneira do Brasil acompanham o vetor global, confirmando que o canal de transmissão está ativo.'
 		],
-		[
-			/Primary drivers behind (.+?) remain active without a credible de-escalation agreement\./gi,
-			'Os vetores primários por trás de $1 permanecem ativos sem um acordo de desescalada crível.'
+		assumptions: [
+			'A persistência do impasse tarifário permanece ativa: não houve trégua verificável de tarifas ou mediação efetiva pela OMC no curto prazo.',
+			'Nenhuma resolução rápida se materializa: não ocorreu um acordo bilateral EUA-China que reverta os principais cronogramas tarifários.',
+			'O canal de exposição do Brasil permanece intacto: parceiros de importação e exportação não se desacoplaram dos corredores comerciais afetados.'
 		],
-		[
-			/Policy responses stay incremental and do not immediately neutralize (.+?) plus (.+?) pressure\./gi,
-			'As respostas de política permanecem incrementais e não neutralizam imediatamente a pressão de $1 mais $2.'
+		changeTriggers: [
+			'Anúncios tarifários EUA-China caem abaixo do limiar de detecção ou restrições comerciais de grandes blocos revertem curso por três ou mais ciclos consecutivos.',
+			'Um arcabouço bilateral de comércio obtém rollback de tarifas em pelo menos 50% das categorias contestadas.',
+			'O saldo comercial do Brasil com parceiros afetados rompe a correlação com a direção do vetor global por três ou mais ciclos de monitoramento.'
+		]
+	},
+	'stagflation-risk': {
+		name: 'Risco de Estagflação',
+		keyJudgments: [
+			'Inflação persistentemente acima da meta somada ao aumento do desemprego cria a compressão dupla típica da estagflação, limitando respostas fiscal e monetária.',
+			'O Brasil enfrenta, simultaneamente, custo de financiamento mais alto e demanda do consumidor enfraquecida, comprimindo receita pública e poder de compra das famílias.',
+			'As Forças Armadas brasileiras devem monitorar a estabilidade orçamentária de defesa, pois a compressão fiscal da estagflação pode reduzir financiamento de prontidão e aquisição.'
 		],
-		[
-			/Two core drivers of (.+?) fall below activation threshold across consecutive cycles\./gi,
-			'Dois vetores centrais de $1 caem abaixo do limiar de ativação em ciclos consecutivos.'
+		indicators: [
+			'CPI e PCE dos EUA; pedidos iniciais de seguro-desemprego',
+			'Inclinação da curva 2y/10y dos Treasuries; breakeven de inflação de 5 anos',
+			'IPCA mensal; curva de juros Selic (DI B3)'
 		],
-		[
-			/A verifiable diplomatic, regulatory, or security breakthrough materially reduces (.+?) and (.+?) stress\./gi,
-			'Um avanço verificável diplomático, regulatório ou de segurança reduz materialmente o estresse de $1 e $2.'
+		confirmationSignals: [
+			'Leituras de CPI/PCE acima da meta junto com alta de pedidos de seguro-desemprego em múltiplos veículos confiáveis por dois ou mais ciclos consecutivos.',
+			'Achatamento da curva de juros ou expectativas de inflação acima de 3% movem-se na mesma direção, confirmando transmissão entre domínios.',
+			'Trajetória do IPCA ou orientação da Selic acompanha o vetor global, confirmando que o canal de transmissão está ativo.'
 		],
-		[
-			/Brazil-specific indicators decouple from global trend direction, invalidating the current transmission pathway\./gi,
-			'Indicadores específicos do Brasil desacoplam da direção da tendência global, invalidando o atual caminho de transmissão.'
+		assumptions: [
+			'A persistência inflacionária permanece ativa: restrições de oferta ou demanda resiliente impedem normalização rápida sem recessão profunda.',
+			'Nenhuma resolução rápida se materializa: não houve reversão de choque de oferta nem pacto de desinflação salarial de grande escala.',
+			'O canal de exposição do Brasil permanece intacto: receitas de commodities não compensam totalmente o custo doméstico importado.'
 		],
-		[
-			/Brazilian military impact remains indirect; continue monitoring logistics, cyber, and critical infrastructure spillover\./gi,
-			'O impacto para as Forças Armadas brasileiras permanece indireto; continuar monitorando efeitos de transbordamento em logística, ciber e infraestrutura crítica.'
+		changeTriggers: [
+			'Inflação núcleo cai abaixo do limiar de detecção ou o desemprego reverte curso por três ou mais ciclos consecutivos.',
+			'Um pacote coordenado do G7 no lado da oferta resulta em desaceleração do CPI abaixo de 3% anualizado por dois trimestres consecutivos.',
+			'O IPCA rompe a correlação com as tendências inflacionárias EUA-UE por três ou mais ciclos de monitoramento.'
+		]
+	},
+	'geopolitical-crisis': {
+		name: 'Crise Geopolítica em Múltiplas Frentes',
+		keyJudgments: [
+			'Conflitos simultâneos na Europa e no Oriente Médio fragmentam apetite a risco, elevam prêmios de seguro e desviam atenção estratégica de OTAN e EUA.',
+			'O Brasil enfrenta custos mais altos de importação de commodities e seguros de exportação à medida que o risco de conflito em múltiplos teatros é precificado.',
+			'As Forças Armadas brasileiras devem intensificar o monitoramento de corredores marítimos e coordenar planos de contingência para possíveis rupturas de suprimento.'
 		],
-		[
-			/Brazilian military and civilian institutions retain coordination bandwidth for spillover monitoring and response readiness\./gi,
-			'As instituições militares e civis brasileiras mantêm capacidade de coordenação para monitoramento de transbordamentos e prontidão de resposta.'
+		indicators: [
+			'Índice VIX; contagem mensal de eventos do ACLED em teatros ativos',
+			'Preço spot do Brent; prêmio de seguro de guerra no transporte marítimo',
+			'CDS soberano do Brasil (5 anos); EMBI+ Brasil'
 		],
-		[
-			/Brazil absorbs second-order effects through economic and governance channels without immediate nationwide security disruption\./gi,
-			'O Brasil absorve efeitos de segunda ordem por canais econômicos e de governança, sem disrupção imediata de segurança em escala nacional.'
+		confirmationSignals: [
+			'Relatos de escalada em dois ou mais teatros distintos em veículos confiáveis por dois ou mais ciclos consecutivos.',
+			'VIX ou índices de volatilidade energética movem-se na mesma direção, confirmando transmissão entre domínios.',
+			'CDS brasileiro ou custos logísticos seguem a direção do vetor global, confirmando que o canal de transmissão está ativo.'
 		],
-		[
-			/registers across multiple credible outlets for two or more consecutive refresh cycles, confirming signal activation\./gi,
-			'registra-se em múltiplos veículos confiáveis por dois ou mais ciclos consecutivos de atualização, confirmando ativação do sinal.'
+		assumptions: [
+			'Conflito cinético ativo em pelo menos dois teatros permanece vigente: não houve cessar-fogo simultâneo.',
+			'Nenhuma resolução rápida se materializa: não houve acordo de paz na Ucrânia nem cessar-fogo robusto em Gaza.',
+			'O canal de exposição do Brasil permanece intacto: mercados globais continuam a precificar risco de múltiplos teatros.'
 		],
-		[
-			/moves in the same direction, ruling out isolated noise and confirming cross-domain transmission\./gi,
-			'move-se na mesma direção, descartando ruído isolado e confirmando transmissão entre domínios.'
+		changeTriggers: [
+			'Relatos de conflito ativo caem abaixo do limiar de detecção ou ambos os conflitos entram em cessar-fogo verificado por três ciclos.',
+			'Um acordo de paz duradouro cessa hostilidades em pelo menos um dos teatros principais.',
+			'Custos de frete e energia no Brasil rompem correlação com a intensidade do conflito por três ou mais ciclos.'
+		]
+	},
+	'tech-regulatory-storm': {
+		name: 'Tempestade Regulatória em Tecnologia',
+		keyJudgments: [
+			'Medidas antitruste, segurança em IA e enforcement cripto simultâneos nos EUA e UE elevam custos de conformidade e comprimem modelos de plataforma.',
+			'O Brasil enfrenta efeitos indiretos via atrasos em lançamentos, custos de licenciamento e difusão de precedentes regulatórios.',
+			'As Forças Armadas brasileiras devem acompanhar governança de IA que afete aquisição e integração de capacidades comerciais.'
 		],
-		[
-			/tracks global driver direction, confirming the transmission pathway is open\./gi,
-			'acompanha a direção do vetor global, confirmando que o canal de transmissão está ativo.'
+		indicators: [
+			'Contagem de ações DMA/DSA na UE; volume de ações antitruste DOJ/FTC',
+			'P/L do setor tech do Nasdaq 100; volume de rodadas de VC',
+			'Notificações da ANPD; calendário regulatório da ANATEL'
 		],
-		[
-			/remains operative: (.+)/gi,
-			'permanece ativo: $1'
+		confirmationSignals: [
+			'Ações regulatórias, multas ou legislações vinculantes em IA, big tech ou cripto em veículos confiáveis por dois ou mais ciclos consecutivos.',
+			'Valuações de tech ou nível de investimento de VC movem-se na mesma direção, confirmando transmissão entre domínios.',
+			'Ações da ANATEL/ANPD/CGI acompanham o vetor global, confirmando o canal de transmissão.'
 		],
-		[
-			/No rapid policy resolution emerges: (.+)/gi,
-			'Nenhuma resolução política rápida se materializa: $1'
+		assumptions: [
+			'Momentum regulatório permanece ativo: coalizões legislativas e prioridades de enforcement não se fragmentaram.',
+			'Nenhuma resolução rápida se materializa: não houve safe-harbor amplo nem moratória regulatória.',
+			'O canal de exposição do Brasil permanece intacto: dependência de plataformas reguladas e repasse de custos seguem relevantes.'
 		],
-		[
-			/Brazil's exposure channel is intact: (.+)/gi,
-			'O canal de exposição do Brasil está intacto: $1'
+		changeTriggers: [
+			'Ações de enforcement em IA caem abaixo do limiar ou litígios antitruste revertem por três ciclos.',
+			'Acordo EUA-UE cria framework unificado que reduz duplicidade de enforcement em duas categorias de plataforma.',
+			'Investimento e postura regulatória no Brasil rompem correlação com os ciclos EUA-UE por três ciclos.'
+		]
+	},
+	'financial-stress': {
+		name: 'Estresse no Setor Financeiro',
+		keyJudgments: [
+			'Juros mais altos combinados à deterioração do colateral imobiliário comprimem margem financeira e elevam inadimplência.',
+			'O Brasil enfrenta condições externas mais restritivas e possível saída de capital à medida que aumenta o apetite por porto seguro.',
+			'As Forças Armadas brasileiras devem monitorar condições de financiamento orçamentário, pois custos de dívida soberana podem subir.'
 		],
-		[
-			/falls below detection threshold or (.+?) reverses course across three or more consecutive refresh cycles\./gi,
-			'cai abaixo do limiar de detecção ou $1 reverte curso em três ou mais ciclos consecutivos de atualização.'
+		indicators: [
+			'KBW Bank Index (BKX); spread SOFR-OIS',
+			'Spread de bond corporativo IG (ICE BofA); taxa de inadimplência hipotecária',
+			'EMBI+ do setor bancário brasileiro; contagem de falhas de liquidação do BACEN'
 		],
-		[
-			/achieves (.+?) on (.+)/gi,
-			'alcança $1 em $2'
+		confirmationSignals: [
+			'Quedas de ações bancárias, saques de depósitos ou abertura de CDS em instituições sistêmicas por dois ciclos consecutivos.',
+			'Spreads de crédito IG ou taxas interbancárias movem-se na mesma direção, confirmando transmissão.',
+			'Indicadores de estresse bancário no Brasil acompanham o vetor global.'
 		],
-		[
-			/breaks correlation with (.+?) across three or more consecutive monitoring cycles\./gi,
-			'rompe a correlação com $1 em três ou mais ciclos consecutivos de monitoramento.'
+		assumptions: [
+			'Pressão de solvência bancária permanece ativa: facilidades de liquidez não cobriram totalmente as instituições vulneráveis.',
+			'Nenhuma resolução rápida se materializa: não houve resgate coordenado suficiente para restaurar confiança.',
+			'O canal de exposição do Brasil permanece intacto: exposição externa e linhas de funding seguem correlacionadas.'
 		],
-		[
-			/Brazil faces (.+?) as (.+?) transmits through (.+)/gi,
-			'O Brasil enfrenta $1 à medida que $2 se transmite por $3'
+		changeTriggers: [
+			'Indicadores de estresse de solvência caem abaixo do limiar ou colateral imobiliário estabiliza por três ciclos.',
+			'Intervenção de BC/Tesouro normaliza spreads interbancários e fluxos de depósitos em 30 dias.',
+			'Indicadores bancários do Brasil rompem correlação com índices globais por três ciclos.'
+		]
+	},
+	'nuclear-escalation': {
+		name: 'Escalada Nuclear',
+		keyJudgments: [
+			'Sinalização nuclear explícita da Rússia ou aceleração do enriquecimento iraniano eleva a probabilidade de respostas de dissuasão e mobilização diplomática emergencial.',
+			'O Brasil enfrenta aumento de prêmios de risco e preços de commodities à medida que eventos nucleares disparam busca por porto seguro.',
+			'As Forças Armadas brasileiras devem manter elevada consciência estratégica e apoiar sinalização multilateral de não proliferação.'
 		],
-		[
-			/Brazilian military should (.+?) as (.+)/gi,
-			'As Forças Armadas brasileiras devem $1 à medida que $2'
+		indicators: [
+			'Status de salvaguardas da AIEA; divulgações de níveis de enriquecimento',
+			'Ouro spot (XAU/USD); VIX',
+			'Frequência de notas do Itamaraty; votos do Brasil na AIEA'
 		],
-		[/Brazilian military should/gi, 'As Forças Armadas brasileiras devem'],
-		[/Brazil should/gi, 'O Brasil deve'],
-		[/Brazil faces/gi, 'O Brasil enfrenta'],
-		[/cross-market stress signals/gi, 'sinais de estresse entre mercados'],
-		[/de-escalation/gi, 'desescalada'],
-		[/activation threshold/gi, 'limiar de ativação'],
-		[/consecutive cycles/gi, 'ciclos consecutivos'],
-		[/spillover/gi, 'transbordamento']
-	];
-
-	let translated = text;
-	for (const [pattern, replacement] of phraseReplacements) {
-		translated = translated.replace(pattern, replacement);
+		confirmationSignals: [
+			'Alertas de prontidão nuclear, revisão de doutrina ou violações da AIEA em veículos confiáveis por dois ciclos.',
+			'Preços do ouro, petróleo ou setores sensíveis a risco nuclear movem-se na mesma direção.',
+			'Postura do Itamaraty ou engajamento na AIEA acompanha o vetor global.'
+		],
+		assumptions: [
+			'Escalada de sinalização nuclear permanece ativa: não houve recuo verificável ou acordo de inspeção.',
+			'Nenhuma resolução rápida se materializa: não houve acordo bilateral de redução de risco nuclear.',
+			'O canal de exposição do Brasil permanece intacto: mercados globais continuam precificando risco nuclear.'
+		],
+		changeTriggers: [
+			'Retórica nuclear cai abaixo do limiar ou acesso de monitoramento da AIEA é restaurado por três ciclos.',
+			'Acordo verificável reduz risco nuclear com desmobilização inspecionável.',
+			'Risco soberano do Brasil e receitas de commodities rompem correlação com a intensidade nuclear.'
+		]
+	},
+	'middle-east-escalation': {
+		name: 'Escalada no Oriente Médio',
+		keyJudgments: [
+			'Ativação de proxies iranianos e risco de confronto direto Irã-Israel elevam a probabilidade de interrupção no Estreito de Ormuz e desaceleração no Suez.',
+			'O Brasil enfrenta alta de preços de petróleo e seguro marítimo à medida que a escalada pressiona energia e frete.',
+			'As Forças Armadas brasileiras devem acompanhar segurança marítima no Mar Vermelho e Golfo Pérsico.'
+		],
+		indicators: [
+			'Brent spot; contagem de trânsito no Estreito de Ormuz/Mar Vermelho',
+			'Prêmio de seguro de guerra de navios (BIMCO); sobretaxas Lloyd’s',
+			'Preço de importação de combustíveis (ANP); custo de aquisição da Petrobras'
+		],
+		confirmationSignals: [
+			'Ataques diretos, enxames de drones ou interdição naval no Golfo/Mar Vermelho em veículos confiáveis por dois ciclos.',
+			'Brent ou taxas de seguro movem-se na mesma direção, confirmando transmissão.',
+			'Preço de importação de combustíveis ou hedge da Petrobras acompanha o vetor global.'
+		],
+		assumptions: [
+			'Projeção regional iraniana permanece ativa: IRGC e proxies mantêm capacidade e intenção.',
+			'Nenhuma resolução rápida se materializa: não houve cessar-fogo ou reabertura diplomática eficaz.',
+			'O canal de exposição do Brasil permanece intacto: importações de energia seguem precificadas em Brent.'
+		],
+		changeTriggers: [
+			'Atividade de proxies cai abaixo do limiar ou operações Israel-Gaza revertem por três ciclos.',
+			'Engajamento diplomático EUA-Irã reduz ativação de proxies em pelo menos duas frentes.',
+			'Custos de importação e rotas rompem correlação com métricas de escalada.'
+		]
+	},
+	'energy-supply-shock': {
+		name: 'Choque de Oferta de Energia',
+		keyJudgments: [
+			'Disrupções de gás russo e petróleo do Oriente Médio removem folga de oferta durante pico de demanda, elevando preços.',
+			'O Brasil enfrenta aumento de custos de combustível e eletricidade com repasse para produção industrial e transporte.',
+			'As Forças Armadas brasileiras devem revisar reservas operacionais de combustível e resiliência logística.'
+		],
+		indicators: [
+			'Henry Hub; TTF europeu; Brent front-month',
+			'Taxa de armazenamento de gás na Europa (AGSI+); frete spot de LNG',
+			'Pesquisa semanal de preços da ANP; bandeira tarifária da ANEEL'
+		],
+		confirmationSignals: [
+			'Avisos de queda de estoque de gás, anúncios emergenciais da OPEP+ ou fechamento de dutos em veículos confiáveis por dois ciclos.',
+			'Henry Hub, TTF ou Brent movem-se na mesma direção, confirmando transmissão.',
+			'Preço de combustíveis ou anúncios tarifários no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Disrupção de rotas de suprimento permanece ativa: expansão alternativa não compensou o volume perdido.',
+			'Nenhuma resolução rápida se materializa: não houve pacote emergencial de oferta suficiente.',
+			'O canal de exposição do Brasil permanece intacto: preços domésticos seguem benchmarks internacionais.'
+		],
+		changeTriggers: [
+			'Alertas de disrupção caem abaixo do limiar ou preços de energia revertem por três ciclos.',
+			'Intervenção coordenada restaura oferta com normalização de preços em até 60 dias.',
+			'Indicadores de energia no Brasil rompem correlação com benchmarks globais.'
+		]
+	},
+	'recession-signal': {
+		name: 'Sinal de Recessão',
+		keyJudgments: [
+			'Indicadores avançados e de atividade apontam desaceleração sincronizada, elevando risco de recessão.',
+			'O Brasil enfrenta compressão de demanda externa e aperto financeiro, reduzindo exportações e investimento.',
+			'As Forças Armadas brasileiras devem monitorar risco fiscal e pressões sobre orçamento de defesa.'
+		],
+		indicators: [
+			'PMI ISM manufatura/serviços; Leading Economic Index (Conference Board)',
+			'Inversão da curva 3m/10y; índice de confiança do consumidor',
+			'Superávit comercial do Brasil (MDIC); fluxo de capital do BCB (IDP)'
+		],
+		confirmationSignals: [
+			'PMIs negativos, alta de pedidos de desemprego ou inversão persistente da curva em veículos confiáveis por dois ciclos.',
+			'LEI em queda ou confiança do consumidor abaixo de limiares recessivos movem-se na mesma direção.',
+			'Superávit comercial ou fluxo de capitais no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Transmissão da política monetária permanece ativa: altas de juros ainda não foram neutralizadas.',
+			'Nenhuma resolução rápida se materializa: não houve corte de juros ou estímulo fiscal amplo.',
+			'O canal de exposição do Brasil permanece intacto: receitas de exportação seguem sensíveis ao ciclo global.'
+		],
+		changeTriggers: [
+			'Pedidos de desemprego caem abaixo do limiar ou habitação reverte a positivo por três ciclos.',
+			'Pivô de BC normaliza curva e PMI acima de 50 por dois meses.',
+			'PIB e comércio do Brasil rompem correlação com indicadores EUA-UE.'
+		]
+	},
+	'inflation-spiral': {
+		name: 'Espiral Inflacionária',
+		keyJudgments: [
+			'Choques climáticos na oferta agrícola e gargalos logísticos amplificam inflação, criando ciclo de preços em energia e alimentos.',
+			'O Brasil enfrenta volatilidade de preços de alimentos e pressão inflacionária doméstica.',
+			'As Forças Armadas brasileiras devem monitorar pressões de custo em combustíveis, alimentos e manutenção.'
+		],
+		indicators: [
+			'FAO Food Price Index; IEA energy price composite',
+			'Futuros de trigo, milho e soja (CBOT)',
+			'IPCA alimentos; índice de diesel da ANP'
+		],
+		confirmationSignals: [
+			'CPI acelerando com aumento de fretes em veículos confiáveis por dois ciclos.',
+			'Futuros agrícolas ou custos de energia movem-se na mesma direção.',
+			'Componente de alimentos do IPCA acompanha o vetor global.'
+		],
+		assumptions: [
+			'Desbalanceamento oferta-demanda permanece ativo: disrupções não se resolveram.',
+			'Nenhuma resolução rápida se materializa: não houve liberação emergencial de estoques.',
+			'O canal de exposição do Brasil permanece intacto: preços domésticos seguem benchmarks.'
+		],
+		changeTriggers: [
+			'Aceleração do CPI cai abaixo do limiar ou fretes revertem por três ciclos.',
+			'Liberação coordenada de estoques reduz preços agrícolas em dois ciclos.',
+			'IPCA alimentos rompe correlação com índices globais por três ciclos.'
+		]
+	},
+	'dollar-stress': {
+		name: 'Estresse do Dólar',
+		keyJudgments: [
+			'Pressão simultânea de política do Fed, contágio cripto e desacoplamento financeiro EUA‑China cria incerteza sobre funding em dólar.',
+			'O Brasil enfrenta pressão de depreciação cambial e maior custo de dívida em dólar.',
+			'As Forças Armadas brasileiras devem avaliar riscos de passivos em moeda estrangeira.'
+		],
+		indicators: [
+			'DXY; variação semanal do balanço do Fed',
+			'JPMorgan EMCI; yield real do Treasury 10y',
+			'BRL/USD; intervenções do BCB'
+		],
+		confirmationSignals: [
+			'DXY acima de 110 ou ativação de linhas swap em veículos confiáveis por dois ciclos.',
+			'Moedas emergentes ou yields dos Treasuries movem-se na mesma direção.',
+			'Câmbio do real ou reservas do BCB acompanham o vetor global.'
+		],
+		assumptions: [
+			'Escassez de funding em dólar permanece ativa: normalização do balanço do Fed não foi revertida.',
+			'Nenhuma resolução rápida se materializa: não houve pivô do Fed ou expansão coordenada de swaps.',
+			'O canal de exposição do Brasil permanece intacto: dívida externa e práticas de comércio seguem sensíveis ao dólar.'
+		],
+		changeTriggers: [
+			'Indicadores de estresse em dólar caem abaixo do limiar ou DXY abaixo de 105 por três ciclos.',
+			'Pivô do Fed ou expansão de swaps normaliza condições em 30 dias.',
+			'Real e dívida externa rompem correlação com DXY por três ciclos.'
+		]
+	},
+	'ai-disruption-wave': {
+		name: 'Onda de Disrupção por IA',
+		keyJudgments: [
+			'Adoção rápida de IA por grandes empregadores acelera deslocamento de trabalho white-collar.',
+			'O Brasil enfrenta aumento do gap de habilidades em funções administrativas, legais e analíticas.',
+			'As Forças Armadas brasileiras devem acompanhar deslocamento de trabalho em funções técnicas e analíticas.'
+		],
+		indicators: [
+			'Stanford HAI AI Index; patentes de IA (WIPO)',
+			'Folha de pagamento do setor tech nos EUA (BLS); capex em IA',
+			'Matrículas SENAI em requalificação de IA; emprego PNAD em TI'
+		],
+		confirmationSignals: [
+			'Anúncios de demissões no setor tech citando IA por dois ciclos consecutivos.',
+			'Patentes de IA ou gasto em adoção empresarial movem-se na mesma direção.',
+			'Emprego em TI no Brasil ou demanda por requalificação acompanha o vetor global.'
+		],
+		assumptions: [
+			'Ritmo de implantação de IA permanece ativo: não houve pausa regulatória.',
+			'Nenhuma resolução rápida se materializa: não houve programa de transição em escala.',
+			'O canal de exposição do Brasil permanece intacto: mercados de trabalho de serviços seguem expostos.'
+		],
+		changeTriggers: [
+			'Anúncios de demissões por IA caem abaixo do limiar ou adoção reverte.',
+			'Programa universal de transição reduz desemprego estrutural.',
+			'Emprego em TI no Brasil rompe correlação com ciclos globais.'
+		]
+	},
+	'disinfo-storm': {
+		name: 'Tempestade de Desinformação',
+		keyJudgments: [
+			'Ciclos eleitorais são explorados por campanhas de mídia sintética combinando deepfakes, texto gerado por IA e amplificação inautêntica.',
+			'O Brasil enfrenta risco elevado de desinformação dado calendário eleitoral e alta penetração de redes sociais.',
+			'As Forças Armadas brasileiras devem fortalecer protocolos de verificação e apoiar segurança eleitoral.'
+		],
+		indicators: [
+			'Relatórios DSA da UE sobre remoção de deepfakes; takedowns coordenados (Meta/Google)',
+			'Alertas de integridade eleitoral (NDI, IRI, IFES)',
+			'Reclamações do TSE; notificações de incidentes da ANPD'
+		],
+		confirmationSignals: [
+			'Incidentes de deepfake contra candidatos ou takedowns coordenados em veículos confiáveis por dois ciclos.',
+			'Alertas de integridade eleitoral movem-se na mesma direção.',
+			'Relatórios do TSE ou de plataformas no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Intenção adversária permanece ativa: atores mantêm motivação e capacidade.',
+			'Nenhuma resolução rápida se materializa: não houve mandato amplo de detecção de deepfakes.',
+			'O canal de exposição do Brasil permanece intacto: usuários seguem expostos a conteúdo sintético.'
+		],
+		changeTriggers: [
+			'Incidentes de deepfake caem abaixo do limiar ou campanhas coordenadas revertem.',
+			'Implantação multi-plataforma reduz alcance de deepfakes no ciclo eleitoral.',
+			'Taxas de incidentes no Brasil rompem correlação com tendências globais.'
+		]
+	},
+	'pandemic-redux': {
+		name: 'Retorno da Pandemia',
+		keyJudgments: [
+			'Patógeno de alta transmissibilidade e evasão imune progride de surto local para disseminação multinacional.',
+			'O Brasil enfrenta pressão no sistema de saúde e disrupção de suprimentos farmacêuticos e de PPE.',
+			'As Forças Armadas brasileiras devem revisar planos de resposta e prontidão sob protocolos de quarentena.'
+		],
+		indicators: [
+			'Eventos WHO Disease Outbreak News; estimativa de R efetivo',
+			'Capacidade aérea global (OAG); rastreador de disrupção farmacêutica',
+			'Alertas InfoGripe; autorizações emergenciais da ANVISA'
+		],
+		confirmationSignals: [
+			'Declarações de fase 4+ da OMS ou emergências nacionais em dois países por dois ciclos.',
+			'Queda de volume aéreo ou alertas de disrupção farmacêutica movem-se na mesma direção.',
+			'Nível de alerta do Ministério da Saúde ou autorizações da ANVISA acompanham o vetor global.'
+		],
+		assumptions: [
+			'Potencial de transmissão permanece ativo: características não melhoraram materialmente.',
+			'Nenhuma resolução rápida se materializa: vacina/antiviral não foi escalado.',
+			'O canal de exposição do Brasil permanece intacto: vínculos de viagem e comércio seguem relevantes.'
+		],
+		changeTriggers: [
+			'Gravidade da OMS cai abaixo do limiar ou transmissão reverte por três ciclos.',
+			'Contramedida eficaz reduz casos abaixo do baseline em 60 dias.',
+			'Casos no Brasil rompem correlação com o país fonte.'
+		]
+	},
+	'climate-shock': {
+		name: 'Choque Climático',
+		keyJudgments: [
+			'Eventos extremos intensificados causam danos simultâneos a produção agrícola, infraestrutura e redes de energia.',
+			'O Brasil enfrenta exposição direta por danos em regiões agrícolas e estresse na malha logística.',
+			'As Forças Armadas brasileiras devem monitorar demanda de apoio logístico e resiliência de instalações.'
+		],
+		indicators: [
+			'Anomalia de temperatura NOAA/WMO; NDVI de estresse de vegetação',
+			'Futuros agrícolas (CME); índice global de disrupção logística',
+			'Eventos extremos do INMET; revisões de safra EMBRAPA'
+		],
+		confirmationSignals: [
+			'Furacões categoria 4+, secas e eventos simultâneos em regiões-chave por dois ciclos.',
+			'Preços agrícolas ou disrupção logística movem-se na mesma direção.',
+			'Alertas INMET ou revisões EMBRAPA acompanham o vetor global.'
+		],
+		assumptions: [
+			'Intensidade climática permanece ativa: padrão não retornou à média histórica.',
+			'Nenhuma resolução rápida se materializa: não houve financiamento emergencial suficiente.',
+			'O canal de exposição do Brasil permanece intacto: regiões exportadoras seguem expostas.'
+		],
+		changeTriggers: [
+			'Frequência de eventos extremos cai abaixo do limiar por três ciclos.',
+			'Realocação emergencial restaura produção acima de 90% em duas safras.',
+			'Produção e logística no Brasil rompem correlação com métricas globais.'
+		]
+	},
+	'social-pressure': {
+		name: 'Pressão Social',
+		keyJudgments: [
+			'Combinação de custo de vida, desemprego, reação à imigração e polarização cria instabilidade social sustentada.',
+			'O Brasil enfrenta maior risco de violência política e disrupção de serviços em centros urbanos.',
+			'As Forças Armadas brasileiras devem manter prontidão de apoio civil e coordenação com forças estaduais.'
+		],
+		indicators: [
+			'Eventos de protesto ACLED; Índice de Estabilidade Política (EIU)',
+			'Confiança do consumidor (G7); incidentes de violência eleitoral',
+			'Índice de vulnerabilidade IBGE; operações de ordem pública (PM)'
+		],
+		confirmationSignals: [
+			'Protestos multi-cidade ligados a pelo menos três estressores por dois ciclos.',
+			'Confiança do consumidor em mínimas ou violência eleitoral movem-se na mesma direção.',
+			'Indicadores de estabilidade no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Convergência multi-fator permanece ativa: estressores seguem simultaneamente elevados.',
+			'Nenhuma resolução rápida se materializa: não houve pacote de alívio ou pacto de desescalada.',
+			'O canal de exposição do Brasil permanece intacto: níveis de desigualdade e polarização seguem elevados.'
+		],
+		changeTriggers: [
+			'Frequência de protestos cai abaixo do limiar ou dois estressores revertem por três ciclos.',
+			'Pacote social reduz índices de hardship em duas categorias em dois trimestres.',
+			'Indicadores sociais no Brasil rompem correlação com o composto global.'
+		]
+	},
+	'cyber-warfare-escalation': {
+		name: 'Escalada de Guerra Cibernética',
+		keyJudgments: [
+			'Atividade cibernética de estados e ataques a infraestrutura crítica aumentam risco de escalada e interrupções sistêmicas.',
+			'O Brasil enfrenta risco de spillover em setores financeiros, energia e comunicações.',
+			'As Forças Armadas brasileiras devem elevar vigilância cibernética e coordenação com defesa civil e CERTs.'
+		],
+		indicators: [
+			'Contagem de incidentes de ransomware/zero-day; alertas CISA/ENISA',
+			'Anomalias em redes de energia e telecom; falhas de sistemas bancários',
+			'Alertas do CTIR.Gov; incidentes setoriais no Brasil'
+		],
+		confirmationSignals: [
+			'Incidentes cibernéticos de alto impacto em múltiplos setores por dois ciclos.',
+			'Falhas de infraestrutura ou interrupções financeiras movem-se na mesma direção.',
+			'Alertas nacionais acompanham o vetor global.'
+		],
+		assumptions: [
+			'Pressão cibernética permanece ativa: atores estatais mantêm capacidade e intenção.',
+			'Nenhuma resolução rápida se materializa: não houve acordo internacional efetivo.',
+			'O canal de exposição do Brasil permanece intacto: infraestrutura crítica segue vulnerável.'
+		],
+		changeTriggers: [
+			'Incidentes críticos caem abaixo do limiar por três ciclos.',
+			'Medidas coordenadas reduzem severidade e frequência em 60 dias.',
+			'Indicadores de risco no Brasil rompem correlação com o cenário global.'
+		]
+	},
+	'critical-infra-attack': {
+		name: 'Ataque à Infraestrutura Crítica',
+		keyJudgments: [
+			'Ataques direcionados a energia, água ou telecom elevam risco de disrupções sistêmicas e efeitos em cascata.',
+			'O Brasil enfrenta risco de interrupções em serviços essenciais e cadeia logística.',
+			'As Forças Armadas brasileiras devem reforçar proteção de infraestrutura crítica e planos de continuidade.'
+		],
+		indicators: [
+			'Alertas de operadores de energia e água; incidentes de telecom',
+			'Relatórios de falhas de rede e blecautes; interrupções logísticas',
+			'Alertas do CTIR.Gov; falhas de infraestrutura registradas'
+		],
+		confirmationSignals: [
+			'Incidentes confirmados em infraestrutura crítica por dois ciclos consecutivos.',
+			'Quedas de serviço e interrupções logísticas movem-se na mesma direção.',
+			'Relatórios nacionais acompanham o vetor global.'
+		],
+		assumptions: [
+			'Risco de ataque permanece ativo: atores mantêm capacidade e acesso.',
+			'Nenhuma resolução rápida se materializa: não houve mitigação sistêmica.',
+			'O canal de exposição do Brasil permanece intacto: dependência de infraestrutura crítica é alta.'
+		],
+		changeTriggers: [
+			'Incidentes em infraestrutura crítica caem abaixo do limiar por três ciclos.',
+			'Medidas de resiliência reduzem interrupções em 60 dias.',
+			'Indicadores nacionais rompem correlação com a tendência global.'
+		]
+	},
+	'cyber-financial-attack': {
+		name: 'Ataque Ciberfinanceiro',
+		keyJudgments: [
+			'Ataques coordenados a bancos e sistemas de pagamento elevam risco de crise de confiança financeira.',
+			'O Brasil enfrenta vulnerabilidade a interrupções de liquidação e volatilidade de mercado.',
+			'As Forças Armadas brasileiras devem monitorar impactos em infraestrutura de pagamentos e coordenação com o BACEN.'
+		],
+		indicators: [
+			'Incidentes em SWIFT/clearing; alertas de segurança bancária',
+			'Falhas de liquidação e indisponibilidade de canais de pagamento',
+			'Relatórios do BACEN e de bancos brasileiros'
+		],
+		confirmationSignals: [
+			'Incidentes ciber em bancos sistêmicos por dois ciclos.',
+			'Interrupções de pagamento e volatilidade movem-se na mesma direção.',
+			'Alertas do BACEN acompanham o vetor global.'
+		],
+		assumptions: [
+			'Ameaça ciberfinanceira permanece ativa: atores mantém capacidade.',
+			'Nenhuma resolução rápida se materializa: não houve defesa coordenada suficiente.',
+			'O canal de exposição do Brasil permanece intacto: infraestrutura financeira é conectada globalmente.'
+		],
+		changeTriggers: [
+			'Incidentes caem abaixo do limiar por três ciclos.',
+			'Mitigações coordenadas reduzem indisponibilidade em 60 dias.',
+			'Indicadores brasileiros rompem correlação com o global.'
+		]
+	},
+	'energy-weaponization': {
+		name: 'Arma de Energia',
+		keyJudgments: [
+			'Fornecedores energéticos usam preços e exportações como instrumento geopolítico, elevando instabilidade.',
+			'O Brasil enfrenta pressão em custos de importação e volatilidade de preços internos.',
+			'As Forças Armadas brasileiras devem monitorar riscos de suprimento e planejamento de contingência.'
+		],
+		indicators: [
+			'Cortes de oferta OPEP+; anúncios de embargo',
+			'Spreads de preços entre regiões; volatilidade de contratos futuros',
+			'Custos de importação ANP; estoques estratégicos'
+		],
+		confirmationSignals: [
+			'Anúncios de restrição de oferta por dois ciclos consecutivos.',
+			'Spreads regionais e volatilidade movem-se na mesma direção.',
+			'Custos de importação no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Instrumentalização energética permanece ativa: não houve reversão de política.',
+			'Nenhuma resolução rápida se materializa: não houve compensação de oferta.',
+			'O canal de exposição do Brasil permanece intacto: dependência de importações persiste.'
+		],
+		changeTriggers: [
+			'Restrições de oferta caem abaixo do limiar por três ciclos.',
+			'Realocação de oferta reduz volatilidade em 60 dias.',
+			'Custos no Brasil rompem correlação com benchmarks globais.'
+		]
+	},
+	'resource-war': {
+		name: 'Guerra por Recursos',
+		keyJudgments: [
+			'Competição por recursos críticos (energia, minerais, água) intensifica tensões geopolíticas.',
+			'O Brasil enfrenta pressão sobre preços de insumos e risco de restrições comerciais.',
+			'As Forças Armadas brasileiras devem acompanhar cadeias de suprimento de minerais críticos.'
+		],
+		indicators: [
+			'Preços de lítio, níquel e terras raras; restrições de exportação',
+			'Contingências de mineração e logística; conflitos em regiões produtoras',
+			'Dados de exportação e importação do Brasil (MDIC)'
+		],
+		confirmationSignals: [
+			'Anúncios de restrição de exportação e conflitos em regiões produtoras por dois ciclos.',
+			'Preços de minerais críticos movem-se na mesma direção.',
+			'Fluxos comerciais do Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Competição por recursos permanece ativa: não houve diversificação suficiente.',
+			'Nenhuma resolução rápida se materializa: acordos de fornecimento não foram ampliados.',
+			'O canal de exposição do Brasil permanece intacto: cadeias de suprimento seguem sensíveis.'
+		],
+		changeTriggers: [
+			'Restrição de exportação cai abaixo do limiar por três ciclos.',
+			'Acordos multilaterais estabilizam oferta.',
+			'Fluxos do Brasil rompem correlação com preços globais.'
+		]
+	},
+	'green-transition-shock': {
+		name: 'Choque da Transição Verde',
+		keyJudgments: [
+			'Aceleração regulatória e tecnológica na transição energética gera disrupções em setores tradicionais.',
+			'O Brasil enfrenta volatilidade de investimentos e reprecificação de ativos fósseis.',
+			'As Forças Armadas brasileiras devem avaliar impactos em infraestrutura e suprimentos energéticos.'
+		],
+		indicators: [
+			'Preços de carbono; cronograma de descarbonização',
+			'Investimentos em renováveis; custos de capital em energia fóssil',
+			'Indicadores de transição energética no Brasil'
+		],
+		confirmationSignals: [
+			'Novos mandatos regulatórios e mudanças de preços de carbono por dois ciclos.',
+			'Investimento e custos de capital movem-se na mesma direção.',
+			'Indicadores brasileiros acompanham o vetor global.'
+		],
+		assumptions: [
+			'Ritmo de transição permanece ativo: políticas não recuaram.',
+			'Nenhuma resolução rápida se materializa: não houve transição gradual suficiente.',
+			'O canal de exposição do Brasil permanece intacto: matriz energética segue sensível.'
+		],
+		changeTriggers: [
+			'Mandatos regulatórios caem abaixo do limiar por três ciclos.',
+			'Pacotes de transição reduzem volatilidade em 60 dias.',
+			'Indicadores do Brasil rompem correlação com a tendência global.'
+		]
+	},
+	'food-crisis-spiral': {
+		name: 'Espiral de Crise Alimentar',
+		keyJudgments: [
+			'Choques simultâneos de clima, logística e preços aceleram insegurança alimentar.',
+			'O Brasil enfrenta pressão sobre preços domésticos e cadeias de suprimento de alimentos.',
+			'As Forças Armadas brasileiras devem acompanhar riscos de abastecimento e logística humanitária.'
+		],
+		indicators: [
+			'WFP/FAO alertas de insegurança alimentar; preços globais de alimentos',
+			'Disrupções logísticas; custos de frete de grãos',
+			'Preços ao consumidor de alimentos no Brasil; estoques CONAB'
+		],
+		confirmationSignals: [
+			'Alertas de insegurança alimentar e alta de preços por dois ciclos.',
+			'Fretes de grãos e preços movem-se na mesma direção.',
+			'Preços no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Pressão alimentar permanece ativa: choques não foram resolvidos.',
+			'Nenhuma resolução rápida se materializa: não houve liberação suficiente de estoques.',
+			'O canal de exposição do Brasil permanece intacto: preços internos seguem benchmarks.'
+		],
+		changeTriggers: [
+			'Alertas de crise alimentar caem abaixo do limiar por três ciclos.',
+			'Intervenção internacional reduz preços em duas safras.',
+			'Preços no Brasil rompem correlação com índices globais.'
+		]
+	},
+	'climate-migration': {
+		name: 'Pressão Migratória Climática',
+		keyJudgments: [
+			'Eventos climáticos extremos impulsionam deslocamentos populacionais e pressão sobre fronteiras.',
+			'O Brasil enfrenta aumento de fluxos migratórios e pressão sobre serviços públicos.',
+			'As Forças Armadas brasileiras devem monitorar rotas e capacidade de resposta humanitária.'
+		],
+		indicators: [
+			'Deslocamentos climáticos (UNHCR/IOM); desastres declarados',
+			'Fluxos em fronteiras regionais; pedidos de refúgio',
+			'Indicadores de migração e abrigamento no Brasil'
+		],
+		confirmationSignals: [
+			'Declarações de desastre e deslocamentos em dois ciclos consecutivos.',
+			'Fluxos fronteiriços movem-se na mesma direção.',
+			'Indicadores nacionais acompanham o vetor global.'
+		],
+		assumptions: [
+			'Pressão migratória permanece ativa: eventos climáticos persistem.',
+			'Nenhuma resolução rápida se materializa: não houve reassentamento em escala.',
+			'O canal de exposição do Brasil permanece intacto: fronteiras e serviços seguem sensíveis.'
+		],
+		changeTriggers: [
+			'Deslocamentos caem abaixo do limiar por três ciclos.',
+			'Programa internacional reduz fluxos em 90 dias.',
+			'Indicadores brasileiros rompem correlação com o global.'
+		]
+	},
+	'agricultural-collapse': {
+		name: 'Sinal de Colapso Agrícola',
+		keyJudgments: [
+			'Sequência de eventos climáticos extremos e pragas reduz produtividade agrícola em regiões-chave.',
+			'O Brasil enfrenta risco de queda de produção e aumento de preços de alimentos.',
+			'As Forças Armadas brasileiras devem avaliar capacidade logística para apoio ao abastecimento.'
+		],
+		indicators: [
+			'Previsões de safra (USDA/CONAB); NDVI e estresse hídrico',
+			'Preços futuros de grãos; custos de fertilizantes',
+			'Índices de produtividade agrícola no Brasil'
+		],
+		confirmationSignals: [
+			'Revisões negativas de safra e estresse hídrico por dois ciclos.',
+			'Preços de grãos e fertilizantes movem-se na mesma direção.',
+			'Produtividade brasileira acompanha o vetor global.'
+		],
+		assumptions: [
+			'Choque agrícola permanece ativo: perdas não foram compensadas.',
+			'Nenhuma resolução rápida se materializa: não houve recuperação de produtividade.',
+			'O canal de exposição do Brasil permanece intacto: mercado interno segue sensível.'
+		],
+		changeTriggers: [
+			'Revisões negativas caem abaixo do limiar por três ciclos.',
+			'Recomposição de produtividade acima de 90% em duas safras.',
+			'Indicadores do Brasil rompem correlação com preços globais.'
+		]
+	},
+	'sovereign-debt-crisis': {
+		name: 'Crise de Dívida Soberana',
+		keyJudgments: [
+			'Pressões de juros e desaceleração elevam risco de inadimplência soberana em múltiplos países.',
+			'O Brasil enfrenta aumento de spreads e custos de refinanciamento.',
+			'As Forças Armadas brasileiras devem monitorar impacto fiscal e estabilidade orçamentária.'
+		],
+		indicators: [
+			'CDS soberano; spreads de títulos em dólar',
+			'Leilões de dívida e rolagem em mercados emergentes',
+			'EMBI+ Brasil; cronograma de dívida do Tesouro'
+		],
+		confirmationSignals: [
+			'Abertura de spreads e deterioração de leilões por dois ciclos.',
+			'CDS e yields movem-se na mesma direção.',
+			'EMBI+ Brasil acompanha o vetor global.'
+		],
+		assumptions: [
+			'Estresse de dívida soberana permanece ativo: condições de mercado seguem restritivas.',
+			'Nenhuma resolução rápida se materializa: não houve backstop suficiente.',
+			'O canal de exposição do Brasil permanece intacto: vulnerabilidade a spreads externos permanece.'
+		],
+		changeTriggers: [
+			'Spreads soberanos caem abaixo do limiar por três ciclos.',
+			'Intervenção multilateral estabiliza spreads em 60 dias.',
+			'Spreads do Brasil rompem correlação com o global.'
+		]
+	},
+	'credit-contagion': {
+		name: 'Contágio de Crédito',
+		keyJudgments: [
+			'Alta de inadimplência e spreads indica contágio de crédito entre setores.',
+			'O Brasil enfrenta risco de restrição de crédito e pressão sobre bancos.',
+			'As Forças Armadas brasileiras devem monitorar condições de funding e impactos fiscais.'
+		],
+		indicators: [
+			'Spreads IG e HY; taxas de default',
+			'Índices de estresse de crédito; volume de reestruturações',
+			'Spreads de crédito no Brasil; inadimplência bancária'
+		],
+		confirmationSignals: [
+			'Abertura simultânea de spreads e aumento de defaults por dois ciclos.',
+			'Índices de estresse movem-se na mesma direção.',
+			'Spreads no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Contágio de crédito permanece ativo: aperto não foi revertido.',
+			'Nenhuma resolução rápida se materializa: não houve suporte suficiente.',
+			'O canal de exposição do Brasil permanece intacto: crédito doméstico é sensível.'
+		],
+		changeTriggers: [
+			'Spreads caem abaixo do limiar por três ciclos.',
+			'Programa de liquidez normaliza spreads em 60 dias.',
+			'Spreads do Brasil rompem correlação com o global.'
+		]
+	},
+	'dedollarization-signal': {
+		name: 'Sinal de Desdolarização',
+		keyJudgments: [
+			'Movimentos para acordos comerciais em moedas locais e redução de reservas em dólar ganham tração.',
+			'O Brasil enfrenta reprecificação de riscos cambiais e ajustes de fluxo comercial.',
+			'As Forças Armadas brasileiras devem acompanhar impactos em compras externas e financiamento.'
+		],
+		indicators: [
+			'Acordos bilaterais de comércio em moeda local; participação do dólar em reservas',
+			'Pagamentos internacionais em moedas alternativas; swaps bilaterais',
+			'Fluxos de comércio do Brasil por moeda de liquidação'
+		],
+		confirmationSignals: [
+			'Anúncios de acordos em moeda local por dois ciclos.',
+			'Participação do dólar em reservas cai na mesma direção.',
+			'Fluxos do Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Tração da desdolarização permanece ativa: iniciativas não foram revertidas.',
+			'Nenhuma resolução rápida se materializa: não houve retorno à dominância do dólar.',
+			'O canal de exposição do Brasil permanece intacto: comércio é sensível a moedas de liquidação.'
+		],
+		changeTriggers: [
+			'Acordos em moeda local caem abaixo do limiar por três ciclos.',
+			'Participação do dólar nas reservas se recupera de forma consistente.',
+			'Fluxos do Brasil rompem correlação com o vetor global.'
+		]
+	},
+	'social-tinderbox': {
+		name: 'Barril de Pólvora Social',
+		keyJudgments: [
+			'Combinação de tensões econômicas e polarização cria ambiente propenso a explosões sociais rápidas.',
+			'O Brasil enfrenta risco de protestos abruptos e instabilidade local.',
+			'As Forças Armadas brasileiras devem manter prontidão para apoio a segurança pública.'
+		],
+		indicators: [
+			'Índices de inflação de alimentos; desemprego juvenil',
+			'Violência política e incidentes de protesto',
+			'Indicadores de risco social no Brasil'
+		],
+		confirmationSignals: [
+			'Picos simultâneos de inflação e protestos por dois ciclos.',
+			'Violência política e protestos movem-se na mesma direção.',
+			'Indicadores no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Tensões sociais permanecem ativas: não houve alívio econômico suficiente.',
+			'Nenhuma resolução rápida se materializa: não houve pactos de despolarização.',
+			'O canal de exposição do Brasil permanece intacto: fatores locais amplificam o risco.'
+		],
+		changeTriggers: [
+			'Protestos caem abaixo do limiar por três ciclos.',
+			'Medidas de alívio reduzem tensões em 90 dias.',
+			'Indicadores brasileiros rompem correlação com o global.'
+		]
+	},
+	'democratic-stress': {
+		name: 'Estresse Democrático',
+		keyJudgments: [
+			'Contestação eleitoral e erosão institucional aumentam a fragilidade democrática.',
+			'O Brasil enfrenta maior risco de crises de legitimidade e polarização.',
+			'As Forças Armadas brasileiras devem reforçar protocolos de neutralidade institucional.'
+		],
+		indicators: [
+			'Relatórios de liberdade civil; índices de confiança institucional',
+			'Disputas eleitorais e judicialização',
+			'Indicadores do TSE e confiança pública no Brasil'
+		],
+		confirmationSignals: [
+			'Contestações eleitorais em múltiplos países por dois ciclos.',
+			'Queda de confiança institucional move-se na mesma direção.',
+			'Indicadores no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Estresse democrático permanece ativo: polarização não recuou.',
+			'Nenhuma resolução rápida se materializa: não houve pactos institucionais.',
+			'O canal de exposição do Brasil permanece intacto: ambiente político segue sensível.'
+		],
+		changeTriggers: [
+			'Contestações caem abaixo do limiar por três ciclos.',
+			'Reformas institucionais elevam confiança em 90 dias.',
+			'Indicadores brasileiros rompem correlação com o global.'
+		]
+	},
+	'global-protest-wave': {
+		name: 'Onda Global de Protestos',
+		keyJudgments: [
+			'Protestos simultâneos em múltiplos países indicam descontentamento sistêmico.',
+			'O Brasil enfrenta risco de contágio social e mobilizações coordenadas.',
+			'As Forças Armadas brasileiras devem acompanhar sinais de escalada e capacidade logística de resposta.'
+		],
+		indicators: [
+			'Contagem de protestos ACLED; indicadores de estabilidade social',
+			'Bloqueios e greves em setores críticos',
+			'Eventos de protesto e greves no Brasil'
+		],
+		confirmationSignals: [
+			'Picos de protestos em múltiplas regiões por dois ciclos.',
+			'Greves e bloqueios movem-se na mesma direção.',
+			'Eventos no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Onda de protestos permanece ativa: fatores estruturais persistem.',
+			'Nenhuma resolução rápida se materializa: não houve pacotes de alívio.',
+			'O canal de exposição do Brasil permanece intacto: tensões locais podem amplificar.'
+		],
+		changeTriggers: [
+			'Frequência de protestos cai abaixo do limiar por três ciclos.',
+			'Medidas de alívio reduzem protestos em 90 dias.',
+			'Indicadores no Brasil rompem correlação com o global.'
+		]
+	},
+	'arms-race-acceleration': {
+		name: 'Aceleração da Corrida Armamentista',
+		keyJudgments: [
+			'Aumento simultâneo de gastos militares e modernização acelera competição estratégica.',
+			'O Brasil enfrenta pressão por modernização e aumento de custos de defesa.',
+			'As Forças Armadas brasileiras devem monitorar riscos de obsolescência e dependência tecnológica.'
+		],
+		indicators: [
+			'Orçamentos de defesa; encomendas de armamentos',
+			'Testes de mísseis e modernização nuclear',
+			'Gastos e projetos de defesa no Brasil'
+		],
+		confirmationSignals: [
+			'Anúncios de aumento de gastos militares por dois ciclos.',
+			'Testes e modernizações movem-se na mesma direção.',
+			'Indicadores no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Corrida armamentista permanece ativa: tensões estratégicas persistem.',
+			'Nenhuma resolução rápida se materializa: não houve acordos de controle.',
+			'O canal de exposição do Brasil permanece intacto: custos de defesa seguem sensíveis.'
+		],
+		changeTriggers: [
+			'Gastos militares caem abaixo do limiar por três ciclos.',
+			'Acordos de controle reduzem modernização em 90 dias.',
+			'Indicadores brasileiros rompem correlação com o global.'
+		]
+	},
+	'multi-domain-conflict': {
+		name: 'Conflito Multidomínio',
+		keyJudgments: [
+			'Conflitos simultâneos em domínios terrestre, cibernético, espacial e informacional aumentam risco sistêmico.',
+			'O Brasil enfrenta exposição indireta via logística, energia e ciberinfraestrutura.',
+			'As Forças Armadas brasileiras devem coordenar inteligência entre domínios e resiliência crítica.'
+		],
+		indicators: [
+			'Ataques cibernéticos e interferência em satélites; incidentes de guerra eletrônica',
+			'Interrupções logísticas e de energia; escaladas militares',
+			'Alertas de infraestrutura crítica e ciber no Brasil'
+		],
+		confirmationSignals: [
+			'Incidentes em múltiplos domínios por dois ciclos consecutivos.',
+			'Disrupções logísticas e cibernéticas movem-se na mesma direção.',
+			'Alertas no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Conflito multidomínio permanece ativo: não houve redução coordenada.',
+			'Nenhuma resolução rápida se materializa: não houve cessar-fogo abrangente.',
+			'O canal de exposição do Brasil permanece intacto: infraestrutura crítica segue conectada.'
+		],
+		changeTriggers: [
+			'Incidentes multidomínio caem abaixo do limiar por três ciclos.',
+			'Acordos reduzem escaladas em 90 dias.',
+			'Indicadores no Brasil rompem correlação com o global.'
+		]
+	},
+	'escalation-ladder': {
+		name: 'Escada de Escalada',
+		keyJudgments: [
+			'Sequência de respostas militares e políticas indica avanço de escalada entre grandes potências.',
+			'O Brasil enfrenta aumento de risco geopolítico e volatilidade de mercados.',
+			'As Forças Armadas brasileiras devem monitorar pontos de inflexão e preparar contingências.'
+		],
+		indicators: [
+			'Posturas militares e exercícios; alertas de prontidão',
+			'Sanções e retaliações; retórica diplomática',
+			'Indicadores de risco geopolítico no Brasil'
+		],
+		confirmationSignals: [
+			'Sequência de escaladas por dois ciclos consecutivos.',
+			'Sanções e postura militar movem-se na mesma direção.',
+			'Indicadores no Brasil acompanham o vetor global.'
+		],
+		assumptions: [
+			'Escalada permanece ativa: não houve recuo verificável.',
+			'Nenhuma resolução rápida se materializa: não houve acordo de desescalada.',
+			'O canal de exposição do Brasil permanece intacto: mercado e segurança seguem sensíveis.'
+		],
+		changeTriggers: [
+			'Escalada cai abaixo do limiar por três ciclos.',
+			'Acordo de desescalada reduz tensão em 90 dias.',
+			'Indicadores no Brasil rompem correlação com o global.'
+		]
+	},
+	'systemic-fragility': {
+		name: 'Fragilidade Sistêmica',
+		keyJudgments: [
+			'Choques simultâneos em dívida soberana, logística, ciber e clima sobrecarregam buffers de resiliência.',
+			'O Brasil enfrenta exposição composta: estresse climático e pressão fiscal combinam-se com ameaças cibernéticas.',
+			'As Forças Armadas brasileiras devem monitorar demandas de contingência multissetorial e interoperabilidade.'
+		],
+		indicators: [
+			'BIS Global Risk Index; probabilidade de cenário adverso WEO (FMI)',
+			'Índice de correlação entre ativos; NY Fed Global Supply Chain Pressure Index',
+			'Compósito de estresse multissetorial brasileiro (BACEN + ANEEL + CTIR.Gov + CONAB)'
+		],
+		confirmationSignals: [
+			'Três ou mais sinais simultâneos (CDS, logística, ciber, clima) por dois ciclos.',
+			'Indicadores de risco sistêmico do BIS/FMI movem-se na mesma direção.',
+			'Compósito multissetorial do Brasil acompanha o vetor global.'
+		],
+		assumptions: [
+			'Acoplamento entre domínios permanece ativo: riscos se transmitem entre si.',
+			'Nenhuma resolução rápida se materializa: não houve intervenção coordenada suficiente.',
+			'O canal de exposição do Brasil permanece intacto: acoplamento multissetorial é real.'
+		],
+		changeTriggers: [
+			'Coocorrência de estresse cai abaixo do limiar por três ciclos.',
+			'Resposta multilateral estabiliza três de quatro domínios simultaneamente.',
+			'Compósito do Brasil rompe correlação com fragilidade global.'
+		]
+	},
+	'polycrisis': {
+		name: 'Policrise',
+		keyJudgments: [
+			'Choques sociais, alimentares, climáticos e econômicos se reforçam, criando risco emergente acima da soma das crises isoladas.',
+			'O Brasil enfrenta demandas simultâneas humanitárias, inflacionárias, de governança e climáticas.',
+			'As Forças Armadas brasileiras devem preparar apoio multiagência e coordenação com defesa civil, saúde e segurança.'
+		],
+		indicators: [
+			'Gap de financiamento OCHA; contagem simultânea WFP + UNHCR + WHO',
+			'Downgrades de crescimento do FMI; sobreposição de emergências WFP/UNHCR',
+			'Decretos federais de emergência em domínios não relacionados (janela 30 dias)'
+		],
+		confirmationSignals: [
+			'Insegurança alimentar, deslocamentos, estresse fiscal e desastres climáticos ativos simultaneamente por dois ciclos.',
+			'Gap humanitário global ou apelos multissetoriais acima de 50% da capacidade.',
+			'Decretos federais no Brasil em dois ou mais domínios acompanham o vetor global.'
+		],
+		assumptions: [
+			'Efeitos de interação multi-crise permanecem ativos: cada crise agrava as demais.',
+			'Nenhuma resolução rápida se materializa: não houve resposta global suficiente.',
+			'O canal de exposição do Brasil permanece intacto: risco interno amplifica padrões globais.'
+		],
+		changeTriggers: [
+			'Coocorrência de crises cai abaixo do limiar por três ciclos.',
+			'Resposta internacional reduz três de cinco crises em 90 dias.',
+			'Frequência de emergência no Brasil rompe correlação com o compósito global.'
+		]
 	}
-	return translated;
+};
+
+const SHOULD_VALIDATE_TRANSLATIONS =
+	typeof import.meta !== 'undefined' &&
+	typeof import.meta.env !== 'undefined' &&
+	(import.meta.env.DEV || import.meta.env.MODE === 'test');
+
+let compoundTranslationsValidated = false;
+function validateCompoundPatternTranslations(): void {
+	if (!SHOULD_VALIDATE_TRANSLATIONS || compoundTranslationsValidated) return;
+	for (const pattern of COMPOUND_PATTERNS) {
+		const translated = COMPOUND_PATTERNS_PT_BR_BY_ID[pattern.id];
+		if (!translated) {
+			throw new Error(`[analysis] Missing pt-BR compound translation for ${pattern.id}`);
+		}
+		if (translated.keyJudgments.length !== pattern.keyJudgments.length) {
+			throw new Error(`[analysis] keyJudgments length mismatch for ${pattern.id}`);
+		}
+		if (translated.indicators.length !== pattern.indicators.length) {
+			throw new Error(`[analysis] indicators length mismatch for ${pattern.id}`);
+		}
+		if (translated.confirmationSignals.length !== pattern.confirmationSignals.length) {
+			throw new Error(`[analysis] confirmationSignals length mismatch for ${pattern.id}`);
+		}
+		if (translated.assumptions.length !== pattern.assumptions.length) {
+			throw new Error(`[analysis] assumptions length mismatch for ${pattern.id}`);
+		}
+		if (translated.changeTriggers.length !== pattern.changeTriggers.length) {
+			throw new Error(`[analysis] changeTriggers length mismatch for ${pattern.id}`);
+		}
+	}
+	compoundTranslationsValidated = true;
 }
 
-const COMPOUND_PATTERNS_PT_BR: CompoundPattern[] = COMPOUND_PATTERNS.map((pattern) => ({
-	...pattern,
-	name: COMPOUND_NAME_OVERRIDES_PT_BR[pattern.id] ?? pattern.name,
-	keyJudgments: pattern.keyJudgments.map(translateCompoundIntelText),
-	indicators: pattern.indicators.map(translateCompoundIntelText),
-	confirmationSignals: pattern.confirmationSignals.map(translateCompoundIntelText),
-	assumptions: pattern.assumptions.map(translateCompoundIntelText),
-	changeTriggers: pattern.changeTriggers.map(translateCompoundIntelText)
-}));
+export const COMPOUND_PATTERNS_PT_BR: CompoundPattern[] = COMPOUND_PATTERNS.map((pattern) => {
+	const translated = COMPOUND_PATTERNS_PT_BR_BY_ID[pattern.id];
+	if (!translated) return pattern;
+	return {
+		...pattern,
+		...translated,
+		name: COMPOUND_NAME_OVERRIDES_PT_BR[pattern.id] ?? translated.name ?? pattern.name
+	};
+});
 
 export function getCompoundPatterns(locale: Locale): CompoundPattern[] {
-	return locale === 'pt-BR' ? COMPOUND_PATTERNS_PT_BR : COMPOUND_PATTERNS;
+	if (locale === 'pt-BR') {
+		validateCompoundPatternTranslations();
+		return COMPOUND_PATTERNS_PT_BR;
+	}
+	return COMPOUND_PATTERNS;
 }
 
 export interface NarrativePattern {

@@ -15,7 +15,7 @@ import {
 	type TopicStats
 } from './correlation';
 import type { NewsItem } from '$lib/types';
-import { getSourceWeight, COMPOUND_PATTERNS } from '$lib/config/analysis';
+import { getSourceWeight, COMPOUND_PATTERNS, COMPOUND_PATTERNS_PT_BR } from '$lib/config/analysis';
 
 function createCorrelationNewsItem(overrides: Partial<NewsItem> = {}): NewsItem {
 	return {
@@ -467,6 +467,25 @@ describe('Compound Pattern Detection', () => {
 			expect(pattern.confirmationSignals.every((v) => v.trim().length > 0)).toBe(true);
 			expect(pattern.assumptions.every((v) => v.trim().length > 0)).toBe(true);
 			expect(pattern.changeTriggers.every((v) => v.trim().length > 0)).toBe(true);
+		}
+	});
+
+	it('should provide full pt-BR translations for all compound patterns', () => {
+		const ptById = new Map(COMPOUND_PATTERNS_PT_BR.map((pattern) => [pattern.id, pattern]));
+		for (const pattern of COMPOUND_PATTERNS) {
+			const translated = ptById.get(pattern.id);
+			expect(translated).toBeDefined();
+			expect(translated!.name.trim().length).toBeGreaterThan(0);
+			expect(translated!.keyJudgments.length).toBe(pattern.keyJudgments.length);
+			expect(translated!.indicators.length).toBe(pattern.indicators.length);
+			expect(translated!.confirmationSignals.length).toBe(pattern.confirmationSignals.length);
+			expect(translated!.assumptions.length).toBe(pattern.assumptions.length);
+			expect(translated!.changeTriggers.length).toBe(pattern.changeTriggers.length);
+			expect(translated!.keyJudgments.every((v) => v.trim().length > 0)).toBe(true);
+			expect(translated!.indicators.every((v) => v.trim().length > 0)).toBe(true);
+			expect(translated!.confirmationSignals.every((v) => v.trim().length > 0)).toBe(true);
+			expect(translated!.assumptions.every((v) => v.trim().length > 0)).toBe(true);
+			expect(translated!.changeTriggers.every((v) => v.trim().length > 0)).toBe(true);
 		}
 	});
 
