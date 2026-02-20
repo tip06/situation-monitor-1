@@ -62,7 +62,6 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'common.retry': 'Tentar novamente',
 	'common.alert': 'ALERTA',
 	'alerts.dismiss': 'Fechar',
-	'alerts.example': 'Exemplo: {value}',
 	'alerts.recent': 'Alertas recentes',
 	'alerts.none': 'Nenhum alerta ainda',
 	'alerts.clear': 'Limpar',
