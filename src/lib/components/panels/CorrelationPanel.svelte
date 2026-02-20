@@ -9,8 +9,9 @@
 		type CompoundPatternManualAdditions
 	} from '$lib/config/analysis';
 	import type { NewsItem } from '$lib/types';
-	import { language } from '$lib/stores';
+	import { language, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
+	import { untrack } from 'svelte';
 
 	interface Props {
 		news?: NewsItem[];
@@ -152,6 +153,40 @@
 
 	$effect(() => {
 		compoundAdditions = loadCompoundPatternManualAdditions($language);
+	});
+
+	let lastNavNonce = 0;
+	$effect(() => {
+		const nav = $alertNavigation;
+		if (nav.nonce === 0 || nav.nonce === lastNavNonce) return;
+		if (nav.panelId !== 'correlation' || !nav.sourceId) return;
+		lastNavNonce = nav.nonce;
+
+		const currentAnalysis = untrack(() => analysis);
+		if (!currentAnalysis) return;
+
+		const compound = currentAnalysis.compoundSignals.find((s) => s.id === nav.sourceId);
+		if (compound) {
+			toggleCompoundExpand(compound.id);
+			return;
+		}
+
+		const emerging = currentAnalysis.emergingPatterns.find((p) => p.id === nav.sourceId);
+		if (emerging) {
+			openHeadlines(emerging.name, emerging.headlines);
+			return;
+		}
+
+		const momentum = currentAnalysis.momentumSignals.find((s) => s.id === nav.sourceId);
+		if (momentum) {
+			openHeadlines(momentum.name, momentum.headlines);
+			return;
+		}
+
+		const predictive = currentAnalysis.predictiveSignals.find((s) => s.id === nav.sourceId);
+		if (predictive) {
+			openHeadlines(predictive.name, predictive.headlines);
+		}
 	});
 
 	$effect(() => {

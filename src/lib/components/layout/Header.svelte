@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isRefreshing, lastRefresh, language } from '$lib/stores';
+	import { isRefreshing, lastRefresh, language, activeTab, alertNavigation } from '$lib/stores';
 	import { alertPopups } from '$lib/stores/alertPopups';
+	import type { AlertPopup } from '$lib/alerts/engine';
 	import { t } from '$lib/i18n';
 	import { toIntlLocale } from '$lib/i18n/types';
 
@@ -27,6 +28,16 @@
 				})
 			: t($language, 'header.neverRefreshed')
 	);
+
+	function handleAlertClick(alert: AlertPopup) {
+		alertsOpen = false;
+		if (alert.tabId) {
+			activeTab.setTab(alert.tabId);
+		}
+		if (alert.panelId && alert.sourceId) {
+			alertNavigation.navigate(alert.panelId, alert.sourceId);
+		}
+	}
 
 	onMount(() => {
 		function handleClick(event: MouseEvent) {
@@ -82,7 +93,13 @@
 					{:else}
 						<ul class="alerts-list">
 							{#each alertHistory as alert (alert.id)}
-								<li class="alerts-item">
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+								<li
+									class="alerts-item"
+									class:clickable={!!(alert.tabId || (alert.panelId && alert.sourceId))}
+									onclick={() => handleAlertClick(alert)}
+								>
 									<div class="alerts-item-title">
 										{t($language, alert.titleKey)}
 										<span class="alerts-item-count">({alert.count})</span>
@@ -262,6 +279,19 @@
 	.alerts-item:last-child {
 		border-bottom: none;
 		padding-bottom: 0;
+	}
+
+	.alerts-item.clickable {
+		cursor: pointer;
+		border-radius: 4px;
+		margin: 0 -0.3rem;
+		padding-left: 0.3rem;
+		padding-right: 0.3rem;
+		transition: background 0.15s ease;
+	}
+
+	.alerts-item.clickable:hover {
+		background: rgba(255, 255, 255, 0.06);
 	}
 
 	.alerts-item-title {

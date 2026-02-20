@@ -110,6 +110,7 @@ Unique business logic for intelligence analysis:
 - check out world monitor for ideas
 - investigate ways to speed up refreshes
 - alerts for economic indicators
+- make a cool loading screen
 
 ## General Guidance
 

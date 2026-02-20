@@ -3,9 +3,10 @@
 	import { Modal } from '$lib/components/modals';
 	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
-	import { language } from '$lib/stores';
+	import { language, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import { toIntlLocale } from '$lib/i18n/types';
+	import { untrack } from 'svelte';
 
 	interface Props {
 		news?: NewsItem[];
@@ -27,6 +28,28 @@
 		modalHeadlines = headlines;
 		modalOpen = true;
 	}
+
+	let lastNavNonce = 0;
+	$effect(() => {
+		const nav = $alertNavigation;
+		if (nav.nonce === 0 || nav.nonce === lastNavNonce) return;
+		if (nav.panelId !== 'narrative' || !nav.sourceId) return;
+		lastNavNonce = nav.nonce;
+
+		const currentAnalysis = untrack(() => analysis);
+		if (!currentAnalysis) return;
+
+		const narrative =
+			currentAnalysis.trendingNarratives.find((n) => n.id === nav.sourceId) ??
+			currentAnalysis.emergingFringe.find((n) => n.id === nav.sourceId) ??
+			currentAnalysis.fringeToMainstream.find((n) => n.id === nav.sourceId) ??
+			currentAnalysis.narrativeWatch.find((n) => n.id === nav.sourceId) ??
+			currentAnalysis.disinfoSignals.find((n) => n.id === nav.sourceId);
+
+		if (narrative) {
+			openHeadlines(narrative.name, narrative.headlines);
+		}
+	});
 
 	function getStatusVariant(status: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (status) {

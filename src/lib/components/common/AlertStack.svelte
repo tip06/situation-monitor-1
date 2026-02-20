@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { alertPopups } from '$lib/stores/alertPopups';
-	import { activeTab } from '$lib/stores';
+	import { activeTab, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import { language } from '$lib/stores';
 	import type { AlertPopup } from '$lib/alerts/engine';
@@ -10,6 +10,9 @@
 	function handleClick(item: AlertPopup) {
 		if (item.tabId) {
 			activeTab.setTab(item.tabId);
+		}
+		if (item.panelId && item.sourceId) {
+			alertNavigation.navigate(item.panelId, item.sourceId);
 		}
 	}
 

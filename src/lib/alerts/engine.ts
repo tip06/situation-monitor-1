@@ -27,6 +27,8 @@ export interface AlertPopup {
 	severity: AlertSeverity;
 	panelId?: PanelId;
 	tabId?: 'global' | 'regional' | 'economy' | 'social' | 'technology';
+	/** ID of the source item (news item, signal, narrative) that triggered this alert */
+	sourceId?: string;
 }
 
 interface DetectAlertsParams {
@@ -67,7 +69,8 @@ function createPopup(
 	detail: string | undefined,
 	severity: AlertSeverity,
 	panelId?: PanelId,
-	tabId?: AlertPopup['tabId']
+	tabId?: AlertPopup['tabId'],
+	sourceId?: string
 ): AlertPopup {
 	return {
 		id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -78,7 +81,8 @@ function createPopup(
 		timestamp: Date.now(),
 		severity,
 		panelId,
-		tabId
+		tabId,
+		sourceId
 	};
 }
 
@@ -141,7 +145,8 @@ export function detectAlerts({
 				example?.title,
 				'danger',
 				panelId,
-				tabId
+				tabId,
+				example?.id
 			)
 		);
 	}
@@ -195,7 +200,8 @@ export function detectAlerts({
 					example?.name,
 					'danger',
 					'correlation',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}
@@ -213,7 +219,8 @@ export function detectAlerts({
 					example?.name,
 					'warning',
 					'correlation',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}
@@ -231,7 +238,8 @@ export function detectAlerts({
 					example?.name,
 					'warning',
 					'correlation',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}
@@ -249,7 +257,8 @@ export function detectAlerts({
 					example?.prediction ?? example?.name,
 					'info',
 					'correlation',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}
@@ -278,7 +287,8 @@ export function detectAlerts({
 					example?.name,
 					'info',
 					'narrative',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}
@@ -294,7 +304,8 @@ export function detectAlerts({
 					example?.name,
 					'info',
 					'narrative',
-					'social'
+					'social',
+					example?.id
 				)
 			);
 		}

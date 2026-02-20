@@ -106,5 +106,8 @@ export {
 // Language store
 export { language } from './language';
 
+// Alert navigation store
+export { alertNavigation, type AlertNavigationTarget } from './alertNavigation';
+
 // Sources store
 export { sources, getEnabledSourcesForCategory, type SourceRecord } from './sources';

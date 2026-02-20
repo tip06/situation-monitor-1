@@ -14,10 +14,12 @@
 		iranNews,
 		venezuelaNews,
 		greenlandNews,
-		fringeNews
+		fringeNews,
+		alertNavigation
 	} from '$lib/stores';
 	import { language } from '$lib/stores';
 	import { t } from '$lib/i18n';
+	import { tick } from 'svelte';
 
 	interface Props {
 		category: NewsCategory;
@@ -27,6 +29,9 @@
 
 	let { category, panelId, title }: Props = $props();
 	let isExpanded = $state(false);
+	let highlightedId = $state<string | null>(null);
+	let newsList = $state<HTMLElement | null>(null);
+	let lastNavNonce = 0;
 
 	// Filter state
 	let searchQuery = $state('');
@@ -141,6 +146,23 @@
 			closeExpanded();
 		}
 	}
+
+	$effect(() => {
+		const nav = $alertNavigation;
+		if (nav.nonce === 0 || nav.nonce === lastNavNonce) return;
+		if (nav.panelId !== panelId || !nav.sourceId) return;
+		lastNavNonce = nav.nonce;
+
+		const targetId = nav.sourceId;
+		tick().then(() => {
+			if (!newsList) return;
+			const el = newsList.querySelector<HTMLElement>(`[data-news-id="${targetId}"]`);
+			if (!el) return;
+			el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			highlightedId = targetId;
+			setTimeout(() => { highlightedId = null; }, 2000);
+		});
+	});
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -235,9 +257,11 @@
 			{#if items.length === 0 && hasActiveFilters}
 				<div class="empty-state">{t($language, 'news.noMatches')}</div>
 			{:else}
-				<div class="news-list">
+				<div class="news-list" bind:this={newsList}>
 					{#each items as item (item.id)}
-						<NewsItem {item} />
+						<div data-news-id={item.id} class:nav-highlight={highlightedId === item.id}>
+							<NewsItem {item} />
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -424,6 +448,17 @@
 
 	.news-list::-webkit-scrollbar-thumb:hover {
 		background: var(--text-muted);
+	}
+
+	.nav-highlight {
+		animation: nav-pulse 2s ease-out;
+		border-radius: 4px;
+	}
+
+	@keyframes nav-pulse {
+		0%   { background: rgba(99, 102, 241, 0.25); }
+		60%  { background: rgba(99, 102, 241, 0.1); }
+		100% { background: transparent; }
 	}
 
 	.empty-state {
