@@ -63,6 +63,103 @@ export interface CompoundPattern {
 	boostFactor: number; // Score multiplier when detected
 }
 
+export type CompoundPatternAdditionCategory =
+	| 'keyJudgments'
+	| 'confirmationSignals'
+	| 'assumptions'
+	| 'indicators'
+	| 'changeTriggers';
+
+export type CompoundPatternManualAdditions = Record<
+	string,
+	Partial<Record<CompoundPatternAdditionCategory, string[]>>
+>;
+
+export const COMPOUND_PATTERN_MANUAL_ADDITIONS_BY_LOCALE: Record<Locale, CompoundPatternManualAdditions> = {
+	en: {},
+	'pt-BR': {}
+};
+
+const COMPOUND_PATTERN_MANUAL_STORAGE_KEY = 'compoundPatternManualAdditions.v1';
+
+function canUseLocalStorage(): boolean {
+	return typeof localStorage !== 'undefined';
+}
+
+function mergeCompoundPatternAdditions(
+	base: CompoundPatternManualAdditions,
+	extra: CompoundPatternManualAdditions
+): CompoundPatternManualAdditions {
+	const merged: CompoundPatternManualAdditions = { ...base };
+	for (const [id, additions] of Object.entries(extra)) {
+		const existing = merged[id] ?? {};
+		merged[id] = {
+			keyJudgments: [...(existing.keyJudgments ?? []), ...(additions.keyJudgments ?? [])],
+			confirmationSignals: [
+				...(existing.confirmationSignals ?? []),
+				...(additions.confirmationSignals ?? [])
+			],
+			assumptions: [...(existing.assumptions ?? []), ...(additions.assumptions ?? [])],
+			indicators: [...(existing.indicators ?? []), ...(additions.indicators ?? [])],
+			changeTriggers: [...(existing.changeTriggers ?? []), ...(additions.changeTriggers ?? [])]
+		};
+	}
+	return merged;
+}
+
+function loadAllManualAdditionsFromStorage(): Record<string, CompoundPatternManualAdditions> {
+	if (!canUseLocalStorage()) return {};
+	try {
+		const raw = localStorage.getItem(COMPOUND_PATTERN_MANUAL_STORAGE_KEY);
+		if (!raw) return {};
+		const parsed = JSON.parse(raw);
+		if (!parsed || typeof parsed !== 'object') return {};
+		return parsed as Record<string, CompoundPatternManualAdditions>;
+	} catch {
+		return {};
+	}
+}
+
+export function loadCompoundPatternManualAdditions(locale: Locale): CompoundPatternManualAdditions {
+	const base = COMPOUND_PATTERN_MANUAL_ADDITIONS_BY_LOCALE[locale] ?? {};
+	if (!canUseLocalStorage()) return base;
+	const all = loadAllManualAdditionsFromStorage();
+	const stored = all[locale] ?? {};
+	return mergeCompoundPatternAdditions(base, stored);
+}
+
+export function saveCompoundPatternManualAdditions(
+	locale: Locale,
+	additions: CompoundPatternManualAdditions
+): void {
+	if (!canUseLocalStorage()) return;
+	const all = loadAllManualAdditionsFromStorage();
+	all[locale] = additions;
+	try {
+		localStorage.setItem(COMPOUND_PATTERN_MANUAL_STORAGE_KEY, JSON.stringify(all));
+	} catch {
+		// no-op
+	}
+}
+
+export function appendCompoundPatternManualAddition(
+	locale: Locale,
+	id: string,
+	category: CompoundPatternAdditionCategory,
+	text: string
+): CompoundPatternManualAdditions {
+	const trimmed = text.trim();
+	if (!trimmed) return loadCompoundPatternManualAdditions(locale);
+	const current = loadCompoundPatternManualAdditions(locale);
+	const updated = mergeCompoundPatternAdditions(current, {
+		[id]: {
+			[category]: [trimmed]
+		}
+	});
+	saveCompoundPatternManualAdditions(locale, updated);
+	return updated;
+}
+
 export const COMPOUND_PATTERNS: CompoundPattern[] = [
 	{
 		id: 'trade-war-escalation',

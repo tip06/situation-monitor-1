@@ -2,6 +2,12 @@
 	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
 	import { Modal } from '$lib/components/modals';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
+	import {
+		appendCompoundPatternManualAddition,
+		loadCompoundPatternManualAdditions,
+		type CompoundPatternAdditionCategory,
+		type CompoundPatternManualAdditions
+	} from '$lib/config/analysis';
 	import type { NewsItem } from '$lib/types';
 	import { language } from '$lib/stores';
 	import { t } from '$lib/i18n';
@@ -22,6 +28,12 @@
 	let modalHeadlines = $state<Array<{ title: string; link: string; source: string }>>([]);
 	let expandedSignals = $state<Record<string, boolean>>({});
 	let expandedCompoundId = $state<string | null>(null);
+	let collapsingCompoundId = $state<string | null>(null);
+	let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+	let addCompoundId = $state<string | null>(null);
+	let addCategory = $state<CompoundPatternAdditionCategory>('keyJudgments');
+	let addText = $state('');
+	let compoundAdditions = $state<CompoundPatternManualAdditions>({});
 
 	function openHeadlines(title: string, headlines: Array<{ title: string; link: string; source: string }>) {
 		modalTitle = title;
@@ -55,11 +67,81 @@
 	}
 
 	function toggleCompoundExpand(signalId: string) {
-		expandedCompoundId = expandedCompoundId === signalId ? null : signalId;
+		const isExpanding = expandedCompoundId !== signalId;
+		if (!isExpanding) {
+			beginCollapse(signalId);
+			return;
+		}
+		expandedCompoundId = signalId;
+		collapsingCompoundId = null;
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
+		if (isExpanding) {
+			expandedSignals = {
+				...expandedSignals,
+				[signalId]: true
+			};
+		}
+	}
+
+	function openAddAnalysis(signalId: string) {
+		expandedCompoundId = signalId;
+		collapsingCompoundId = null;
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+			collapseTimer = null;
+		}
+		expandedSignals = {
+			...expandedSignals,
+			[signalId]: true
+		};
+		addCompoundId = signalId;
+		addCategory = 'keyJudgments';
+		addText = '';
+	}
+
+	function confirmAddAnalysis() {
+		if (!addCompoundId) return;
+		const value = addText.trim();
+		if (!value) return;
+		compoundAdditions = appendCompoundPatternManualAddition(
+			$language,
+			addCompoundId,
+			addCategory,
+			value
+		);
+		addText = '';
+	}
+
+	function cancelAddAnalysis() {
+		addCompoundId = null;
+		addText = '';
 	}
 
 	function closeExpandedCompound() {
-		expandedCompoundId = null;
+		if (expandedCompoundId) {
+			beginCollapse(expandedCompoundId);
+		}
+	}
+
+	function beginCollapse(signalId: string) {
+		if (addCompoundId === signalId) {
+			addCompoundId = null;
+			addText = '';
+		}
+		collapsingCompoundId = signalId;
+		if (collapseTimer) {
+			clearTimeout(collapseTimer);
+		}
+		collapseTimer = setTimeout(() => {
+			if (collapsingCompoundId === signalId) {
+				expandedCompoundId = null;
+				collapsingCompoundId = null;
+			}
+			collapseTimer = null;
+		}, 160);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -67,6 +149,26 @@
 			closeExpandedCompound();
 		}
 	}
+
+	$effect(() => {
+		compoundAdditions = loadCompoundPatternManualAdditions($language);
+	});
+
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		if (!expandedCompoundId) return;
+		const { body } = document;
+		const prevOverflow = body.style.overflow;
+		const prevTouchAction = body.style.touchAction;
+		body.classList.add('compound-expanded');
+		body.style.overflow = 'hidden';
+		body.style.touchAction = 'none';
+		return () => {
+			body.classList.remove('compound-expanded');
+			body.style.overflow = prevOverflow;
+			body.style.touchAction = prevTouchAction;
+		};
+	});
 
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (level) {
@@ -99,6 +201,10 @@
 		return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	}
 
+	function getAdded(signalId: string, key: CompoundPatternAdditionCategory): string[] {
+		return compoundAdditions[signalId]?.[key] ?? [];
+	}
+
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -113,7 +219,7 @@
 	{#if news.length === 0 && !loading && !error}
 		<div class="empty-state">{t($language, 'correlation.insufficient')}</div>
 	{:else if analysis}
-		<div class="correlation-content">
+		<div class="correlation-content" class:compound-expanded={!!expandedCompoundId}>
 			{#if analysis.compoundSignals.length > 0}
 				<div class="section">
 					<div class="section-title">{t($language, 'correlation.compoundSignals')}<InfoTooltip text={t($language, 'tooltip.correlation.compoundSignals')} /></div>
@@ -122,6 +228,7 @@
 							class="compound-item"
 							class:critical={signal.level === 'critical'}
 							class:expanded={expandedCompoundId === signal.id}
+							class:collapsing={collapsingCompoundId === signal.id}
 						>
 							<div class="compound-header">
 								<span class="compound-name">{signal.name}</span>
@@ -149,6 +256,20 @@
 											</svg>
 										{/if}
 									</button>
+									<button
+										type="button"
+										class="compound-add-btn"
+										onclick={() => openAddAnalysis(signal.id)}
+										aria-label={t($language, 'correlation.addAnalysis')}
+										title={t($language, 'correlation.addAnalysis')}
+									>
+										<svg viewBox="0 0 24 24" aria-hidden="true">
+											<path
+												fill="currentColor"
+												d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z"
+											/>
+										</svg>
+									</button>
 									<Badge
 										text={signal.level.toUpperCase()}
 										variant={signal.level === 'critical' ? 'danger' : 'warning'}
@@ -171,12 +292,54 @@
 									{t($language, 'correlation.viewHeadlines')}
 								</button>
 							</div>
+							{#if addCompoundId === signal.id}
+								<div class="compound-add-form">
+									<div class="compound-add-fields">
+										<div class="compound-add-field">
+											<label class="compound-add-label" for={`compound-category-${signal.id}`}>
+												{t($language, 'correlation.addCategory')}
+											</label>
+											<select
+												id={`compound-category-${signal.id}`}
+												class="compound-add-select"
+												bind:value={addCategory}
+											>
+												<option value="keyJudgments">{t($language, 'correlation.category.keyJudgments')}</option>
+												<option value="confirmationSignals">{t($language, 'correlation.category.confirmationSignals')}</option>
+												<option value="assumptions">{t($language, 'correlation.category.assumptions')}</option>
+												<option value="indicators">{t($language, 'correlation.category.indicators')}</option>
+												<option value="changeTriggers">{t($language, 'correlation.category.changeTriggers')}</option>
+											</select>
+										</div>
+										<div class="compound-add-field">
+											<label class="compound-add-label" for={`compound-text-${signal.id}`}>
+												{t($language, 'correlation.addText')}
+											</label>
+											<textarea
+												id={`compound-text-${signal.id}`}
+												class="compound-add-input"
+												rows="3"
+												bind:value={addText}
+												placeholder={t($language, 'correlation.addPlaceholder')}
+											></textarea>
+										</div>
+									</div>
+									<div class="compound-add-actions">
+										<button class="compound-add-confirm" type="button" onclick={confirmAddAnalysis}>
+											{t($language, 'correlation.confirmAdd')}
+										</button>
+										<button class="compound-add-cancel" type="button" onclick={cancelAddAnalysis}>
+											{t($language, 'correlation.cancelAdd')}
+										</button>
+									</div>
+								</div>
+							{/if}
 							{#if expandedSignals[signal.id]}
 								<div class="compound-intel">
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.keyJudgments')}</div>
 										<ul class="intel-list">
-											{#each signal.keyJudgments as judgment}
+											{#each [...signal.keyJudgments, ...getAdded(signal.id, 'keyJudgments')] as judgment}
 												<li>{judgment}</li>
 											{/each}
 										</ul>
@@ -184,7 +347,7 @@
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.confirmationSignals')}</div>
 										<div class="indicator-chips">
-											{#each signal.confirmationSignals as cs}
+											{#each [...signal.confirmationSignals, ...getAdded(signal.id, 'confirmationSignals')] as cs}
 												<span class="indicator-chip">{cs}</span>
 											{/each}
 										</div>
@@ -192,7 +355,7 @@
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.assumptions')}</div>
 										<ul class="intel-list">
-											{#each signal.assumptions as assumption}
+											{#each [...signal.assumptions, ...getAdded(signal.id, 'assumptions')] as assumption}
 												<li>{assumption}</li>
 											{/each}
 										</ul>
@@ -200,7 +363,7 @@
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.indicators')}</div>
 										<div class="indicator-chips">
-											{#each signal.indicators as indicator}
+											{#each [...signal.indicators, ...getAdded(signal.id, 'indicators')] as indicator}
 												<span class="indicator-chip">{indicator}</span>
 											{/each}
 										</div>
@@ -208,7 +371,7 @@
 									<div class="intel-block">
 										<div class="intel-heading">{t($language, 'correlation.changeTriggers')}</div>
 										<ul class="intel-list">
-											{#each signal.changeTriggers as trigger}
+											{#each [...signal.changeTriggers, ...getAdded(signal.id, 'changeTriggers')] as trigger}
 												<li>{trigger}</li>
 											{/each}
 										</ul>
@@ -349,6 +512,23 @@
 		gap: 0.75rem;
 	}
 
+	.correlation-content.compound-expanded .compound-item:not(.expanded),
+	.correlation-content.compound-expanded .pattern-item,
+	.correlation-content.compound-expanded .signal-item,
+	.correlation-content.compound-expanded .correlation-item,
+	.correlation-content.compound-expanded .predictive-item,
+	.correlation-content.compound-expanded .section-title,
+	.correlation-content.compound-expanded .empty-state {
+		opacity: 0.35;
+		filter: blur(1.2px);
+		transition: opacity 0.16s ease, filter 0.16s ease;
+	}
+
+	.correlation-content.compound-expanded .compound-item.expanded {
+		opacity: 1;
+		filter: none;
+	}
+
 	.section {
 		padding-bottom: 0.5rem;
 		border-bottom: 1px solid var(--border);
@@ -420,6 +600,30 @@
 		height: 0.75rem;
 	}
 
+	.compound-add-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.2rem;
+		height: 1.2rem;
+		background: rgba(255, 255, 255, 0.08);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 3px;
+		color: var(--text-primary);
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.compound-add-btn:hover {
+		background: rgba(255, 255, 255, 0.18);
+		border-color: var(--text-primary);
+	}
+
+	.compound-add-btn svg {
+		width: 0.75rem;
+		height: 0.75rem;
+	}
+
 	.compound-name {
 		font-size: 0.65rem;
 		font-weight: 600;
@@ -443,6 +647,77 @@
 		line-height: 1.4;
 	}
 
+	.compound-add-form {
+		margin-top: 0.35rem;
+		padding: 0.55rem;
+		border-radius: 6px;
+		background: rgba(255, 255, 255, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.compound-add-fields {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.compound-add-field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.compound-add-label {
+		font-size: 0.52rem;
+		color: var(--text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.compound-add-select,
+	.compound-add-input {
+		background: rgba(0, 0, 0, 0.35);
+		color: var(--text-primary);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 4px;
+		padding: 0.35rem 0.4rem;
+		font-size: 0.6rem;
+	}
+
+	.compound-add-input {
+		min-height: 3.2rem;
+		resize: vertical;
+	}
+
+	.compound-add-actions {
+		display: flex;
+		gap: 0.4rem;
+		justify-content: flex-end;
+	}
+
+	.compound-add-confirm,
+	.compound-add-cancel {
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		padding: 0.3rem 0.7rem;
+		font-size: 0.58rem;
+		cursor: pointer;
+	}
+
+	.compound-add-confirm {
+		background: rgba(80, 200, 120, 0.22);
+		color: var(--text-primary);
+		border-color: rgba(80, 200, 120, 0.45);
+	}
+
+	.compound-add-cancel {
+		background: rgba(255, 80, 80, 0.2);
+		color: var(--text-primary);
+		border-color: rgba(255, 80, 80, 0.45);
+	}
+
 	.compound-item.expanded {
 		position: fixed;
 		top: 50%;
@@ -452,8 +727,14 @@
 		max-height: min(85vh, 920px);
 		overflow: auto;
 		z-index: 1101;
+		background: rgba(18, 18, 18, 0.98);
+		border: 1px solid rgba(255, 165, 0, 0.35);
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 		animation: expand-pop 0.18s ease-out;
+	}
+
+	.compound-item.expanded.collapsing {
+		animation: collapse-pop 0.16s ease-in forwards;
 	}
 
 	@keyframes expand-pop {
@@ -464,6 +745,17 @@
 		to {
 			opacity: 1;
 			transform: translate(-50%, -50%) scale(1);
+		}
+	}
+
+	@keyframes collapse-pop {
+		from {
+			opacity: 1;
+			transform: translate(-50%, -50%) scale(1);
+		}
+		to {
+			opacity: 0;
+			transform: translate(-50%, -50%) scale(0.97);
 		}
 	}
 
