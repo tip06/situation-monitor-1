@@ -114,8 +114,6 @@ Unique business logic for intelligence analysis:
 - translate emerging patterns and momentum signals
 - Improve news filtering (fix keywords and freezing) (2)
 - create rss feeds from sites or social media (1)
-- improve readability on expanded intelligence (different color scheme for each item) (3)
-- translate all narratives (3)
 
 
 ## General Guidance
