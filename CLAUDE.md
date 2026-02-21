@@ -106,11 +106,17 @@ Unique business logic for intelligence analysis:
 
 ## TODO
 
-- Improve map interface
-- check out world monitor for ideas
-- investigate ways to speed up refreshes
-- alerts for economic indicators
-- make a cool loading screen
+- Improve map interface (1-2)
+- check out world monitor for ideas (1-2)
+- investigate ways to speed up refreshes (2)
+- alerts for economic indicators (2-3)
+- make a cool loading screen (2-3)
+- translate emerging patterns and momentum signals
+- Improve news filtering (fix keywords and freezing) (2)
+- create rss feeds from sites or social media (1)
+- improve readability on expanded intelligence (different color scheme for each item) (3)
+- translate all narratives (3)
+- now, let's take a look at the emerging patterns and momentum signals, under the trends and analysis tab. I noticed these features have not been translated to portuguese, as was the rest of the application. let's fix that by adding the translation to these strings.
 
 ## General Guidance
 

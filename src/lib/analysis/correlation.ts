@@ -218,10 +218,16 @@ function calculateAcceleration(velocities: number[]): number {
 	return velocities[0] - velocities[1];
 }
 
+import { t } from '$lib/i18n';
+import type { MessageKey } from '$lib/i18n/messages/en';
+
 /**
- * Format topic ID to display name
+ * Format topic ID to display name with translation support
  */
-function formatTopicName(id: string): string {
+function formatTopicName(id: string, locale: Locale): string {
+	const key = `topic.${id}` as MessageKey;
+	const translated = t(locale, key);
+	if (translated !== key) return translated;
 	return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
@@ -408,7 +414,7 @@ export function analyzeCorrelations(
 
 			results.emergingPatterns.push({
 				id: topic.id,
-				name: formatTopicName(topic.id),
+				name: formatTopicName(topic.id, locale),
 				category: topic.category,
 				count,
 				weightedCount,
@@ -425,7 +431,7 @@ export function analyzeCorrelations(
 
 			results.momentumSignals.push({
 				id: topic.id,
-				name: formatTopicName(topic.id),
+				name: formatTopicName(topic.id, locale),
 				category: topic.category,
 				current: count,
 				delta,
@@ -443,7 +449,7 @@ export function analyzeCorrelations(
 
 			results.crossSourceCorrelations.push({
 				id: topic.id,
-				name: formatTopicName(topic.id),
+				name: formatTopicName(topic.id, locale),
 				category: topic.category,
 				sourceCount: sources.length,
 				sources,
@@ -457,13 +463,13 @@ export function analyzeCorrelations(
 
 		if (score >= 15) {
 			const confidence = Math.min(95, Math.round(score * 1.5));
-			const prediction = getPrediction(topic, count);
+			const prediction = getPrediction(topic, count, locale);
 			const level: PredictiveSignal['level'] =
 				confidence >= 70 ? 'high' : confidence >= 50 ? 'medium' : 'low';
 
 			results.predictiveSignals.push({
 				id: topic.id,
-				name: formatTopicName(topic.id),
+				name: formatTopicName(topic.id, locale),
 				category: topic.category,
 				score,
 				confidence,
@@ -490,25 +496,25 @@ export function analyzeCorrelations(
 }
 
 /**
- * Generate prediction text based on topic and count
+ * Generate prediction text based on topic and count with translation support
  */
-function getPrediction(topic: CorrelationTopic, count: number): string {
+function getPrediction(topic: CorrelationTopic, count: number, locale: Locale): string {
 	if (topic.id === 'tariffs' && count >= 4) {
-		return 'Market volatility likely in next 24-48h';
+		return t(locale, 'prediction.tariffs');
 	}
 	if (topic.id === 'fed-rates') {
-		return 'Expect increased financial sector coverage';
+		return t(locale, 'prediction.fed-rates');
 	}
 	if (topic.id.includes('china') || topic.id.includes('russia')) {
-		return 'Geopolitical escalation narrative forming';
+		return t(locale, 'prediction.china-russia');
 	}
 	if (topic.id === 'layoffs') {
-		return 'Employment concerns may dominate news cycle';
+		return t(locale, 'prediction.layoffs');
 	}
 	if (topic.category === 'Conflict') {
-		return 'Breaking developments likely within hours';
+		return t(locale, 'prediction.conflict');
 	}
-	return 'Topic gaining mainstream traction';
+	return t(locale, 'prediction.default');
 }
 
 /**

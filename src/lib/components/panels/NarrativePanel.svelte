@@ -5,6 +5,7 @@
 	import type { NewsItem } from '$lib/types';
 	import { language, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n/messages/en';
 	import { toIntlLocale } from '$lib/i18n/types';
 	import { untrack } from 'svelte';
 
@@ -16,7 +17,7 @@
 
 	let { news = [], loading = false, error = null }: Props = $props();
 
-	const analysis = $derived(analyzeNarratives(news));
+	const analysis = $derived(analyzeNarratives(news, $language));
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -159,13 +160,13 @@
 								<div class="trending-indicators">
 									<span
 										class="momentum-indicator {getMomentumClass(narrative.momentum)}"
-										title={t($language, 'narrative.momentumTitle', { value: narrative.momentum })}
+										title={t($language, 'narrative.momentumTitle', { value: t($language, `level.${narrative.momentum}` as MessageKey) })}
 									>
 										{getMomentumIcon(narrative.momentum)}
 									</span>
 									<span
 										class="sentiment-indicator {getSentimentClass(narrative.sentiment)}"
-										title={t($language, 'narrative.sentimentTitle', { value: narrative.sentiment })}
+										title={t($language, 'narrative.sentimentTitle', { value: t($language, `level.${narrative.sentiment}` as MessageKey) })}
 									>
 										{getSentimentIndicator(narrative.sentiment)}
 									</span>
@@ -173,7 +174,7 @@
 							</div>
 							<div class="trending-meta">
 								<span class="mention-count">{t($language, 'narrative.mentions', { count: narrative.count })}</span>
-								<span class="category-tag">{narrative.category}</span>
+								<span class="category-tag">{t($language, `category.${narrative.category}` as MessageKey)}</span>
 							</div>
 							{#if narrative.sources.length > 0}
 								<div class="trending-sources">
@@ -195,7 +196,7 @@
 							<div class="narrative-header">
 								<span class="narrative-name">{narrative.name}</span>
 								<Badge
-									text={narrative.status.toUpperCase()}
+									text={t($language, `level.${narrative.status}` as MessageKey).toUpperCase()}
 									variant={getStatusVariant(narrative.status)}
 								/>
 							</div>
@@ -261,7 +262,7 @@
 							<div class="disinfo-header">
 								<span class="disinfo-name">{signal.name}</span>
 								<Badge
-									text={signal.severity.toUpperCase()}
+									text={t($language, `level.${signal.severity}` as MessageKey).toUpperCase()}
 									variant={getSeverityVariant(signal.severity)}
 								/>
 							</div>

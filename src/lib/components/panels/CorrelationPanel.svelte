@@ -11,6 +11,7 @@
 	import type { NewsItem } from '$lib/types';
 	import { language, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n/messages/en';
 	import { untrack } from 'svelte';
 
 	interface Props {
@@ -233,6 +234,8 @@
 	}
 
 	function formatTopicName(id: string): string {
+		const translated = t($language, `topic.${id}` as MessageKey);
+		if (translated !== `topic.${id}`) return translated;
 		return id.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	}
 
@@ -306,7 +309,7 @@
 										</svg>
 									</button>
 									<Badge
-										text={signal.level.toUpperCase()}
+										text={t($language, `level.${signal.level}` as MessageKey).toUpperCase()}
 										variant={signal.level === 'critical' ? 'danger' : 'warning'}
 									/>
 								</div>
@@ -428,7 +431,7 @@
 							<div class="pattern-header">
 								<span class="pattern-topic">{pattern.name}</span>
 								<Badge
-									text={pattern.level.toUpperCase()}
+									text={t($language, `level.${pattern.level}` as MessageKey).toUpperCase()}
 									variant={getLevelVariant(pattern.level)}
 								/>
 							</div>

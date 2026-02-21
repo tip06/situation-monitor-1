@@ -67,10 +67,17 @@ const narrativeHistory: Record<
 // Minimum mentions to show a trending narrative
 const MIN_TRENDING_MENTIONS = 2;
 
+import { t } from '$lib/i18n';
+import type { Locale } from '$lib/i18n/types';
+import type { MessageKey } from '$lib/i18n/messages/en';
+
 /**
- * Format narrative ID to display name
+ * Format narrative ID to display name with translation support
  */
-function formatNarrativeName(id: string): string {
+function formatNarrativeName(id: string, locale: Locale = 'en'): string {
+	const key = `narrative.${id}` as MessageKey;
+	const translated = t(locale, key);
+	if (translated !== key) return translated;
 	return id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -104,8 +111,7 @@ function matchesPatterns(text: string, patterns: RegExp[]): boolean {
  */
 function calculateMomentum(
 	narrativeId: string,
-	currentCount: number,
-	_now: number
+	currentCount: number
 ): 'rising' | 'stable' | 'falling' {
 	const history = narrativeHistory[narrativeId];
 	if (!history || history.counts.length < 2) {
@@ -150,7 +156,11 @@ function estimateSentiment(headlines: NewsItem[]): 'positive' | 'neutral' | 'neg
 /**
  * Analyze mainstream narrative patterns
  */
-function analyzeMainstreamNarratives(allNews: NewsItem[], now: number): TrendingNarrative[] {
+function analyzeMainstreamNarratives(
+	allNews: NewsItem[],
+	now: number,
+	locale: Locale
+): TrendingNarrative[] {
 	const results: TrendingNarrative[] = [];
 
 	for (const pattern of MAINSTREAM_NARRATIVE_PATTERNS) {
@@ -189,12 +199,12 @@ function analyzeMainstreamNarratives(allNews: NewsItem[], now: number): Trending
 			narrativeHistory[pattern.id].sources.add(source);
 		}
 
-		const momentum = calculateMomentum(pattern.id, matches.length, now);
+		const momentum = calculateMomentum(pattern.id, matches.length);
 		const sentiment = estimateSentiment(matches);
 
 		results.push({
 			id: pattern.id,
-			name: pattern.name,
+			name: formatNarrativeName(pattern.id, locale),
 			category: pattern.category,
 			region: pattern.region,
 			count: matches.length,
@@ -216,7 +226,8 @@ function analyzeMainstreamNarratives(allNews: NewsItem[], now: number): Trending
  */
 function analyzeFringeNarratives(
 	allNews: NewsItem[],
-	now: number
+	now: number,
+	locale: Locale
 ): {
 	emergingFringe: EmergingFringe[];
 	fringeToMainstream: FringeToMainstream[];
@@ -279,7 +290,7 @@ function analyzeFringeNarratives(
 		// Build narrative data
 		const narrativeData: NarrativeData = {
 			id: narrative.id,
-			name: formatNarrativeName(narrative.id),
+			name: formatNarrativeName(narrative.id, locale),
 			category: narrative.category,
 			severity: narrative.severity,
 			count: matches.length,
@@ -328,16 +339,19 @@ function analyzeFringeNarratives(
 /**
  * Analyze narratives across all news items
  */
-export function analyzeNarratives(allNews: NewsItem[]): NarrativeResults | null {
+export function analyzeNarratives(
+	allNews: NewsItem[],
+	locale: Locale = 'en'
+): NarrativeResults | null {
 	if (!allNews || allNews.length === 0) return null;
 
 	const now = Date.now();
 
 	// Analyze mainstream narratives (always active)
-	const trendingNarratives = analyzeMainstreamNarratives(allNews, now);
+	const trendingNarratives = analyzeMainstreamNarratives(allNews, now, locale);
 
 	// Analyze fringe narratives (works best with fringe sources)
-	const fringeResults = analyzeFringeNarratives(allNews, now);
+	const fringeResults = analyzeFringeNarratives(allNews, now, locale);
 
 	return {
 		trendingNarratives,
