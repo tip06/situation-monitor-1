@@ -45,27 +45,65 @@ export const CORS_PROXIES = {
 // Default export for backward compatibility
 export const CORS_PROXY_URL = CORS_PROXIES.fallback;
 
+interface ProxyFetchOptions {
+	timeoutMs?: number;
+	accept?: string;
+}
+
+async function fetchWithTimeout(url: string, options: ProxyFetchOptions): Promise<Response> {
+	const timeoutMs = options.timeoutMs ?? 30000;
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+	try {
+		return await fetch(url, {
+			signal: controller.signal,
+			headers: options.accept ? { Accept: options.accept } : undefined
+		});
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
 /**
  * Fetch with CORS proxy fallback
  * Tries primary proxy first, falls back to secondary on failure
  */
-export async function fetchWithProxy(url: string): Promise<Response> {
+export async function fetchWithProxy(url: string, options: ProxyFetchOptions = {}): Promise<Response> {
 	const encodedUrl = encodeURIComponent(url);
+	const primaryUrl = CORS_PROXIES.primary + encodedUrl;
+	const fallbackUrl = CORS_PROXIES.fallback + encodedUrl;
+	let lastResponse: Response | null = null;
+	let lastError: unknown;
 
 	// Try primary proxy first
 	try {
-		const response = await fetch(CORS_PROXIES.primary + encodedUrl);
+		const response = await fetchWithTimeout(primaryUrl, options);
+		lastResponse = response;
 		if (response.ok) {
 			return response;
 		}
 		// If we get an error response, try fallback
 		logger.warn('API', `Primary proxy failed (${response.status}), trying fallback`);
 	} catch (error) {
+		lastError = error;
 		logger.warn('API', 'Primary proxy error, trying fallback:', error);
 	}
 
 	// Fallback to secondary proxy
-	return fetch(CORS_PROXIES.fallback + encodedUrl);
+	try {
+		const response = await fetchWithTimeout(fallbackUrl, options);
+		lastResponse = response;
+		return response;
+	} catch (error) {
+		lastError = error;
+	}
+
+	if (lastResponse) {
+		return lastResponse;
+	}
+
+	throw lastError instanceof Error ? lastError : new Error('Proxy request failed');
 }
 
 /**
@@ -81,7 +119,7 @@ export const API_DELAYS = {
  */
 export const CACHE_TTLS = {
 	weather: 10 * 60 * 1000, // 10 minutes
-	news: 5 * 60 * 1000, // 5 minutes
+	news: 6 * 60 * 60 * 1000, // 6 hours
 	markets: 60 * 1000, // 1 minute
 	default: 5 * 60 * 1000 // 5 minutes
 } as const;

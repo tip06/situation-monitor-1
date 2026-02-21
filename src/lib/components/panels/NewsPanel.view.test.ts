@@ -17,4 +17,10 @@ describe('NewsPanel expansion rendering', () => {
 		expect(panelSource).toContain("event.key === 'Escape'");
 		expect(panelSource).toContain('news-panel-shell.expanded');
 	});
+
+	it('uses a direct derived items filter without nested derived indirection', () => {
+		expect(panelSource).toContain('const items = $derived.by(() => {');
+		expect(panelSource).not.toContain('const filteredItems = $derived(() => {');
+		expect(panelSource).not.toContain('const items = $derived(filteredItems())');
+	});
 });

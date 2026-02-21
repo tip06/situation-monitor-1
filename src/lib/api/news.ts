@@ -5,15 +5,24 @@
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { FEEDS } from '$lib/config/feeds';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
-import { fetchWithProxy, API_DELAYS, logger } from '$lib/config/api';
+import { fetchWithProxy, API_DELAYS, CACHE_TTLS, CORS_PROXIES, logger } from '$lib/config/api';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
 import { getEnabledSourcesForCategory } from '$lib/stores/sources';
+import { cacheManager } from '$lib/services/cache';
+import { deduplicateNews } from '$lib/utils';
+import { browser } from '$app/environment';
 
 /** Categories that use RSS feeds only (no GDELT) */
 const RSS_ONLY_CATEGORIES: NewsCategory[] = ['politics', 'brazil', 'latam', 'finance'];
 
 /** Categories that use both RSS feeds AND GDELT */
 const RSS_PLUS_GDELT_CATEGORIES: NewsCategory[] = ['intel'];
+const NEWS_SOURCE_TIMEOUT_MS = 30000;
+const NEWS_CATEGORY_CONCURRENCY = 3;
+const NEWS_CACHE_TTL_MS = CACHE_TTLS.news;
+const NEWS_MAX_AGE_DAYS = 7;
+const EDGE_RESPONSE_TIMEOUT_MS = 12000;
+const NEWS_CHECKPOINTS_STORAGE_KEY = 'newsCheckpoints';
 
 /**
  * Simple hash function to generate unique IDs from URLs
@@ -26,6 +35,97 @@ function hashCode(str: string): string {
 		hash = hash & hash; // Convert to 32bit integer
 	}
 	return Math.abs(hash).toString(36);
+}
+
+interface FetchCategoryNewsOptions {
+	timeoutMs?: number;
+}
+
+type NewsCheckpointMap = Partial<Record<NewsCategory, number>>;
+
+export interface RefreshAllNewsProgressiveOptions {
+	timeoutMs?: number;
+	categoryConcurrency?: number;
+	categories?: NewsCategory[];
+	preferEdge?: boolean;
+	sinceByCategory?: NewsCheckpointMap;
+	onCachedCategory?: (
+		category: NewsCategory,
+		items: NewsItem[],
+		meta: { stale: boolean; source: 'memory' | 'storage' }
+	) => void;
+	onFreshCategory?: (category: NewsCategory, items: NewsItem[]) => void;
+	onCategoryError?: (category: NewsCategory, error: unknown) => void;
+	onCheckpointUpdate?: (category: NewsCategory, checkpoint: number) => void;
+}
+
+interface EdgeSnapshotResponse {
+	categories?: Partial<Record<NewsCategory, NewsItem[]>>;
+	checkpoints?: NewsCheckpointMap;
+}
+
+function getCategorySourceSignature(category: NewsCategory): string {
+	const enabledSources = getEnabledSourcesForCategory(category)
+		.map((source) => `${source.name}|${source.url}`)
+		.sort();
+	return hashCode(enabledSources.join('::'));
+}
+
+function getCategoryCacheKey(category: NewsCategory, sourceSignature: string): string {
+	return `news:${category}:${sourceSignature}`;
+}
+
+function getEdgeAggregatorBaseUrl(): string {
+	return CORS_PROXIES.primary.split('?')[0].replace(/\/$/, '');
+}
+
+function getStoredCheckpoints(): NewsCheckpointMap {
+	if (!browser) return {};
+	try {
+		const raw = localStorage.getItem(NEWS_CHECKPOINTS_STORAGE_KEY);
+		return raw ? (JSON.parse(raw) as NewsCheckpointMap) : {};
+	} catch {
+		return {};
+	}
+}
+
+function setStoredCheckpoints(checkpoints: NewsCheckpointMap): void {
+	if (!browser) return;
+	try {
+		localStorage.setItem(NEWS_CHECKPOINTS_STORAGE_KEY, JSON.stringify(checkpoints));
+	} catch {
+		// Ignore storage write errors
+	}
+}
+
+function mergeNewsItems(existing: NewsItem[], incoming: NewsItem[]): NewsItem[] {
+	const merged = deduplicateNews([...incoming, ...existing]);
+	return filterByAge(merged, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp);
+}
+
+async function fetchEdgeNewsSnapshot(
+	categories: NewsCategory[],
+	sinceByCategory: NewsCheckpointMap
+): Promise<EdgeSnapshotResponse> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), EDGE_RESPONSE_TIMEOUT_MS);
+
+	try {
+		const response = await fetch(`${getEdgeAggregatorBaseUrl()}/news/snapshot`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ categories, sinceByCategory }),
+			signal: controller.signal
+		});
+
+		if (!response.ok) {
+			throw new Error(`Edge snapshot request failed: ${response.status}`);
+		}
+
+		return (await response.json()) as EdgeSnapshotResponse;
+	} finally {
+		clearTimeout(timeoutId);
+	}
 }
 
 /**
@@ -139,11 +239,15 @@ function parseRssFeed(xml: string, sourceName: string, category: NewsCategory): 
 async function fetchRssFeed(
 	url: string,
 	sourceName: string,
-	category: NewsCategory
+	category: NewsCategory,
+	timeoutMs: number
 ): Promise<NewsItem[]> {
 	try {
 		logger.log('RSS', `Fetching ${sourceName}`);
-		const response = await fetchWithProxy(url);
+		const response = await fetchWithProxy(url, {
+			timeoutMs,
+			accept: 'application/rss+xml, application/xml, text/xml, */*'
+		});
 
 		if (!response.ok) {
 			logger.warn('RSS', `Failed to fetch ${sourceName}: ${response.status}`);
@@ -161,7 +265,11 @@ async function fetchRssFeed(
 /**
  * Fetch news from RSS feeds for a category
  */
-async function fetchRssNews(category: NewsCategory): Promise<NewsItem[]> {
+async function fetchRssNews(
+	category: NewsCategory,
+	options: FetchCategoryNewsOptions = {}
+): Promise<NewsItem[]> {
+	const timeoutMs = options.timeoutMs ?? NEWS_SOURCE_TIMEOUT_MS;
 	const feeds = getEnabledSourcesForCategory(category);
 	if (feeds.length === 0) {
 		if ((FEEDS[category] || []).length > 0) {
@@ -176,7 +284,7 @@ async function fetchRssNews(category: NewsCategory): Promise<NewsItem[]> {
 
 	// Fetch all feeds in parallel
 	const results = await Promise.all(
-		feeds.map((feed) => fetchRssFeed(feed.url, feed.name, category))
+		feeds.map((feed) => fetchRssFeed(feed.url, feed.name, category, timeoutMs))
 	);
 
 	// Combine all items and sort by timestamp (newest first)
@@ -266,8 +374,12 @@ const GDELT_QUERIES: Record<NewsCategory, string> = {
 /**
  * Fetch news from GDELT for a category
  */
-async function fetchGdeltNews(category: NewsCategory): Promise<NewsItem[]> {
+async function fetchGdeltNews(
+	category: NewsCategory,
+	options: FetchCategoryNewsOptions = {}
+): Promise<NewsItem[]> {
 	try {
+		const timeoutMs = options.timeoutMs ?? NEWS_SOURCE_TIMEOUT_MS;
 		const baseQuery = GDELT_QUERIES[category];
 		const fullQuery = `${baseQuery} sourcelang:english`;
 
@@ -277,7 +389,7 @@ async function fetchGdeltNews(category: NewsCategory): Promise<NewsItem[]> {
 
 		logger.log('GDELT', `Fetching ${category}`);
 
-		const response = await fetchWithProxy(gdeltUrl);
+		const response = await fetchWithProxy(gdeltUrl, { timeoutMs, accept: 'application/json' });
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 		}
@@ -322,19 +434,22 @@ function filterByAge(items: NewsItem[], maxAgeDays: number): NewsItem[] {
  * Fetch news for a specific category
  * Uses RSS feeds, GDELT, or both depending on category configuration
  */
-export async function fetchCategoryNews(category: NewsCategory): Promise<NewsItem[]> {
+export async function fetchCategoryNews(
+	category: NewsCategory,
+	options: FetchCategoryNewsOptions = {}
+): Promise<NewsItem[]> {
 	// RSS only categories
 	if (RSS_ONLY_CATEGORIES.includes(category)) {
-		const items = await fetchRssNews(category);
-		return filterByAge(items, 7).sort((a, b) => b.timestamp - a.timestamp);
+		const items = await fetchRssNews(category, options);
+		return filterByAge(items, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp);
 	}
 
 	// RSS + GDELT categories
 	if (RSS_PLUS_GDELT_CATEGORIES.includes(category)) {
 		// Fetch both in parallel
 		const [rssItems, gdeltItems] = await Promise.all([
-			fetchRssNews(category),
-			fetchGdeltNews(category)
+			fetchRssNews(category, options),
+			fetchGdeltNews(category, options)
 		]);
 
 		// Combine, filter by age, and sort
@@ -344,12 +459,12 @@ export async function fetchCategoryNews(category: NewsCategory): Promise<NewsIte
 			`${category}: ${rssItems.length} RSS + ${gdeltItems.length} GDELT = ${allItems.length} total`
 		);
 
-		return filterByAge(allItems, 7).sort((a, b) => b.timestamp - a.timestamp);
+		return filterByAge(allItems, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp);
 	}
 
 	// GDELT only (default)
-	const items = await fetchGdeltNews(category);
-	return filterByAge(items, 7).sort((a, b) => b.timestamp - a.timestamp);
+	const items = await fetchGdeltNews(category, options);
+	return filterByAge(items, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp);
 }
 
 /** All news categories in fetch order */
@@ -385,6 +500,116 @@ function createEmptyNewsResult(): Record<NewsCategory, NewsItem[]> {
 	};
 }
 
+function getCachedCategoryNews(
+	category: NewsCategory,
+	sourceSignature: string
+): { items: NewsItem[]; stale: boolean; source: 'memory' | 'storage' } | null {
+	const key = getCategoryCacheKey(category, sourceSignature);
+	const cached = cacheManager.get<NewsItem[]>(key);
+	if (!cached) return null;
+	return {
+		items: cached.data,
+		stale: cached.isStale,
+		source: cached.fromCache
+	};
+}
+
+function setCachedCategoryNews(
+	category: NewsCategory,
+	sourceSignature: string,
+	items: NewsItem[]
+): void {
+	const key = getCategoryCacheKey(category, sourceSignature);
+	cacheManager.set(key, items, NEWS_CACHE_TTL_MS);
+}
+
+/**
+ * Refresh all news with cache-first hydration and progressive background updates.
+ */
+export async function refreshAllNewsProgressive(
+	options: RefreshAllNewsProgressiveOptions = {}
+): Promise<Record<NewsCategory, NewsItem[]>> {
+	const timeoutMs = options.timeoutMs ?? NEWS_SOURCE_TIMEOUT_MS;
+	const categoryConcurrency = Math.max(1, options.categoryConcurrency ?? NEWS_CATEGORY_CONCURRENCY);
+	const targetCategories = options.categories?.length ? options.categories : NEWS_CATEGORIES;
+	const result = createEmptyNewsResult();
+	const sourceSignatures = new Map<NewsCategory, string>();
+
+	// Hydrate from cache first for instant paint.
+	for (const category of targetCategories) {
+		const sourceSignature = getCategorySourceSignature(category);
+		sourceSignatures.set(category, sourceSignature);
+		const cached = getCachedCategoryNews(category, sourceSignature);
+		if (!cached) continue;
+		result[category] = cached.items;
+		options.onCachedCategory?.(category, cached.items, {
+			stale: cached.stale,
+			source: cached.source
+		});
+	}
+
+	// Prefer edge aggregator delta snapshot first.
+	if (options.preferEdge !== false) {
+		const storedCheckpoints = getStoredCheckpoints();
+		const sinceByCategory = { ...storedCheckpoints, ...(options.sinceByCategory ?? {}) };
+		try {
+			const edgeData = await fetchEdgeNewsSnapshot(targetCategories, sinceByCategory);
+			const nextCheckpoints = { ...storedCheckpoints };
+
+			for (const category of targetCategories) {
+				const incoming = edgeData.categories?.[category] ?? [];
+				const merged = mergeNewsItems(result[category], incoming);
+				result[category] = merged;
+				setCachedCategoryNews(category, sourceSignatures.get(category) ?? 'default', merged);
+				options.onFreshCategory?.(category, merged);
+
+				const checkpoint = edgeData.checkpoints?.[category];
+				if (typeof checkpoint === 'number' && Number.isFinite(checkpoint)) {
+					nextCheckpoints[category] = checkpoint;
+					options.onCheckpointUpdate?.(category, checkpoint);
+				} else if (merged.length > 0) {
+					const inferred = merged[0].timestamp;
+					nextCheckpoints[category] = inferred;
+					options.onCheckpointUpdate?.(category, inferred);
+				}
+			}
+
+			setStoredCheckpoints(nextCheckpoints);
+			return result;
+		} catch (error) {
+			logger.warn('News API', 'Edge snapshot failed, falling back to direct fetch:', error);
+		}
+	}
+
+	let index = 0;
+	const fallbackCheckpoints = getStoredCheckpoints();
+	const workers = Array.from({ length: Math.min(categoryConcurrency, targetCategories.length) }, () =>
+		(async () => {
+			while (index < targetCategories.length) {
+				const category = targetCategories[index++];
+				try {
+					const items = await fetchCategoryNews(category, { timeoutMs });
+					const merged = mergeNewsItems(result[category], items);
+					result[category] = merged;
+					setCachedCategoryNews(category, sourceSignatures.get(category) ?? 'default', merged);
+					options.onFreshCategory?.(category, merged);
+					if (merged.length > 0) {
+						const checkpoint = merged[0].timestamp;
+						fallbackCheckpoints[category] = checkpoint;
+						options.onCheckpointUpdate?.(category, checkpoint);
+					}
+				} catch (error) {
+					options.onCategoryError?.(category, error);
+				}
+			}
+		})()
+	);
+
+	await Promise.all(workers);
+	setStoredCheckpoints(fallbackCheckpoints);
+	return result;
+}
+
 /**
  * Fetch all news - sequential with delays to avoid rate limiting
  */
@@ -398,7 +623,7 @@ export async function fetchAllNews(): Promise<Record<NewsCategory, NewsItem[]>> 
 			await delay(API_DELAYS.betweenCategories);
 		}
 
-		result[category] = await fetchCategoryNews(category);
+		result[category] = await fetchCategoryNews(category, { timeoutMs: NEWS_SOURCE_TIMEOUT_MS });
 	}
 
 	return result;

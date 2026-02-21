@@ -31,10 +31,10 @@
 	} from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import { filterNews } from '$lib/utils';
-	import { fetchAllNews, fetchAllMarkets, fetchPolymarket } from '$lib/api';
+	import { refreshAllNewsProgressive, fetchAllMarkets, fetchPolymarket } from '$lib/api';
 	import type { Prediction } from '$lib/api';
-	import type { CustomMonitor } from '$lib/types';
-	import type { PanelId } from '$lib/config';
+	import type { CustomMonitor, NewsCategory } from '$lib/types';
+	import { getTabPanels, type PanelId, type TabId } from '$lib/config';
 	import { detectAlerts } from '$lib/alerts/engine';
 	import { alertPopups } from '$lib/stores/alertPopups';
 
@@ -47,28 +47,67 @@
 	// Misc panel data
 	let predictions = $state<Prediction[]>([]);
 
+	const NEWS_REFRESH_CATEGORIES: NewsCategory[] = [
+		'politics',
+		'tech',
+		'finance',
+		'gov',
+		'ai',
+		'intel',
+		'brazil',
+		'latam',
+		'iran',
+		'venezuela',
+		'greenland'
+	];
+	const PANEL_TO_NEWS_CATEGORY: Partial<Record<PanelId, NewsCategory>> = {
+		politics: 'politics',
+		tech: 'tech',
+		finance: 'finance',
+		gov: 'gov',
+		ai: 'ai',
+		intel: 'intel',
+		brazil: 'brazil',
+		latam: 'latam',
+		iran: 'iran',
+		venezuela: 'venezuela',
+		greenland: 'greenland'
+	};
+
+	function getVisibleNewsCategories(tabId: TabId): NewsCategory[] {
+		const enabledSettings = get(settings).enabled;
+		const tabPanels = getTabPanels(tabId);
+		const visibleCategories = tabPanels
+			.filter((panelId) => enabledSettings[panelId] !== false)
+			.map((panelId) => PANEL_TO_NEWS_CATEGORY[panelId])
+			.filter((category): category is NewsCategory => !!category);
+		return [...new Set(visibleCategories)];
+	}
+
+	function getRemainingNewsCategories(visibleCategories: NewsCategory[]): NewsCategory[] {
+		const visibleSet = new Set(visibleCategories);
+		return NEWS_REFRESH_CATEGORIES.filter((category) => !visibleSet.has(category));
+	}
+
 	// Data fetching
-	async function loadNews() {
-		// Set loading for all categories
-		const categories = [
-			'politics',
-			'tech',
-			'finance',
-			'gov',
-			'ai',
-			'intel',
-			'brazil',
-			'latam',
-			'iran',
-			'venezuela',
-			'greenland'
-		] as const;
+	async function loadNews(categories: NewsCategory[]) {
 		categories.forEach((cat) => news.setLoading(cat, true));
 
 		try {
-			const data = await fetchAllNews();
-			Object.entries(data).forEach(([category, items]) => {
-				news.setItems(category as keyof typeof data, items);
+			await refreshAllNewsProgressive({
+				timeoutMs: 30000,
+				categoryConcurrency: 3,
+				categories,
+				preferEdge: true,
+				onCachedCategory: (category, items) => {
+					news.setItems(category, items);
+				},
+				onFreshCategory: (category, items) => {
+					news.setItems(category, items);
+				},
+				onCategoryError: (category, error) => {
+					news.setError(category, String(error));
+				}
 			});
 		} catch (error) {
 			categories.forEach((cat) => news.setError(cat, String(error)));
@@ -99,7 +138,12 @@
 	async function handleRefresh() {
 		refresh.startRefresh();
 		try {
-			await Promise.all([loadNews(), loadMarkets()]);
+			const visibleCategories = getVisibleNewsCategories($activeTab);
+			const remainingCategories = getRemainingNewsCategories(visibleCategories);
+			await Promise.all([loadNews(visibleCategories), loadMarkets()]);
+			if (remainingCategories.length > 0) {
+				void loadNews(remainingCategories);
+			}
 			runAlertDetection();
 			refresh.endRefresh();
 		} catch (error) {
@@ -182,7 +226,12 @@
 		async function initialLoad() {
 			refresh.startRefresh();
 			try {
-				await Promise.all([loadNews(), loadMarkets(), loadMiscData()]);
+				const visibleCategories = getVisibleNewsCategories($activeTab);
+				const remainingCategories = getRemainingNewsCategories(visibleCategories);
+				await Promise.all([loadNews(visibleCategories), loadMarkets(), loadMiscData()]);
+				if (remainingCategories.length > 0) {
+					void loadNews(remainingCategories);
+				}
 				runAlertDetection();
 				refresh.endRefresh();
 			} catch (error) {

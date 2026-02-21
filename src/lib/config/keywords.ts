@@ -134,13 +134,43 @@ export const TOPIC_KEYWORDS: Record<string, string[]> = {
 	]
 };
 
+interface CompiledKeyword {
+	keyword: string;
+	pattern: RegExp;
+}
+
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildKeywordPattern(keyword: string): RegExp {
+	const normalized = keyword.trim();
+	const escaped = escapeRegex(normalized).replace(/\s+/g, '\\s+');
+	const boundary = '[\\p{L}\\p{N}_]';
+	return new RegExp(`(?<!${boundary})${escaped}(?!${boundary})`, 'iu');
+}
+
+function compileKeywords(keywords: readonly string[]): CompiledKeyword[] {
+	return keywords.map((keyword) => ({
+		keyword,
+		pattern: buildKeywordPattern(keyword)
+	}));
+}
+
+const COMPILED_ALERT_KEYWORDS = compileKeywords(ALERT_KEYWORDS);
+const COMPILED_REGION_KEYWORDS = Object.fromEntries(
+	Object.entries(REGION_KEYWORDS).map(([region, keywords]) => [region, compileKeywords(keywords)])
+) as Record<string, CompiledKeyword[]>;
+const COMPILED_TOPIC_KEYWORDS = Object.fromEntries(
+	Object.entries(TOPIC_KEYWORDS).map(([topic, keywords]) => [topic, compileKeywords(keywords)])
+) as Record<string, CompiledKeyword[]>;
+
 /**
  * Check if a headline contains alert keywords
  */
 export function containsAlertKeyword(text: string): { isAlert: boolean; keyword?: string } {
-	const lowerText = text.toLowerCase();
-	for (const keyword of ALERT_KEYWORDS) {
-		if (lowerText.includes(keyword)) {
+	for (const { keyword, pattern } of COMPILED_ALERT_KEYWORDS) {
+		if (pattern.test(text)) {
 			return { isAlert: true, keyword };
 		}
 	}
@@ -151,9 +181,8 @@ export function containsAlertKeyword(text: string): { isAlert: boolean; keyword?
  * Detect region from text
  */
 export function detectRegion(text: string): string | null {
-	const lowerText = text.toLowerCase();
-	for (const [region, keywords] of Object.entries(REGION_KEYWORDS)) {
-		if (keywords.some((k) => lowerText.includes(k))) {
+	for (const [region, keywords] of Object.entries(COMPILED_REGION_KEYWORDS)) {
+		if (keywords.some(({ pattern }) => pattern.test(text))) {
 			return region;
 		}
 	}
@@ -164,10 +193,9 @@ export function detectRegion(text: string): string | null {
  * Detect topics from text
  */
 export function detectTopics(text: string): string[] {
-	const lowerText = text.toLowerCase();
 	const detected: string[] = [];
-	for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-		if (keywords.some((k) => lowerText.includes(k))) {
+	for (const [topic, keywords] of Object.entries(COMPILED_TOPIC_KEYWORDS)) {
+		if (keywords.some(({ pattern }) => pattern.test(text))) {
 			detected.push(topic);
 		}
 	}

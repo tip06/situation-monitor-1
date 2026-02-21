@@ -78,6 +78,36 @@ describe('News Store', () => {
 		expect(state.categories.tech.items[0].isAlert).toBe(false);
 	});
 
+	it('should avoid false conflict topic matches and still detect real conflict topics', async () => {
+		const { news } = await import('./news');
+
+		news.setItems('tech', [
+			{
+				id: 'tech-1',
+				title: 'Microsoft announces software update for Windows',
+				source: 'TechCrunch',
+				link: 'https://example.com/tech-1',
+				timestamp: Date.now(),
+				category: 'tech' as const
+			}
+		]);
+
+		news.setItems('politics', [
+			{
+				id: 'politics-1',
+				title: 'Ukraine war escalates with missile strike',
+				source: 'BBC',
+				link: 'https://example.com/politics-1',
+				timestamp: Date.now(),
+				category: 'politics' as const
+			}
+		]);
+
+		const state = get(news);
+		expect(state.categories.tech.items[0].topics ?? []).not.toContain('CONFLICT');
+		expect(state.categories.politics.items[0].topics ?? []).toContain('CONFLICT');
+	});
+
 	it('should set loading state', async () => {
 		const { news, politicsNews } = await import('./news');
 

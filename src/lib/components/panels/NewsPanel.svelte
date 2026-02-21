@@ -73,7 +73,7 @@
 	);
 
 	// Filtered items: text AND region AND topic
-	const filteredItems = $derived(() => {
+	const items = $derived.by(() => {
 		let result = allItems;
 
 		// Text search (case-insensitive on title + description)
@@ -99,8 +99,6 @@
 
 		return result;
 	});
-
-	const items = $derived(filteredItems());
 	const count = $derived(items.length);
 
 	const hasActiveFilters = $derived(
