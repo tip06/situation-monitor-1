@@ -319,6 +319,7 @@
 							</div>
 							<div class="compound-actions">
 								<button class="compound-action-btn" onclick={() => toggleCompoundDetails(signal.id)}>
+									<span class="btn-icon">{expandedSignals[signal.id] ? '◈' : '◇'}</span>
 									{expandedSignals[signal.id]
 										? t($language, 'correlation.hideIntelligence')
 										: t($language, 'correlation.showIntelligence')}
@@ -375,7 +376,10 @@
 							{#if expandedSignals[signal.id]}
 								<div class="compound-intel">
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.keyJudgments')}</div>
+										<div class="intel-heading">
+											<span class="intel-icon">🧠</span>
+											{t($language, 'correlation.keyJudgments')}
+										</div>
 										<ul class="intel-list">
 											{#each [...signal.keyJudgments, ...getAdded(signal.id, 'keyJudgments')] as judgment}
 												<li>{judgment}</li>
@@ -383,7 +387,10 @@
 										</ul>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.confirmationSignals')}</div>
+										<div class="intel-heading">
+											<span class="intel-icon">📡</span>
+											{t($language, 'correlation.confirmationSignals')}
+										</div>
 										<div class="indicator-chips">
 											{#each [...signal.confirmationSignals, ...getAdded(signal.id, 'confirmationSignals')] as cs}
 												<span class="indicator-chip">{cs}</span>
@@ -391,7 +398,10 @@
 										</div>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.assumptions')}</div>
+										<div class="intel-heading">
+											<span class="intel-icon">🔍</span>
+											{t($language, 'correlation.assumptions')}
+										</div>
 										<ul class="intel-list">
 											{#each [...signal.assumptions, ...getAdded(signal.id, 'assumptions')] as assumption}
 												<li>{assumption}</li>
@@ -399,7 +409,10 @@
 										</ul>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.indicators')}</div>
+										<div class="intel-heading">
+											<span class="intel-icon">📊</span>
+											{t($language, 'correlation.indicators')}
+										</div>
 										<div class="indicator-chips">
 											{#each [...signal.indicators, ...getAdded(signal.id, 'indicators')] as indicator}
 												<span class="indicator-chip">{indicator}</span>
@@ -407,7 +420,10 @@
 										</div>
 									</div>
 									<div class="intel-block">
-										<div class="intel-heading">{t($language, 'correlation.changeTriggers')}</div>
+										<div class="intel-heading">
+											<span class="intel-icon">⚡</span>
+											{t($language, 'correlation.changeTriggers')}
+										</div>
 										<ul class="intel-list">
 											{#each [...signal.changeTriggers, ...getAdded(signal.id, 'changeTriggers')] as trigger}
 												<li>{trigger}</li>
@@ -580,25 +596,34 @@
 	.section-title {
 		display: flex;
 		align-items: center;
-		font-size: 0.6rem;
-		font-weight: 600;
+		font-size: 0.72rem;
+		font-weight: 700;
 		color: var(--accent);
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: 0.4rem;
+		letter-spacing: 0.08em;
+		margin-bottom: 0.6rem;
+		opacity: 0.9;
 	}
 
 	.compound-item {
-		padding: 0.4rem;
-		margin: 0.25rem 0;
-		border-radius: 4px;
-		background: rgba(255, 165, 0, 0.05);
-		border-left: 2px solid var(--warning);
+		padding: 0.6rem;
+		margin: 0.5rem 0;
+		border-radius: 8px;
+		background: rgba(15, 23, 42, 0.3);
+		border: 1px solid rgba(255, 255, 255, 0.05);
+		border-left: 3px solid var(--warning);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.compound-item:hover {
+		background: rgba(15, 23, 42, 0.45);
+		border-color: rgba(255, 255, 255, 0.1);
 	}
 
 	.compound-item.critical {
-		background: rgba(255, 100, 100, 0.08);
+		background: rgba(69, 10, 10, 0.15);
 		border-left-color: var(--danger);
+		border-right: 1px solid rgba(239, 68, 68, 0.1);
 	}
 
 	.compound-header {
@@ -663,26 +688,30 @@
 	}
 
 	.compound-name {
-		font-size: 0.65rem;
+		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--text-primary);
 	}
 
 	.compound-topics {
-		font-size: 0.55rem;
+		font-size: 0.65rem;
 		color: var(--text-secondary);
-		margin-bottom: 0.15rem;
+		margin-bottom: 0.2rem;
 	}
 
 	.compound-intel {
-		margin-top: 0.35rem;
-		padding: 0.45rem;
-		border-radius: 4px;
-		background: rgba(255, 165, 0, 0.1);
-		border: 1px solid rgba(255, 165, 0, 0.2);
-		font-size: 0.56rem;
-		color: var(--warning);
-		line-height: 1.4;
+		margin-top: 0.6rem;
+		padding: 0.65rem;
+		border-radius: 6px;
+		background: rgba(15, 23, 42, 0.4);
+		border: 1px solid rgba(99, 102, 241, 0.15);
+		font-size: 0.64rem;
+		color: var(--text-primary);
+		line-height: 1.5;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3);
 	}
 
 	.compound-add-form {
@@ -818,133 +847,168 @@
 	}
 
 	.intel-block {
-		margin-bottom: 0.45rem;
-	}
-
-	.intel-block:last-child {
-		margin-bottom: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
 	}
 
 	.intel-heading {
-		font-size: 0.5rem;
+		font-size: 0.54rem;
 		text-transform: uppercase;
-		letter-spacing: 0.12em;
-		color: var(--text-secondary);
-		margin-bottom: 0.22rem;
+		letter-spacing: 0.08em;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin-bottom: 0.1rem;
 	}
+
+	.intel-icon {
+		font-size: 0.75rem;
+		filter: saturate(0.8) contrast(1.2);
+	}
+
+	/* Specific highlights for intel categories */
+	.intel-block:nth-child(1) .intel-heading { color: #818cf8; } /* Indigo */
+	.intel-block:nth-child(2) .intel-heading { color: #34d399; } /* Emerald */
+	.intel-block:nth-child(3) .intel-heading { color: #a78bfa; } /* Violet */
+	.intel-block:nth-child(4) .intel-heading { color: #fbbf24; } /* Amber */
+	.intel-block:nth-child(5) .intel-heading { color: #f87171; } /* Rose */
 
 	.intel-list {
 		margin: 0;
-		padding-left: 1rem;
-		color: var(--text-primary);
+		padding: 0;
+		list-style: none;
+		color: var(--text-secondary);
 	}
 
 	.intel-list li {
-		margin-bottom: 0.15rem;
+		position: relative;
+		padding-left: 0.8rem;
+		margin-bottom: 0.3rem;
 	}
 
-	.intel-list li:last-child {
-		margin-bottom: 0;
+	.intel-list li::before {
+		content: '•';
+		position: absolute;
+		left: 0;
+		color: rgba(255, 255, 255, 0.3);
 	}
 
 	.indicator-chips {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.25rem;
+		gap: 0.4rem;
 	}
 
-	.indicator-chip {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.12rem 0.45rem;
-		border-radius: 999px;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		background: rgba(255, 255, 255, 0.05);
+	.indicator-chip:hover {
+		background: rgba(255, 255, 255, 0.07);
+		border-color: rgba(255, 255, 255, 0.15);
 		color: var(--text-primary);
-		font-size: 0.54rem;
 	}
 
 	.compound-actions {
 		display: flex;
-		gap: 0.35rem;
-		margin-top: 0.3rem;
+		gap: 0.5rem;
+		margin-top: 0.4rem;
 	}
 
 	.compound-action-btn {
-		border: 1px solid var(--warning);
-		background: rgba(255, 165, 0, 0.08);
-		color: var(--warning);
-		font-size: 0.53rem;
-		padding: 0.2rem 0.35rem;
-		border-radius: 3px;
+		border: 1px solid rgba(99, 102, 241, 0.3);
+		background: rgba(99, 102, 241, 0.05);
+		color: #a5b4fc;
+		font-size: 0.58rem;
+		padding: 0.3rem 0.6rem;
+		border-radius: 4px;
 		cursor: pointer;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		transition: all 0.2s ease;
 	}
 
 	.compound-action-btn:hover {
-		background: rgba(255, 165, 0, 0.14);
+		background: rgba(99, 102, 241, 0.12);
+		border-color: rgba(99, 102, 241, 0.5);
+		transform: translateY(-1px);
+	}
+
+	.btn-icon {
+		font-size: 0.75rem;
+		line-height: 1;
+		color: #818cf8;
 	}
 
 	.compound-action-btn.secondary {
-		border-color: var(--text-secondary);
+		border-color: rgba(255, 255, 255, 0.12);
 		background: rgba(255, 255, 255, 0.03);
-		color: var(--text-secondary);
+		color: var(--text-muted);
+	}
+
+	.compound-action-btn.secondary:hover {
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.2);
+		color: var(--text-primary);
 	}
 
 	:global(html[data-theme='light']) .compound-action-btn {
-		border-color: #b45309;
-		background: #f59e0b;
-		color: #3b1f00;
+		border-color: #6366f1;
+		background: #eef2ff;
+		color: #4338ca;
 	}
 
 	:global(html[data-theme='light']) .compound-action-btn:hover {
-		background: #d97706;
-		color: #fff7ed;
+		background: #e0e7ff;
 	}
 
 	:global(html[data-theme='light']) .compound-intel {
-		background: #fef3c7;
-		border-color: #d97706;
-		color: #7c2d12;
+		background: #f8fafc;
+		border-color: #e2e8f0;
+		color: #334155;
+		box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
 	}
 
 	:global(html[data-theme='light']) .intel-heading {
-		color: #7c2d12;
+		color: #475569;
 	}
 
 	:global(html[data-theme='light']) .indicator-chip {
-		border-color: #d97706;
-		background: #fde68a;
-		color: #7c2d12;
+		border-color: #cbd5e1;
+		background: #f1f5f9;
+		color: #475569;
 	}
 
 	.pattern-item {
-		padding: 0.3rem 0;
+		padding: 0.4rem 0;
 	}
 
 	.pattern-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.2rem;
+		margin-bottom: 0.25rem;
 	}
 
 	.pattern-topic {
-		font-size: 0.65rem;
+		font-size: 0.75rem;
 		font-weight: 500;
 		color: var(--text-primary);
 	}
 
 	.pattern-sources {
-		font-size: 0.55rem;
+		font-size: 0.65rem;
 		color: var(--text-muted);
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
+		gap: 0.5rem;
 	}
 
 	.z-score {
-		font-size: 0.5rem;
-		padding: 0.1rem 0.25rem;
+		font-size: 0.55rem;
+		padding: 0.12rem 0.3rem;
 		border-radius: 3px;
 		background: rgba(68, 255, 136, 0.1);
 		color: var(--success);
@@ -959,8 +1023,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.25rem 0.4rem;
-		margin: 0.2rem 0;
+		padding: 0.4rem 0.6rem;
+		margin: 0.3rem 0;
 		border-radius: 4px;
 		background: rgba(255, 255, 255, 0.02);
 	}
@@ -976,16 +1040,16 @@
 	}
 
 	.signal-topic {
-		font-size: 0.6rem;
+		font-size: 0.72rem;
 		color: var(--text-primary);
 	}
 
 	.signal-direction {
-		font-size: 0.6rem;
+		font-size: 0.72rem;
 		font-weight: 600;
 		display: flex;
 		align-items: center;
-		gap: 0.2rem;
+		gap: 0.3rem;
 	}
 
 	.signal-direction.up {
@@ -997,40 +1061,40 @@
 	}
 
 	.velocity-indicator {
-		font-size: 0.55rem;
+		font-size: 0.65rem;
 	}
 
 	.accel-indicator {
-		font-size: 0.5rem;
+		font-size: 0.6rem;
 		color: var(--warning);
 		font-weight: 700;
 	}
 
 	.correlation-item {
-		padding: 0.25rem 0;
+		padding: 0.4rem 0;
 	}
 
 	.correlation-sources {
-		font-size: 0.6rem;
+		font-size: 0.7rem;
 		color: var(--text-secondary);
 	}
 
 	.correlation-topic {
-		font-size: 0.55rem;
+		font-size: 0.65rem;
 		color: var(--text-muted);
 	}
 
 	.predictive-item {
-		padding: 0.3rem 0;
+		padding: 0.45rem 0;
 	}
 
 	.predictive-pattern {
-		font-size: 0.6rem;
+		font-size: 0.72rem;
 		color: var(--text-primary);
 	}
 
 	.predictive-confidence {
-		font-size: 0.55rem;
+		font-size: 0.65rem;
 		color: var(--text-muted);
 	}
 

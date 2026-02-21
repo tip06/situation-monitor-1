@@ -116,7 +116,7 @@ Unique business logic for intelligence analysis:
 - create rss feeds from sites or social media (1)
 - improve readability on expanded intelligence (different color scheme for each item) (3)
 - translate all narratives (3)
-- now, let's take a look at the emerging patterns and momentum signals, under the trends and analysis tab. I noticed these features have not been translated to portuguese, as was the rest of the application. let's fix that by adding the translation to these strings.
+
 
 ## General Guidance
 
