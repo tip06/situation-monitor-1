@@ -14,6 +14,7 @@
 		if (item.panelId && item.sourceId) {
 			alertNavigation.navigate(item.panelId, item.sourceId);
 		}
+		alertPopups.dismiss(item.id);
 	}
 
 	function handleDismiss(event: MouseEvent, id: string) {
@@ -54,6 +55,9 @@
 						{item.detail}
 					</div>
 				{/if}
+				<div class="alert-progress-bg">
+					<div class="alert-progress-bar"></div>
+				</div>
 			</div>
 		{/each}
 	</div>
@@ -80,6 +84,8 @@
 		box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
 		cursor: pointer;
 		transition: transform 0.15s ease, box-shadow 0.15s ease;
+		position: relative;
+		overflow: hidden;
 	}
 
 	.alert-popup:hover {
@@ -139,5 +145,45 @@
 		font-size: 0.62rem;
 		color: var(--text-secondary);
 		line-height: 1.4;
+		margin-bottom: 0.3rem;
+	}
+
+	.alert-progress-bg {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		height: 2px;
+		background: rgba(255, 255, 255, 0.05);
+	}
+
+	.alert-progress-bar {
+		height: 100%;
+		width: 100%;
+		background: currentColor;
+		opacity: 0.3;
+		animation: progress 10s linear forwards;
+		transform-origin: left;
+	}
+
+	.danger .alert-progress-bar {
+		color: var(--danger);
+	}
+
+	.warning .alert-progress-bar {
+		color: var(--warning);
+	}
+
+	.info .alert-progress-bar {
+		color: var(--accent);
+	}
+
+	@keyframes progress {
+		from {
+			transform: scaleX(1);
+		}
+		to {
+			transform: scaleX(0);
+		}
 	}
 </style>

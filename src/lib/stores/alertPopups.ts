@@ -9,6 +9,13 @@ interface AlertPopupsState {
 function createAlertPopupsStore() {
 	const { subscribe, update, set } = writable<AlertPopupsState>({ items: [], history: [] });
 
+	function dismiss(id: string) {
+		update((state) => ({
+			...state,
+			items: state.items.filter((item) => item.id !== id)
+		}));
+	}
+
 	return {
 		subscribe,
 		push(popups: AlertPopup[]) {
@@ -18,13 +25,15 @@ function createAlertPopupsStore() {
 				items: [...popups, ...state.items].slice(0, 10),
 				history: [...popups, ...state.history].slice(0, 30)
 			}));
+
+			// Auto-dismiss after 10 seconds
+			popups.forEach((popup) => {
+				setTimeout(() => {
+					dismiss(popup.id);
+				}, 10000);
+			});
 		},
-		dismiss(id: string) {
-			update((state) => ({
-				...state,
-				items: state.items.filter((item) => item.id !== id)
-			}));
-		},
+		dismiss,
 		clearHistory() {
 			update((state) => ({
 				...state,
