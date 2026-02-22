@@ -91,6 +91,10 @@ export interface CorrelationResults {
 	topicStats: Record<string, TopicStats>;
 }
 
+let lastCorrelationInput: NewsItem[] | null = null;
+let lastCorrelationLocale: Locale = 'en';
+let lastCorrelationResult: CorrelationResults | null = null;
+
 // Topic history for momentum analysis (in-memory)
 const topicHistory: Record<number, Record<string, number>> = {};
 const velocityHistory: Record<string, number[]> = {};
@@ -104,6 +108,11 @@ const MOMENTUM_WINDOW_MINUTES = 10;
 // Persistence layer
 const STORAGE_KEY = 'correlation_history';
 const HISTORY_HOURS = 168; // 7 days of hourly data
+const PERSIST_THROTTLE_MS = 30000;
+
+let localStorageAvailability: boolean | null = null;
+let persistedHistoryCache: PersistedHistory | null = null;
+let lastPersistedHistorySaveAt = 0;
 
 interface PersistedHistory {
 	hourlyAverages: Record<string, number[]>; // topicId -> last 168 hourly averages
@@ -111,18 +120,22 @@ interface PersistedHistory {
 }
 
 function isLocalStorageAvailable(): boolean {
+	if (localStorageAvailability !== null) return localStorageAvailability;
+
 	try {
 		if (typeof localStorage === 'undefined' || typeof window === 'undefined') return false;
 		const testKey = '__test__';
 		localStorage.setItem(testKey, testKey);
 		localStorage.removeItem(testKey);
-		return true;
+		localStorageAvailability = true;
+		return localStorageAvailability;
 	} catch {
-		return false;
+		localStorageAvailability = false;
+		return localStorageAvailability;
 	}
 }
 
-function loadHistory(): PersistedHistory {
+function loadHistoryFromStorage(): PersistedHistory {
 	if (!isLocalStorageAvailable()) {
 		return { hourlyAverages: {}, lastUpdate: Date.now() };
 	}
@@ -140,17 +153,29 @@ function loadHistory(): PersistedHistory {
 	return { hourlyAverages: {}, lastUpdate: Date.now() };
 }
 
-function saveHistory(history: PersistedHistory): void {
+function getPersistedHistory(): PersistedHistory {
+	if (persistedHistoryCache) return persistedHistoryCache;
+	persistedHistoryCache = loadHistoryFromStorage();
+	return persistedHistoryCache;
+}
+
+function saveHistory(history: PersistedHistory, force = false): void {
+	persistedHistoryCache = history;
 	if (!isLocalStorageAvailable()) return;
+
+	const now = Date.now();
+	if (!force && now - lastPersistedHistorySaveAt < PERSIST_THROTTLE_MS) return;
+
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+		lastPersistedHistorySaveAt = now;
 	} catch (e) {
 		console.warn('Failed to save correlation history:', e);
 	}
 }
 
 function updatePersistedHistory(topicCounts: Record<string, number>): PersistedHistory {
-	const history = loadHistory();
+	const history = getPersistedHistory();
 	const now = Date.now();
 	const currentHour = Math.floor(now / 3600000);
 	const lastHour = Math.floor(history.lastUpdate / 3600000);
@@ -169,7 +194,7 @@ function updatePersistedHistory(topicCounts: Record<string, number>): PersistedH
 			}
 		}
 		history.lastUpdate = now;
-		saveHistory(history);
+		saveHistory(history, true);
 	}
 
 	return history;
@@ -302,7 +327,16 @@ export function analyzeCorrelations(
 	allNews: NewsItem[],
 	locale: Locale = 'en'
 ): CorrelationResults | null {
-	if (!allNews || allNews.length === 0) return null;
+	if (!allNews || allNews.length === 0) {
+		lastCorrelationInput = allNews;
+		lastCorrelationLocale = locale;
+		lastCorrelationResult = null;
+		return null;
+	}
+
+	if (lastCorrelationInput === allNews && lastCorrelationLocale === locale && lastCorrelationResult) {
+		return lastCorrelationResult;
+	}
 
 	const now = Date.now();
 	const currentTime = Math.floor(now / 60000); // Current minute
@@ -492,6 +526,10 @@ export function analyzeCorrelations(
 	results.crossSourceCorrelations.sort((a, b) => b.sourceCount - a.sourceCount);
 	results.predictiveSignals.sort((a, b) => b.score - a.score);
 
+	lastCorrelationInput = allNews;
+	lastCorrelationLocale = locale;
+	lastCorrelationResult = results;
+
 	return results;
 }
 
@@ -544,6 +582,8 @@ export function getCorrelationSummary(results: CorrelationResults | null): {
  * Clear topic history (for testing or reset)
  */
 export function clearCorrelationHistory(): void {
+	lastCorrelationInput = null;
+	lastCorrelationResult = null;
 	for (const key of Object.keys(topicHistory)) {
 		delete topicHistory[parseInt(key)];
 	}
@@ -556,6 +596,8 @@ export function clearCorrelationHistory(): void {
  * Clear persisted history (for testing)
  */
 export function clearPersistedHistory(): void {
+	persistedHistoryCache = null;
+	lastPersistedHistorySaveAt = 0;
 	if (isLocalStorageAvailable()) {
 		localStorage.removeItem(STORAGE_KEY);
 	}

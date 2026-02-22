@@ -38,4 +38,4 @@ Thumbs.db
 archive/
 
 # SQLite database
-data/
+data/*

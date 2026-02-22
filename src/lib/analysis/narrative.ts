@@ -54,6 +54,10 @@ export interface NarrativeResults {
 	disinfoSignals: NarrativeData[];
 }
 
+let lastNarrativeInput: NewsItem[] | null = null;
+let lastNarrativeLocale: Locale = 'en';
+let lastNarrativeResult: NarrativeResults | null = null;
+
 // Track narrative history for momentum calculation
 const narrativeHistory: Record<
 	string,
@@ -343,7 +347,16 @@ export function analyzeNarratives(
 	allNews: NewsItem[],
 	locale: Locale = 'en'
 ): NarrativeResults | null {
-	if (!allNews || allNews.length === 0) return null;
+	if (!allNews || allNews.length === 0) {
+		lastNarrativeInput = allNews;
+		lastNarrativeLocale = locale;
+		lastNarrativeResult = null;
+		return null;
+	}
+
+	if (lastNarrativeInput === allNews && lastNarrativeLocale === locale && lastNarrativeResult) {
+		return lastNarrativeResult;
+	}
 
 	const now = Date.now();
 
@@ -353,10 +366,16 @@ export function analyzeNarratives(
 	// Analyze fringe narratives (works best with fringe sources)
 	const fringeResults = analyzeFringeNarratives(allNews, now, locale);
 
-	return {
+	const results: NarrativeResults = {
 		trendingNarratives,
 		...fringeResults
 	};
+
+	lastNarrativeInput = allNews;
+	lastNarrativeLocale = locale;
+	lastNarrativeResult = results;
+
+	return results;
 }
 
 /**

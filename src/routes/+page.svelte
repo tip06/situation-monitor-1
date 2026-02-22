@@ -73,6 +73,7 @@
 		venezuela: 'venezuela',
 		greenland: 'greenland'
 	};
+	const SITUATION_FILTER_OPTIONS = { maxItems: 10, maxAgeDays: 7 };
 
 	function getVisibleNewsCategories(tabId: TabId): NewsCategory[] {
 		const enabledSettings = get(settings).enabled;
@@ -89,29 +90,78 @@
 		return NEWS_REFRESH_CATEGORIES.filter((category) => !visibleSet.has(category));
 	}
 
-	// Data fetching
-	async function loadNews(categories: NewsCategory[]) {
-		categories.forEach((cat) => news.setLoading(cat, true));
+	let activeLoadToken = 0;
+	let deferredCategoryLoadTimer: ReturnType<typeof setTimeout> | null = null;
+	const inFlightCategoryLoads = new Map<NewsCategory, Promise<void>>();
+	let longTaskObserver: PerformanceObserver | null = null;
 
-		try {
-			await refreshAllNewsProgressive({
-				timeoutMs: 30000,
-				categoryConcurrency: 3,
-				categories,
-				preferEdge: true,
-				onCachedCategory: (category, items) => {
-					news.setItems(category, items);
-				},
-				onFreshCategory: (category, items) => {
-					news.setItems(category, items);
-				},
-				onCategoryError: (category, error) => {
-					news.setError(category, String(error));
-				}
-			});
-		} catch (error) {
-			categories.forEach((cat) => news.setError(cat, String(error)));
+	function cancelDeferredCategoryLoad() {
+		if (deferredCategoryLoadTimer) {
+			clearTimeout(deferredCategoryLoadTimer);
+			deferredCategoryLoadTimer = null;
 		}
+	}
+
+	function beginLoadCycle(): number {
+		activeLoadToken += 1;
+		cancelDeferredCategoryLoad();
+		return activeLoadToken;
+	}
+
+	function isCurrentLoadToken(token: number): boolean {
+		return token === activeLoadToken;
+	}
+
+	function scheduleDeferredCategoryLoad(categories: NewsCategory[], token: number, delayMs = 5000) {
+		cancelDeferredCategoryLoad();
+		deferredCategoryLoadTimer = setTimeout(() => {
+			if (!isCurrentLoadToken(token)) return;
+			void loadNews(categories, token);
+		}, delayMs);
+	}
+
+	// Data fetching
+	async function loadNewsCategory(category: NewsCategory, token: number): Promise<void> {
+		const existing = inFlightCategoryLoads.get(category);
+		if (existing) return existing;
+
+		if (isCurrentLoadToken(token)) {
+			news.setLoading(category, true);
+		}
+
+		const request: Promise<void> = refreshAllNewsProgressive({
+			timeoutMs: 30000,
+			categoryConcurrency: 1,
+			categories: [category],
+			preferEdge: true,
+			onCachedCategory: (loadedCategory, items) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setItems(loadedCategory, items);
+			},
+			onFreshCategory: (loadedCategory, items) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setItems(loadedCategory, items);
+			},
+			onCategoryError: (failedCategory, error) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setError(failedCategory, String(error));
+			}
+		})
+			.then(() => undefined)
+			.catch((error) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setError(category, String(error));
+			})
+			.finally(() => {
+				inFlightCategoryLoads.delete(category);
+			});
+
+		inFlightCategoryLoads.set(category, request);
+		return request;
+	}
+
+	async function loadNews(categories: NewsCategory[], token: number) {
+		await Promise.all(categories.map((category) => loadNewsCategory(category, token)));
 	}
 
 	async function loadMarkets() {
@@ -137,12 +187,13 @@
 	// Refresh handlers
 	async function handleRefresh() {
 		refresh.startRefresh();
+		const token = beginLoadCycle();
 		try {
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
-			await Promise.all([loadNews(visibleCategories), loadMarkets()]);
+			await Promise.all([loadNews(visibleCategories, token), loadMarkets()]);
 			if (remainingCategories.length > 0) {
-				void loadNews(remainingCategories);
+				scheduleDeferredCategoryLoad(remainingCategories, token);
 			}
 			runAlertDetection();
 			refresh.endRefresh();
@@ -219,25 +270,90 @@
 	// Track which tabs have had their data loaded
 	let loadedTabs = $state<Set<string>>(new Set());
 	let initialLoadDone = $state(false);
+	let tabSwitchSequence = 0;
+
+	const iranSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('iran') ||
+					n.title.toLowerCase().includes('tehran') ||
+					n.title.toLowerCase().includes('irgc')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const venezuelaSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('venezuela') ||
+					n.title.toLowerCase().includes('maduro')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const greenlandSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('greenland') ||
+					n.title.toLowerCase().includes('arctic')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
 
 	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
 		const tab = $activeTab;
+		if (typeof performance !== 'undefined' && typeof requestAnimationFrame === 'function') {
+			const currentSequence = ++tabSwitchSequence;
+			const start = performance.now();
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					if (currentSequence !== tabSwitchSequence) return;
+					const duration = performance.now() - start;
+					if (duration > 500) {
+						console.warn(`Slow tab switch detected (${tab}): ${Math.round(duration)}ms`);
+					}
+				});
+			});
+		}
+
 		if (!initialLoadDone || loadedTabs.has(tab)) return;
 
+		const token = beginLoadCycle();
 		const categories = getVisibleNewsCategories(tab);
 		const unloadedCategories = categories.filter(
-			(cat) => get(news)[cat]?.items?.length === 0
+			(cat) => get(news).categories[cat]?.items?.length === 0
 		);
 
 		if (unloadedCategories.length > 0) {
-			loadNews(unloadedCategories);
+			void loadNews(unloadedCategories, token);
 		}
 		loadedTabs = new Set([...loadedTabs, tab]);
 	});
 
 	// Initial load
 	onMount(() => {
+		if (typeof PerformanceObserver !== 'undefined') {
+			try {
+				longTaskObserver = new PerformanceObserver((entryList) => {
+					for (const entry of entryList.getEntries()) {
+						if (entry.duration > 50) {
+							console.warn(`Long task detected: ${Math.round(entry.duration)}ms`);
+						}
+					}
+				});
+				longTaskObserver.observe({ entryTypes: ['longtask'] });
+			} catch {
+				// Long task API may not be supported by the current browser
+			}
+		}
+
 		// Initialize tab store from localStorage
 		activeTab.init();
 		sources.init();
@@ -245,10 +361,11 @@
 		// Load initial data: visible tab first, defer rest
 		async function initialLoad() {
 			refresh.startRefresh();
+			const token = beginLoadCycle();
 			try {
 				const currentTab = $activeTab;
 				const visibleCategories = getVisibleNewsCategories(currentTab);
-				await Promise.all([loadNews(visibleCategories), loadMarkets(), loadMiscData()]);
+				await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData()]);
 				loadedTabs = new Set([currentTab]);
 				initialLoadDone = true;
 				runAlertDetection();
@@ -257,9 +374,7 @@
 				// Defer remaining categories after 5s
 				const remainingCategories = getRemainingNewsCategories(visibleCategories);
 				if (remainingCategories.length > 0) {
-					setTimeout(() => {
-						loadNews(remainingCategories);
-					}, 5000);
+					scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
 				}
 			} catch (error) {
 				initialLoadDone = true;
@@ -270,6 +385,8 @@
 		refresh.setupAutoRefresh(handleRefresh);
 
 		return () => {
+			cancelDeferredCategoryLoad();
+			longTaskObserver?.disconnect();
 			refresh.stopAutoRefresh();
 		};
 	});
@@ -323,15 +440,7 @@
 											'khamenei'
 										]
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('iran') ||
-												n.title.toLowerCase().includes('tehran') ||
-												n.title.toLowerCase().includes('irgc')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={iranSituationNews}
 								/>
 							</div>
 						{/if}
@@ -345,14 +454,7 @@
 										subtitle: t($language, 'situation.venezuela.subtitle'),
 										criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('venezuela') ||
-												n.title.toLowerCase().includes('maduro')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={venezuelaSituationNews}
 								/>
 							</div>
 						{/if}
@@ -366,14 +468,7 @@
 										subtitle: t($language, 'situation.greenland.subtitle'),
 										criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('greenland') ||
-												n.title.toLowerCase().includes('arctic')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={greenlandSituationNews}
 								/>
 							</div>
 						{/if}
