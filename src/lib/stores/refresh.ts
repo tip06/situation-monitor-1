@@ -36,6 +36,7 @@ export const REFRESH_STAGES: StageConfig[] = [
 export interface RefreshState {
 	// Global refresh state
 	isRefreshing: boolean;
+	backgroundSyncCount: number;
 	currentStage: RefreshStage | null;
 	lastRefresh: number | null;
 
@@ -128,6 +129,7 @@ function createInitialState(): RefreshState {
 
 	return {
 		isRefreshing: false,
+		backgroundSyncCount: 0,
 		currentStage: null,
 		lastRefresh: settings.lastRefresh,
 		categoryStates: {},
@@ -178,6 +180,26 @@ function createRefreshStore() {
 				...state,
 				isRefreshing: true,
 				currentStage: 'critical'
+			}));
+		},
+
+		/**
+		 * Start background sync tracking
+		 */
+		startBackgroundSync() {
+			update((state) => ({
+				...state,
+				backgroundSyncCount: state.backgroundSyncCount + 1
+			}));
+		},
+
+		/**
+		 * End background sync tracking
+		 */
+		endBackgroundSync() {
+			update((state) => ({
+				...state,
+				backgroundSyncCount: Math.max(0, state.backgroundSyncCount - 1)
 			}));
 		},
 
@@ -372,6 +394,10 @@ export const refresh = createRefreshStore();
 
 // Derived stores
 export const isRefreshing = derived(refresh, ($refresh) => $refresh.isRefreshing);
+export const isBackgroundSyncing = derived(
+	refresh,
+	($refresh) => $refresh.backgroundSyncCount > 0
+);
 
 export const currentStage = derived(refresh, ($refresh) => $refresh.currentStage);
 

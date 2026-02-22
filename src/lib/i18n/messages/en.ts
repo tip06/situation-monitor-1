@@ -3,6 +3,7 @@ export const EN_MESSAGES = {
 	'app.description': 'Real-time global situation monitoring dashboard',
 	'header.brand': 'SITUATION MONITOR',
 	'header.refreshing': 'Refreshing...',
+	'header.backgroundSyncing': 'Background sync...',
 	'header.lastUpdated': 'Last updated: {time}',
 	'header.neverRefreshed': 'Never refreshed',
 	'header.addData': 'Add Data',

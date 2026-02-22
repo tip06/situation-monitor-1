@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isRefreshing, lastRefresh, language, activeTab, alertNavigation } from '$lib/stores';
+	import {
+		isRefreshing,
+		isBackgroundSyncing,
+		lastRefresh,
+		language,
+		activeTab,
+		alertNavigation
+	} from '$lib/stores';
 	import { alertPopups } from '$lib/stores/alertPopups';
 	import type { AlertPopup } from '$lib/alerts/engine';
 	import { t } from '$lib/i18n';
 	import { toIntlLocale } from '$lib/i18n/types';
+	import type { MessageKey } from '$lib/i18n/messages/en';
 
 	interface Props {
 		onSettingsClick?: () => void;
@@ -39,6 +47,10 @@
 		}
 	}
 
+	function alertTitleKey(key: string): MessageKey {
+		return key as MessageKey;
+	}
+
 	onMount(() => {
 		function handleClick(event: MouseEvent) {
 			if (!alertsOpen || !alertsRef) return;
@@ -61,6 +73,8 @@
 		<div class="refresh-status">
 			{#if $isRefreshing}
 				<span class="status-text loading">{t($language, 'header.refreshing')}</span>
+			{:else if $isBackgroundSyncing}
+				<span class="status-text loading">{t($language, 'header.backgroundSyncing')}</span>
 			{:else}
 				<span class="status-text">{lastRefreshText}</span>
 			{/if}
@@ -101,7 +115,7 @@
 									onclick={() => handleAlertClick(alert)}
 								>
 									<div class="alerts-item-title">
-										{t($language, alert.titleKey)}
+										{t($language, alertTitleKey(alert.titleKey))}
 										<span class="alerts-item-count">({alert.count})</span>
 									</div>
 									{#if alert.detail}

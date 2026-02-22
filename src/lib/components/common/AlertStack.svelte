@@ -4,6 +4,7 @@
 	import { t } from '$lib/i18n';
 	import { language } from '$lib/stores';
 	import type { AlertPopup } from '$lib/alerts/engine';
+	import type { MessageKey } from '$lib/i18n/messages/en';
 
 	const items = $derived($alertPopups.items);
 
@@ -34,6 +35,10 @@
 		if (severity === 'warning') return 'warning';
 		return 'info';
 	}
+
+	function alertTitleKey(key: string): MessageKey {
+		return key as MessageKey;
+	}
 </script>
 
 {#if items.length > 0}
@@ -48,7 +53,7 @@
 			>
 				<div class="alert-header">
 					<div class="alert-title">
-						{t($language, item.titleKey)}
+						{t($language, alertTitleKey(item.titleKey))}
 						<span class="alert-count">({item.count})</span>
 					</div>
 					<button

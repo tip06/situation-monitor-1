@@ -44,9 +44,10 @@ describe('Refresh Store', () => {
 	});
 
 	it('should start with default state', async () => {
-		const { isRefreshing, lastRefresh } = await import('./refresh');
+		const { isRefreshing, isBackgroundSyncing, lastRefresh } = await import('./refresh');
 
 		expect(get(isRefreshing)).toBe(false);
+		expect(get(isBackgroundSyncing)).toBe(false);
 		expect(get(lastRefresh)).toBeNull();
 	});
 
@@ -61,6 +62,25 @@ describe('Refresh Store', () => {
 		expect(get(isRefreshing)).toBe(false);
 		expect(get(currentStage)).toBeNull();
 		expect(get(lastRefresh)).not.toBeNull();
+	});
+
+	it('should track background sync independently from foreground refresh', async () => {
+		const { refresh, isRefreshing, isBackgroundSyncing } = await import('./refresh');
+
+		refresh.startBackgroundSync();
+		expect(get(isBackgroundSyncing)).toBe(true);
+		expect(get(isRefreshing)).toBe(false);
+
+		refresh.startRefresh();
+		expect(get(isRefreshing)).toBe(true);
+		expect(get(isBackgroundSyncing)).toBe(true);
+
+		refresh.endRefresh();
+		expect(get(isRefreshing)).toBe(false);
+		expect(get(isBackgroundSyncing)).toBe(true);
+
+		refresh.endBackgroundSync();
+		expect(get(isBackgroundSyncing)).toBe(false);
 	});
 
 	it('should progress through stages', async () => {

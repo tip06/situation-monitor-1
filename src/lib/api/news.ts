@@ -18,6 +18,7 @@ export interface RefreshAllNewsProgressiveOptions {
 	categoryConcurrency?: number;
 	categories?: NewsCategory[];
 	preferEdge?: boolean;
+	signal?: AbortSignal;
 	sinceByCategory?: NewsCheckpointMap;
 	onCachedCategory?: (
 		category: NewsCategory,
@@ -86,12 +87,12 @@ function createEmptyNewsResult(): Record<NewsCategory, NewsItem[]> {
  */
 export async function fetchCategoryNews(
 	category: NewsCategory,
-	options: { since?: number } = {}
+	options: { since?: number; signal?: AbortSignal } = {}
 ): Promise<NewsItem[]> {
 	const url = options.since
 		? `/api/news/${category}?since=${options.since}`
 		: `/api/news/${category}`;
-	const res = await fetch(url);
+	const res = await fetch(url, { signal: options.signal });
 	if (!res.ok) throw new Error(`Server error: ${res.status}`);
 	const data = await res.json();
 	return data.items;
@@ -123,6 +124,7 @@ export async function refreshAllNewsProgressive(
 ): Promise<Record<NewsCategory, NewsItem[]>> {
 	const targetCategories = options.categories?.length ? options.categories : NEWS_CATEGORIES;
 	const result = createEmptyNewsResult();
+	const signal = options.signal;
 
 	// Get stored checkpoints for incremental fetch
 	const storedCheckpoints = getStoredCheckpoints();
@@ -141,7 +143,7 @@ export async function refreshAllNewsProgressive(
 	}
 
 	try {
-		const res = await fetch(`/api/news?${params}`);
+		const res = await fetch(`/api/news?${params}`, { signal });
 		if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
 		const data: {
@@ -166,11 +168,17 @@ export async function refreshAllNewsProgressive(
 
 		setStoredCheckpoints(nextCheckpoints);
 	} catch (error) {
+		if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+			throw error;
+		}
 		// Fall back to per-category fetch
 		for (const category of targetCategories) {
+			if (signal?.aborted) {
+				throw new DOMException('Request aborted', 'AbortError');
+			}
 			try {
 				const since = sinceByCategory[category];
-				const items = await fetchCategoryNews(category, { since });
+				const items = await fetchCategoryNews(category, { since, signal });
 				const merged = mergeNewsItems(result[category], items);
 				result[category] = merged;
 				options.onFreshCategory?.(category, merged);

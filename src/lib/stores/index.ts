@@ -63,6 +63,7 @@ export {
 export {
 	refresh,
 	isRefreshing,
+	isBackgroundSyncing,
 	currentStage,
 	lastRefresh,
 	autoRefreshEnabled,

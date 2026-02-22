@@ -5,6 +5,7 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'app.description': 'Painel de monitoramento global em tempo real',
 	'header.brand': 'SITUATION MONITOR',
 	'header.refreshing': 'Atualizando...',
+	'header.backgroundSyncing': 'Sincronização em segundo plano...',
 	'header.lastUpdated': 'Última atualização: {time}',
 	'header.neverRefreshed': 'Nunca atualizado',
 	'header.addData': 'Adicionar dados',

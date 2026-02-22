@@ -38,6 +38,8 @@
 	import { detectAlerts } from '$lib/alerts/engine';
 	import { alertPopups } from '$lib/stores/alertPopups';
 
+	type NewsLoadReason = 'initial' | 'refresh' | 'tabSwitch' | 'deferred';
+
 	// Modal state
 	let settingsOpen = $state(false);
 	let monitorFormOpen = $state(false);
@@ -89,28 +91,107 @@
 		return NEWS_REFRESH_CATEGORIES.filter((category) => !visibleSet.has(category));
 	}
 
-	// Data fetching
-	async function loadNews(categories: NewsCategory[]) {
-		categories.forEach((cat) => news.setLoading(cat, true));
+	let initialLoadDone = $state(false);
+	let inFlightCategories = $state<Set<NewsCategory>>(new Set());
+	let tabSwitchController = $state<AbortController | null>(null);
+	let deferredLoadTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+
+	function isAbortError(error: unknown): boolean {
+		return error instanceof DOMException && error.name === 'AbortError';
+	}
+
+	function addInFlightCategories(categories: NewsCategory[]): void {
+		inFlightCategories = new Set([...inFlightCategories, ...categories]);
+	}
+
+	function removeInFlightCategories(categories: NewsCategory[]): void {
+		const next = new Set(inFlightCategories);
+		for (const category of categories) {
+			next.delete(category);
+		}
+		inFlightCategories = next;
+	}
+
+	function getUnloadedCategories(categories: NewsCategory[]): NewsCategory[] {
+		const state = get(news);
+		return categories.filter(
+			(category) => state.categories[category].items.length === 0 && !inFlightCategories.has(category)
+		);
+	}
+
+	function beginLoad(reason: NewsLoadReason): void {
+		if (reason === 'tabSwitch' || reason === 'deferred') {
+			refresh.startBackgroundSync();
+		}
+	}
+
+	function endLoad(reason: NewsLoadReason): void {
+		if (reason === 'tabSwitch' || reason === 'deferred') {
+			refresh.endBackgroundSync();
+		}
+	}
+
+	async function loadNews(
+		categories: NewsCategory[],
+		options: { reason: NewsLoadReason; signal?: AbortSignal; force?: boolean }
+	): Promise<void> {
+		const uniqueCategories = [...new Set(categories)];
+		const categoriesToLoad = (options.force ? uniqueCategories : getUnloadedCategories(uniqueCategories)).filter(
+			(category) => !inFlightCategories.has(category)
+		);
+
+		if (categoriesToLoad.length === 0) return;
+
+		beginLoad(options.reason);
+		addInFlightCategories(categoriesToLoad);
+		categoriesToLoad.forEach((category) => news.setLoading(category, true));
+
+		const completedCategories = new Set<NewsCategory>();
+		let aborted = false;
 
 		try {
 			await refreshAllNewsProgressive({
 				timeoutMs: 30000,
 				categoryConcurrency: 3,
-				categories,
+				categories: categoriesToLoad,
 				preferEdge: true,
+				signal: options.signal,
 				onCachedCategory: (category, items) => {
 					news.setItems(category, items);
+					completedCategories.add(category);
 				},
 				onFreshCategory: (category, items) => {
 					news.setItems(category, items);
+					completedCategories.add(category);
 				},
 				onCategoryError: (category, error) => {
-					news.setError(category, String(error));
+					completedCategories.add(category);
+					if (!isAbortError(error)) {
+						news.setError(category, String(error));
+					}
 				}
 			});
 		} catch (error) {
-			categories.forEach((cat) => news.setError(cat, String(error)));
+			aborted = isAbortError(error);
+			if (!aborted) {
+				for (const category of categoriesToLoad) {
+					if (!completedCategories.has(category)) {
+						news.setError(category, String(error));
+					}
+				}
+			}
+		} finally {
+			for (const category of categoriesToLoad) {
+				if (!completedCategories.has(category)) {
+					news.setLoading(category, false);
+				}
+			}
+			removeInFlightCategories(categoriesToLoad);
+			endLoad(options.reason);
+		}
+
+		if (aborted) {
+			return;
 		}
 	}
 
@@ -136,13 +217,18 @@
 
 	// Refresh handlers
 	async function handleRefresh() {
+		tabSwitchController?.abort();
+		tabSwitchController = null;
 		refresh.startRefresh();
 		try {
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
-			await Promise.all([loadNews(visibleCategories), loadMarkets()]);
+			await Promise.all([
+				loadNews(visibleCategories, { reason: 'refresh', force: true }),
+				loadMarkets()
+			]);
 			if (remainingCategories.length > 0) {
-				void loadNews(remainingCategories);
+				void loadNews(remainingCategories, { reason: 'deferred', force: true });
 			}
 			runAlertDetection();
 			refresh.endRefresh();
@@ -216,24 +302,27 @@
 		alertPopups.push(popups);
 	}
 
-	// Track which tabs have had their data loaded
-	let loadedTabs = $state<Set<string>>(new Set());
-	let initialLoadDone = $state(false);
-
-	// On tab switch: load data for tabs that haven't been loaded yet
+	// On tab switch: load data if needed and cancel stale tab-switch requests
 	$effect(() => {
 		const tab = $activeTab;
-		if (!initialLoadDone || loadedTabs.has(tab)) return;
+		if (!initialLoadDone) return;
+
+		tabSwitchController?.abort();
+		const controller = new AbortController();
+		tabSwitchController = controller;
 
 		const categories = getVisibleNewsCategories(tab);
-		const unloadedCategories = categories.filter(
-			(cat) => get(news)[cat]?.items?.length === 0
-		);
-
-		if (unloadedCategories.length > 0) {
-			loadNews(unloadedCategories);
+		const unloadedCategories = getUnloadedCategories(categories);
+		if (unloadedCategories.length === 0) {
+			tabSwitchController = null;
+			return;
 		}
-		loadedTabs = new Set([...loadedTabs, tab]);
+
+		void loadNews(unloadedCategories, { reason: 'tabSwitch', signal: controller.signal }).finally(() => {
+			if (tabSwitchController === controller) {
+				tabSwitchController = null;
+			}
+		});
 	});
 
 	// Initial load
@@ -248,8 +337,11 @@
 			try {
 				const currentTab = $activeTab;
 				const visibleCategories = getVisibleNewsCategories(currentTab);
-				await Promise.all([loadNews(visibleCategories), loadMarkets(), loadMiscData()]);
-				loadedTabs = new Set([currentTab]);
+				await Promise.all([
+					loadNews(visibleCategories, { reason: 'initial' }),
+					loadMarkets(),
+					loadMiscData()
+				]);
 				initialLoadDone = true;
 				runAlertDetection();
 				refresh.endRefresh();
@@ -257,8 +349,8 @@
 				// Defer remaining categories after 5s
 				const remainingCategories = getRemainingNewsCategories(visibleCategories);
 				if (remainingCategories.length > 0) {
-					setTimeout(() => {
-						loadNews(remainingCategories);
+					deferredLoadTimer = setTimeout(() => {
+						void loadNews(remainingCategories, { reason: 'deferred' });
 					}, 5000);
 				}
 			} catch (error) {
@@ -270,6 +362,10 @@
 		refresh.setupAutoRefresh(handleRefresh);
 
 		return () => {
+			tabSwitchController?.abort();
+			if (deferredLoadTimer) {
+				clearTimeout(deferredLoadTimer);
+			}
 			refresh.stopAutoRefresh();
 		};
 	});
