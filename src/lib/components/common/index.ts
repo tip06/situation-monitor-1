@@ -11,3 +11,4 @@ export { default as ErrorMessage } from './ErrorMessage.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as InfoTooltip } from './InfoTooltip.svelte';
 export { default as AlertStack } from './AlertStack.svelte';
+export { default as PanelSkeleton } from './PanelSkeleton.svelte';

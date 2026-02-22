@@ -1,3 +1,2 @@
-// Enable prerendering for static site generation
-export const prerender = true;
+// Client-side rendering - SPA behavior
 export const ssr = false;

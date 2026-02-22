@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
+	import FeedDiagnostics from './FeedDiagnostics.svelte';
 	import { settings, language, sources } from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import type { NewsCategory } from '$lib/types';
@@ -26,6 +27,7 @@
 
 	let { open = false, onClose }: Props = $props();
 
+	let activeSettingsTab = $state<'general' | 'feeds'>('general');
 	let selectedCategory = $state<NewsCategory>('brazil');
 	let sourceName = $state('');
 	let sourceUrl = $state('');
@@ -60,6 +62,28 @@
 </script>
 
 <Modal {open} title={t($language, 'settings.title')} {onClose}>
+	<div class="settings-tabs">
+		<button
+			type="button"
+			class="settings-tab"
+			class:active={activeSettingsTab === 'general'}
+			onclick={() => activeSettingsTab = 'general'}
+		>
+			Settings
+		</button>
+		<button
+			type="button"
+			class="settings-tab"
+			class:active={activeSettingsTab === 'feeds'}
+			onclick={() => activeSettingsTab = 'feeds'}
+		>
+			Feed Health
+		</button>
+	</div>
+
+	{#if activeSettingsTab === 'feeds'}
+		<FeedDiagnostics />
+	{:else}
 	<div class="settings-sections">
 		<section class="settings-section">
 			<h3 class="section-title">{t($language, 'settings.languageSection')}</h3>
@@ -165,9 +189,40 @@
 			</div>
 		</section>
 	</div>
+	{/if}
 </Modal>
 
 <style>
+	.settings-tabs {
+		display: flex;
+		gap: 0.3rem;
+		margin-bottom: 0.8rem;
+		border-bottom: 1px solid var(--border);
+		padding-bottom: 0.3rem;
+	}
+
+	.settings-tab {
+		padding: 0.35rem 0.7rem;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: 4px 4px 0 0;
+		color: var(--text-muted);
+		font-size: 0.62rem;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.settings-tab:hover {
+		color: var(--text-primary);
+	}
+
+	.settings-tab.active {
+		color: var(--text-primary);
+		border-color: var(--border);
+		border-bottom-color: var(--bg);
+		background: rgba(255, 255, 255, 0.03);
+	}
+
 	.settings-sections {
 		display: flex;
 		flex-direction: column;
