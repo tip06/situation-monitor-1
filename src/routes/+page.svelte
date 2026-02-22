@@ -74,6 +74,7 @@
 		greenland: 'greenland'
 	};
 	const SITUATION_FILTER_OPTIONS = { maxItems: 10, maxAgeDays: 7 };
+	const ENABLE_BACKGROUND_PREFETCH = false;
 
 	function getVisibleNewsCategories(tabId: TabId): NewsCategory[] {
 		const enabledSettings = get(settings).enabled;
@@ -92,14 +93,32 @@
 
 	let activeLoadToken = 0;
 	let deferredCategoryLoadTimer: ReturnType<typeof setTimeout> | null = null;
+	let tabLoadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 	const inFlightCategoryLoads = new Map<NewsCategory, Promise<void>>();
 	let longTaskObserver: PerformanceObserver | null = null;
+	let alertDetectionTimer: ReturnType<typeof setTimeout> | null = null;
 
 	function cancelDeferredCategoryLoad() {
 		if (deferredCategoryLoadTimer) {
 			clearTimeout(deferredCategoryLoadTimer);
 			deferredCategoryLoadTimer = null;
 		}
+	}
+
+	function cancelTabLoadDebounce() {
+		if (tabLoadDebounceTimer) {
+			clearTimeout(tabLoadDebounceTimer);
+			tabLoadDebounceTimer = null;
+		}
+	}
+
+	function scheduleAlertDetection() {
+		if (alertDetectionTimer) {
+			clearTimeout(alertDetectionTimer);
+		}
+		alertDetectionTimer = setTimeout(() => {
+			runAlertDetection();
+		}, 0);
 	}
 
 	function beginLoadCycle(): number {
@@ -192,10 +211,10 @@
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
 			await Promise.all([loadNews(visibleCategories, token), loadMarkets()]);
-			if (remainingCategories.length > 0) {
+			if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
 				scheduleDeferredCategoryLoad(remainingCategories, token);
 			}
-			runAlertDetection();
+			scheduleAlertDetection();
 			refresh.endRefresh();
 		} catch (error) {
 			refresh.endRefresh([String(error)]);
@@ -325,16 +344,24 @@
 
 		if (!initialLoadDone || loadedTabs.has(tab)) return;
 
-		const token = beginLoadCycle();
 		const categories = getVisibleNewsCategories(tab);
 		const unloadedCategories = categories.filter(
 			(cat) => get(news).categories[cat]?.items?.length === 0
 		);
 
-		if (unloadedCategories.length > 0) {
-			void loadNews(unloadedCategories, token);
+		if (unloadedCategories.length === 0) {
+			loadedTabs = new Set([...loadedTabs, tab]);
+			return;
 		}
-		loadedTabs = new Set([...loadedTabs, tab]);
+
+		cancelTabLoadDebounce();
+		tabLoadDebounceTimer = setTimeout(() => {
+			const token = beginLoadCycle();
+			void loadNews(unloadedCategories, token).then(() => {
+				if (!isCurrentLoadToken(token)) return;
+				loadedTabs = new Set([...loadedTabs, tab]);
+			});
+		}, 250);
 	});
 
 	// Initial load
@@ -354,8 +381,6 @@
 			}
 		}
 
-		// Initialize tab store from localStorage
-		activeTab.init();
 		sources.init();
 
 		// Load initial data: visible tab first, defer rest
@@ -368,14 +393,14 @@
 				await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData()]);
 				loadedTabs = new Set([currentTab]);
 				initialLoadDone = true;
-				runAlertDetection();
+				scheduleAlertDetection();
 				refresh.endRefresh();
 
-				// Defer remaining categories after 5s
-				const remainingCategories = getRemainingNewsCategories(visibleCategories);
-				if (remainingCategories.length > 0) {
-					scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
-				}
+					// Defer remaining categories after 5s
+					const remainingCategories = getRemainingNewsCategories(visibleCategories);
+					if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
+						scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
+					}
 			} catch (error) {
 				initialLoadDone = true;
 				refresh.endRefresh([String(error)]);
@@ -384,11 +409,16 @@
 		initialLoad();
 		refresh.setupAutoRefresh(handleRefresh);
 
-		return () => {
-			cancelDeferredCategoryLoad();
-			longTaskObserver?.disconnect();
-			refresh.stopAutoRefresh();
-		};
+			return () => {
+				cancelTabLoadDebounce();
+				cancelDeferredCategoryLoad();
+				if (alertDetectionTimer) {
+					clearTimeout(alertDetectionTimer);
+					alertDetectionTimer = null;
+				}
+				longTaskObserver?.disconnect();
+				refresh.stopAutoRefresh();
+			};
 	});
 </script>
 
