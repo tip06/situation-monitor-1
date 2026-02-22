@@ -111,6 +111,7 @@ Unique business logic for intelligence analysis:
 - alerts for economic indicators (2-3)
 - make a cool loading screen (2-3)
 - create rss feeds from sites or social media (1)
+- fix refreshing (1)
 
 
 ## General Guidance

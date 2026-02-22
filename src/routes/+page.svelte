@@ -216,25 +216,53 @@
 		alertPopups.push(popups);
 	}
 
+	// Track which tabs have had their data loaded
+	let loadedTabs = $state<Set<string>>(new Set());
+	let initialLoadDone = $state(false);
+
+	// On tab switch: load data for tabs that haven't been loaded yet
+	$effect(() => {
+		const tab = $activeTab;
+		if (!initialLoadDone || loadedTabs.has(tab)) return;
+
+		const categories = getVisibleNewsCategories(tab);
+		const unloadedCategories = categories.filter(
+			(cat) => get(news)[cat]?.items?.length === 0
+		);
+
+		if (unloadedCategories.length > 0) {
+			loadNews(unloadedCategories);
+		}
+		loadedTabs = new Set([...loadedTabs, tab]);
+	});
+
 	// Initial load
 	onMount(() => {
 		// Initialize tab store from localStorage
 		activeTab.init();
 		sources.init();
 
-		// Load initial data and track as refresh
+		// Load initial data: visible tab first, defer rest
 		async function initialLoad() {
 			refresh.startRefresh();
 			try {
-				const visibleCategories = getVisibleNewsCategories($activeTab);
-				const remainingCategories = getRemainingNewsCategories(visibleCategories);
+				const currentTab = $activeTab;
+				const visibleCategories = getVisibleNewsCategories(currentTab);
 				await Promise.all([loadNews(visibleCategories), loadMarkets(), loadMiscData()]);
-				if (remainingCategories.length > 0) {
-					void loadNews(remainingCategories);
-				}
+				loadedTabs = new Set([currentTab]);
+				initialLoadDone = true;
 				runAlertDetection();
 				refresh.endRefresh();
+
+				// Defer remaining categories after 5s
+				const remainingCategories = getRemainingNewsCategories(visibleCategories);
+				if (remainingCategories.length > 0) {
+					setTimeout(() => {
+						loadNews(remainingCategories);
+					}, 5000);
+				}
 			} catch (error) {
+				initialLoadDone = true;
 				refresh.endRefresh([String(error)]);
 			}
 		}

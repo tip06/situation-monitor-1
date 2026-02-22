@@ -17,6 +17,13 @@
 		alertPopups.dismiss(item.id);
 	}
 
+	function handleKeydown(event: KeyboardEvent, item: AlertPopup) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			handleClick(item);
+		}
+	}
+
 	function handleDismiss(event: MouseEvent, id: string) {
 		event.stopPropagation();
 		alertPopups.dismiss(id);
@@ -34,8 +41,10 @@
 		{#each items as item (item.id)}
 			<div
 				class={`alert-popup ${severityClass(item.severity)}`}
-				role="alert"
+				role="button"
+				tabindex="0"
 				onclick={() => handleClick(item)}
+				onkeydown={(event) => handleKeydown(event, item)}
 			>
 				<div class="alert-header">
 					<div class="alert-title">

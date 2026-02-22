@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Panel, NewsItem } from '$lib/components/common';
+	import { Panel, NewsItem, PanelSkeleton } from '$lib/components/common';
 	import type { NewsCategory } from '$lib/types';
 	import type { PanelId } from '$lib/config';
 	import {
@@ -199,7 +199,9 @@
 			</button>
 		{/snippet}
 
-		{#if allItems.length === 0 && !loading && !error}
+		{#if loading && allItems.length === 0}
+			<PanelSkeleton lines={6} />
+		{:else if allItems.length === 0 && !loading && !error}
 			<div class="empty-state">{t($language, 'news.empty')}</div>
 		{:else}
 			<!-- Filter toolbar -->
