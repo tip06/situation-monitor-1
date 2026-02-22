@@ -61,6 +61,7 @@ export const EN_MESSAGES = {
 	'common.retry': 'Retry',
 	'common.alert': 'ALERT',
 	'alerts.dismiss': 'Dismiss',
+	'alerts.example': 'Example: {value}',
 	'alerts.recent': 'Recent alerts',
 	'alerts.none': 'No alerts yet',
 	'alerts.clear': 'Clear',
