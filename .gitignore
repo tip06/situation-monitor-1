@@ -38,4 +38,7 @@ Thumbs.db
 archive/
 
 # SQLite database
-data/situation*
+data/
+data/situation-monitor.db
+data/situation-monitor.db-shm
+data/situation-monitor.db-wal

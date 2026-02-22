@@ -6,6 +6,7 @@ import { writable, derived, get } from 'svelte/store';
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config';
 import { deduplicateNews } from '$lib/utils';
+import { mergeNewsItems } from '$lib/shared/news-parser';
 
 export interface CategoryState {
 	items: NewsItem[];
@@ -137,6 +138,32 @@ function createNewsStore() {
 					}
 				}
 			}));
+		},
+
+		/**
+		 * Merge incoming delta items with existing in-memory items for a category.
+		 * Used on refresh to avoid discarding accumulated items when the server
+		 * returns only a recent delta.
+		 */
+		mergeItems(category: NewsCategory, incoming: NewsItem[]) {
+			update((state) => {
+				const existing = state.categories[category]?.items ?? [];
+				const merged = mergeNewsItems(existing, incoming);
+				const enriched = merged.map(enrichNewsItem);
+				const deduplicated = deduplicateNews(enriched);
+				return {
+					...state,
+					categories: {
+						...state.categories,
+						[category]: {
+							items: deduplicated,
+							loading: false,
+							error: null,
+							lastUpdated: Date.now()
+						}
+					}
+				};
+			});
 		},
 
 		/**

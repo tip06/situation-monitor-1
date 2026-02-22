@@ -159,7 +159,7 @@
 			},
 			onFreshCategory: (loadedCategory, items) => {
 				if (!isCurrentLoadToken(token)) return;
-				news.setItems(loadedCategory, items);
+				news.mergeItems(loadedCategory, items);
 			},
 			onCategoryError: (failedCategory, error) => {
 				if (!isCurrentLoadToken(token)) return;
