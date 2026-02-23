@@ -1,0 +1,7 @@
+name = "situation-monitor-proxy"
+main = "workers/cors-proxy.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "NEWS_KV"
+id = "e817821dc4d943bc9bea0e608c12a036" 

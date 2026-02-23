@@ -16,7 +16,11 @@
 		MapPanel,
 		PolymarketSection,
 		IntelPanel,
-		SituationPanel
+		SituationPanel,
+		AIBriefPanel,
+		CountryStabilityPanel,
+		MarketRadarPanel,
+		StrategicRiskPanel
 	} from '$lib/components/panels';
 	import {
 		news,
@@ -27,11 +31,19 @@
 		refresh,
 		allNewsItems,
 		activeTab,
-		language
+		language,
+		intelligence
 	} from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import { filterNews } from '$lib/utils';
-	import { refreshAllNewsProgressive, fetchAllMarkets, fetchPolymarket } from '$lib/api';
+	import {
+		refreshAllNewsProgressive,
+		fetchAllMarkets,
+		fetchPolymarket,
+		fetchAIBrief,
+		fetchStabilitySnapshot,
+		fetchFearGreed
+	} from '$lib/api';
 	import type { Prediction } from '$lib/api';
 	import type { CustomMonitor, NewsCategory } from '$lib/types';
 	import { getTabPanels, type PanelId, type TabId } from '$lib/config';
@@ -215,6 +227,27 @@
 		}
 	}
 
+	async function loadIntelligence() {
+		intelligence.setBriefLoading(true);
+		intelligence.setStabilityLoading(true);
+		const headlines = get(allNewsItems)
+			.slice(0, 50)
+			.map((item) => item.title)
+			.filter(Boolean);
+		await Promise.all([
+			fetchAIBrief(headlines)
+				.then(intelligence.setBrief)
+				.catch((e) => intelligence.setBriefError(String(e))),
+			fetchStabilitySnapshot()
+				.then(intelligence.setStability)
+				.catch((e) => intelligence.setStabilityError(String(e))),
+			fetchFearGreed()
+				.then(intelligence.setFearGreed)
+				.catch(() => {})
+		]);
+		intelligence.setInitialized();
+	}
+
 	// Refresh handlers
 	async function handleRefresh() {
 		tabSwitchController?.abort();
@@ -302,7 +335,48 @@
 		alertPopups.push(popups);
 	}
 
-	// On tab switch: load data if needed and cancel stale tab-switch requests
+	// Track which tabs have had their data loaded
+	let loadedTabs = $state<Set<string>>(new Set());
+	let initialLoadDone = $state(false);
+	let tabSwitchSequence = 0;
+	// Plain (non-reactive) flag to prevent double-loading intelligence data
+	let intelligenceLoadTriggered = false;
+
+	const iranSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('iran') ||
+					n.title.toLowerCase().includes('tehran') ||
+					n.title.toLowerCase().includes('irgc')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const venezuelaSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('venezuela') ||
+					n.title.toLowerCase().includes('maduro')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const greenlandSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('greenland') ||
+					n.title.toLowerCase().includes('arctic')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
 		const tab = $activeTab;
 		if (!initialLoadDone) return;
@@ -310,6 +384,16 @@
 		tabSwitchController?.abort();
 		const controller = new AbortController();
 		tabSwitchController = controller;
+
+		// Load intelligence data on first visit to intelligence tab
+		if (tab === 'intelligence') {
+			if (!intelligenceLoadTriggered) {
+				intelligenceLoadTriggered = true;
+				void loadIntelligence();
+			}
+			loadedTabs = new Set([...loadedTabs, tab]);
+			return;
+		}
 
 		const categories = getVisibleNewsCategories(tab);
 		const unloadedCategories = getUnloadedCategories(categories);
@@ -594,7 +678,34 @@
 						</div>
 					{/if}
 				</div>
-			{/if}
+		{:else if $activeTab === 'intelligence'}
+			<!-- Intelligence Tab: 4-panel columns layout -->
+			<div class="columns-layout">
+				{#if isPanelVisible('ai_brief')}
+					<div class="panel-slot panel-wide">
+						<AIBriefPanel />
+					</div>
+				{/if}
+
+				{#if isPanelVisible('country_stability')}
+					<div class="panel-slot">
+						<CountryStabilityPanel />
+					</div>
+				{/if}
+
+				{#if isPanelVisible('market_radar')}
+					<div class="panel-slot">
+						<MarketRadarPanel />
+					</div>
+				{/if}
+
+				{#if isPanelVisible('strategic_risk')}
+					<div class="panel-slot">
+						<StrategicRiskPanel />
+					</div>
+				{/if}
+			</div>
+		{/if}
 		</div>
 	</main>
 

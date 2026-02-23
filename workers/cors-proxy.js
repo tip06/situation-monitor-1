@@ -592,6 +592,131 @@ async function handleNewsSnapshot(request, env, ctx) {
 	return jsonResponse(response);
 }
 
+const COUNTRY_STABILITY_QUERIES = {
+	usa: 'United States OR "White House" OR Congress',
+	china: 'China OR Beijing OR "Xi Jinping"',
+	russia: 'Russia OR Moscow OR Putin OR Kremlin',
+	iran: 'Iran OR Tehran OR IRGC OR Khamenei',
+	israel: 'Israel OR Tel Aviv OR Netanyahu OR Gaza',
+	ukraine: 'Ukraine OR Kyiv OR Zelensky OR Donbas',
+	venezuela: 'Venezuela OR Maduro OR Caracas',
+	brazil: 'Brazil OR Brasilia OR Lula',
+	india: 'India OR Modi OR "New Delhi"',
+	pakistan: 'Pakistan OR Islamabad OR ISI',
+	northkorea: '"North Korea" OR Pyongyang OR Kim Jong',
+	taiwan: 'Taiwan OR Taipei OR "Taiwan Strait"',
+	saudiarabia: '"Saudi Arabia" OR Riyadh OR MBS',
+	turkey: 'Turkey OR Ankara OR Erdogan',
+	germany: 'Germany OR Berlin OR Bundestag'
+};
+
+const INSTABILITY_KEYWORDS = [
+	['coup', 25], ['revolution', 22], ['civil war', 22], ['invasion', 20],
+	['conflict', 15], ['protest', 12], ['unrest', 12], ['crisis', 10],
+	['sanctions', 8], ['military', 7], ['strike', 6], ['tensions', 5],
+	['ceasefire', -5], ['peace', -4], ['agreement', -3]
+];
+
+function computeStabilityScore(items) {
+	if (items.length === 0) return 75;
+	let instability = 0;
+	for (const item of items) {
+		const text = (item.title + ' ' + (item.description || '')).toLowerCase();
+		for (const [kw, weight] of INSTABILITY_KEYWORDS) {
+			if (text.includes(kw)) instability += weight;
+		}
+	}
+	const raw = Math.max(0, Math.min(100, 100 - (instability / items.length) * 3));
+	return Math.round(raw);
+}
+
+async function handleAiBrief(request, env) {
+	// Read headlines from request body
+	let headlines = [];
+	try {
+		const body = await request.json();
+		if (Array.isArray(body?.headlines)) {
+			headlines = body.headlines.filter((h) => typeof h === 'string' && h.length > 0);
+		}
+	} catch {}
+
+	// Fall back to KV-cached news if frontend sent none
+	if (headlines.length === 0) {
+		for (const category of ['politics', 'intel', 'finance', 'tech', 'ai']) {
+			const stored = await readCategoryPayload(env, category);
+			headlines.push(...stored.items.slice(0, 8).map((i) => i.title));
+		}
+	}
+
+	// Cache key includes a hash of the headlines so different news produces different briefs
+	const cacheKey = 'ai:brief';
+	const cached = await getStoreValue(env, cacheKey);
+	if (cached && headlines.length === 0 && Date.now() - cached.generatedAt < 6 * 60 * 60 * 1000) {
+		return jsonResponse(cached);
+	}
+
+	const groqKey = env.GROQ_API_KEY;
+	if (!groqKey) return jsonResponse({ error: 'GROQ_API_KEY not configured' }, 503);
+
+	const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			model: 'llama-3.3-70b-versatile',
+			messages: [
+				{
+					role: 'system',
+					content: 'You are a senior intelligence analyst. Be direct, analytical, and concise. No fluff.'
+				},
+				{
+					role: 'user',
+					content: `Based on these recent news headlines, write a 3-paragraph global situation brief covering: (1) key geopolitical developments, (2) economic and market signals, (3) notable risks or escalation indicators. Headlines:\n${headlines.join('\n')}`
+				}
+			],
+			max_tokens: 600
+		})
+	});
+
+	if (!response.ok) return jsonResponse({ error: 'Groq API error', status: response.status }, 502);
+	const data = await response.json();
+	const brief = {
+		text: data.choices[0].message.content,
+		generatedAt: Date.now(),
+		headlineCount: headlines.length
+	};
+	await setStoreValue(env, 'ai:brief', brief);
+	return jsonResponse(brief);
+}
+
+async function handleStabilitySnapshot(request, env) {
+	const cached = await getStoreValue(env, 'stability:snapshot');
+	if (cached && Date.now() - cached.generatedAt < 60 * 60 * 1000) {
+		return jsonResponse(cached);
+	}
+
+	const scores = {};
+	await Promise.all(
+		Object.entries(COUNTRY_STABILITY_QUERIES).map(async ([country, query]) => {
+			try {
+				const url =
+					'https://api.gdeltproject.org/api/v2/doc/doc?query=' +
+					encodeURIComponent(`(${query}) sourcelang:english`) +
+					'&timespan=7d&mode=artlist&maxrecords=50&format=json&sort=date';
+				const res = await fetchWithTimeout(url);
+				const data = res.ok ? await res.json() : { articles: [] };
+				const items = Array.isArray(data?.articles) ? data.articles : [];
+				scores[country] = computeStabilityScore(items);
+			} catch {
+				scores[country] = 75;
+			}
+		})
+	);
+
+	const snapshot = { scores, generatedAt: Date.now() };
+	await setStoreValue(env, 'stability:snapshot', snapshot);
+	return jsonResponse(snapshot);
+}
+
 async function handleNewsRefresh(request, env) {
 	let body = {};
 	try {
@@ -674,6 +799,12 @@ export default {
 		}
 		if (url.pathname === '/news/refresh' && request.method === 'POST') {
 			return handleNewsRefresh(request, env);
+		}
+		if (url.pathname === '/ai/brief' && request.method === 'POST') {
+			return handleAiBrief(request, env);
+		}
+		if (url.pathname === '/stability/snapshot' && request.method === 'POST') {
+			return handleStabilitySnapshot(request, env);
 		}
 
 		return handleProxyRequest(request);

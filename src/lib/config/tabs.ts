@@ -5,7 +5,7 @@
 import type { PanelId } from './panels';
 import type { MessageKey } from '$lib/i18n';
 
-export type TabId = 'global' | 'regional' | 'economy' | 'social' | 'technology';
+export type TabId = 'global' | 'regional' | 'economy' | 'social' | 'technology' | 'intelligence';
 
 export type TabLayout = 'grid-2row' | 'side-by-side' | 'columns';
 
@@ -50,6 +50,12 @@ export const TABS: TabConfig[] = [
 		nameKey: 'tabs.technology',
 		layout: 'columns',
 		panels: ['tech', 'ai']
+	},
+	{
+		id: 'intelligence',
+		nameKey: 'tabs.intelligence',
+		layout: 'columns',
+		panels: ['ai_brief', 'country_stability', 'market_radar', 'strategic_risk']
 	}
 ];
 

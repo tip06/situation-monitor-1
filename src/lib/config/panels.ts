@@ -36,7 +36,11 @@ export type PanelId =
 	| 'narrative'
 	| 'fed'
 	| 'brazil'
-	| 'latam';
+	| 'latam'
+	| 'ai_brief'
+	| 'country_stability'
+	| 'market_radar'
+	| 'strategic_risk';
 
 export const PANELS: Record<PanelId, PanelConfig> = {
 	map: { nameKey: 'panelName.map', priority: 1 },
@@ -65,7 +69,11 @@ export const PANELS: Record<PanelId, PanelConfig> = {
 	narrative: { nameKey: 'narrative.title', priority: 1 },
 	fed: { nameKey: 'panelName.fed', priority: 1 },
 	brazil: { nameKey: 'panelName.brazil', priority: 1 },
-	latam: { nameKey: 'panelName.latam', priority: 1 }
+	latam: { nameKey: 'panelName.latam', priority: 1 },
+	ai_brief: { nameKey: 'panelName.ai_brief', priority: 1 },
+	country_stability: { nameKey: 'panelName.country_stability', priority: 1 },
+	market_radar: { nameKey: 'panelName.market_radar', priority: 1 },
+	strategic_risk: { nameKey: 'panelName.strategic_risk', priority: 1 }
 };
 
 export const NON_DRAGGABLE_PANELS: PanelId[] = ['map'];

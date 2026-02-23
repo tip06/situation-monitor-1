@@ -19,3 +19,7 @@ export { default as MonitorsPanel } from './MonitorsPanel.svelte';
 export { default as MapPanel } from './MapPanel.svelte';
 export { default as WorldLeadersPanel } from './WorldLeadersPanel.svelte';
 export { default as FedPanel } from './FedPanel.svelte';
+export { default as AIBriefPanel } from './AIBriefPanel.svelte';
+export { default as CountryStabilityPanel } from './CountryStabilityPanel.svelte';
+export { default as MarketRadarPanel } from './MarketRadarPanel.svelte';
+export { default as StrategicRiskPanel } from './StrategicRiskPanel.svelte';

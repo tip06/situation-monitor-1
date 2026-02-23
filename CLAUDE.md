@@ -109,10 +109,8 @@ Unique business logic for intelligence analysis:
 - Improve map interface (1-2)
 - check out world monitor for ideas (1-2)
 - alerts for economic indicators (2-3)
-- make a cool loading screen (2-3)
 - create rss feeds from sites or social media (1)
-- fix refreshing (1)
-
+- work module by module in the intelligence tab. once ready, move them to something else.
 
 ## General Guidance
 

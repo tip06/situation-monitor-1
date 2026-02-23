@@ -39,3 +39,4 @@ archive/
 
 # SQLite database
 data/
+.firecrawl/
