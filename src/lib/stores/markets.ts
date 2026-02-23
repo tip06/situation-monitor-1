@@ -164,6 +164,26 @@ function createMarketsStore() {
 		},
 
 		/**
+		 * Set all market data in one store update (avoids 4 cascading re-renders)
+		 */
+		setAll(data: {
+			indices: MarketItem[];
+			sectors: SectorPerformance[];
+			commodities: MarketItem[];
+			crypto: CryptoItem[];
+		}) {
+			const now = Date.now();
+			update((state) => ({
+				...state,
+				initialized: true,
+				indices: { items: data.indices, loading: false, error: null, lastUpdated: now },
+				sectors: { items: data.sectors, loading: false, error: null, lastUpdated: now },
+				commodities: { items: data.commodities, loading: false, error: null, lastUpdated: now },
+				crypto: { items: data.crypto, loading: false, error: null, lastUpdated: now }
+			}));
+		},
+
+		/**
 		 * Update a single market item
 		 */
 		updateItem(category: 'indices' | 'commodities', symbol: string, updates: Partial<MarketItem>) {

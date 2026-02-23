@@ -50,8 +50,6 @@
 	import { detectAlerts } from '$lib/alerts/engine';
 	import { alertPopups } from '$lib/stores/alertPopups';
 
-	type NewsLoadReason = 'initial' | 'refresh' | 'tabSwitch' | 'deferred';
-
 	// Modal state
 	let settingsOpen = $state(false);
 	let monitorFormOpen = $state(false);
@@ -87,6 +85,7 @@
 		venezuela: 'venezuela',
 		greenland: 'greenland'
 	};
+	const ENABLE_BACKGROUND_PREFETCH = false;
 
 	function getVisibleNewsCategories(tabId: TabId): NewsCategory[] {
 		const enabledSettings = get(settings).enabled;
@@ -103,117 +102,102 @@
 		return NEWS_REFRESH_CATEGORIES.filter((category) => !visibleSet.has(category));
 	}
 
-	let initialLoadDone = $state(false);
-	let inFlightCategories = $state<Set<NewsCategory>>(new Set());
-	let tabSwitchController = $state<AbortController | null>(null);
-	let deferredLoadTimer = $state<ReturnType<typeof setTimeout> | null>(null);
+	let activeLoadToken = 0;
+	let deferredCategoryLoadTimer: ReturnType<typeof setTimeout> | null = null;
+	let tabLoadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	const inFlightCategoryLoads = new Map<NewsCategory, Promise<void>>();
+	let longTaskObserver: PerformanceObserver | null = null;
+	let alertDetectionTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function isAbortError(error: unknown): boolean {
-		return error instanceof DOMException && error.name === 'AbortError';
-	}
-
-	function addInFlightCategories(categories: NewsCategory[]): void {
-		inFlightCategories = new Set([...inFlightCategories, ...categories]);
-	}
-
-	function removeInFlightCategories(categories: NewsCategory[]): void {
-		const next = new Set(inFlightCategories);
-		for (const category of categories) {
-			next.delete(category);
-		}
-		inFlightCategories = next;
-	}
-
-	function getUnloadedCategories(categories: NewsCategory[]): NewsCategory[] {
-		const state = get(news);
-		return categories.filter(
-			(category) => state.categories[category].items.length === 0 && !inFlightCategories.has(category)
-		);
-	}
-
-	function beginLoad(reason: NewsLoadReason): void {
-		if (reason === 'tabSwitch' || reason === 'deferred') {
-			refresh.startBackgroundSync();
+	function cancelDeferredCategoryLoad() {
+		if (deferredCategoryLoadTimer) {
+			clearTimeout(deferredCategoryLoadTimer);
+			deferredCategoryLoadTimer = null;
 		}
 	}
 
-	function endLoad(reason: NewsLoadReason): void {
-		if (reason === 'tabSwitch' || reason === 'deferred') {
-			refresh.endBackgroundSync();
+	function cancelTabLoadDebounce() {
+		if (tabLoadDebounceTimer) {
+			clearTimeout(tabLoadDebounceTimer);
+			tabLoadDebounceTimer = null;
 		}
 	}
 
-	async function loadNews(
-		categories: NewsCategory[],
-		options: { reason: NewsLoadReason; signal?: AbortSignal; force?: boolean }
-	): Promise<void> {
-		const uniqueCategories = [...new Set(categories)];
-		const categoriesToLoad = (options.force ? uniqueCategories : getUnloadedCategories(uniqueCategories)).filter(
-			(category) => !inFlightCategories.has(category)
-		);
+	function scheduleAlertDetection() {
+		if (alertDetectionTimer) {
+			clearTimeout(alertDetectionTimer);
+		}
+		alertDetectionTimer = setTimeout(() => {
+			runAlertDetection();
+		}, 0);
+	}
 
-		if (categoriesToLoad.length === 0) return;
+	function beginLoadCycle(): number {
+		activeLoadToken += 1;
+		cancelDeferredCategoryLoad();
+		return activeLoadToken;
+	}
 
-		beginLoad(options.reason);
-		addInFlightCategories(categoriesToLoad);
-		categoriesToLoad.forEach((category) => news.setLoading(category, true));
+	function isCurrentLoadToken(token: number): boolean {
+		return token === activeLoadToken;
+	}
 
-		const completedCategories = new Set<NewsCategory>();
-		let aborted = false;
+	function scheduleDeferredCategoryLoad(categories: NewsCategory[], token: number, delayMs = 5000) {
+		cancelDeferredCategoryLoad();
+		deferredCategoryLoadTimer = setTimeout(() => {
+			if (!isCurrentLoadToken(token)) return;
+			void loadNews(categories, token);
+		}, delayMs);
+	}
 
-		try {
-			await refreshAllNewsProgressive({
-				timeoutMs: 30000,
-				categoryConcurrency: 3,
-				categories: categoriesToLoad,
-				preferEdge: true,
-				signal: options.signal,
-				onCachedCategory: (category, items) => {
-					news.setItems(category, items);
-					completedCategories.add(category);
-				},
-				onFreshCategory: (category, items) => {
-					news.setItems(category, items);
-					completedCategories.add(category);
-				},
-				onCategoryError: (category, error) => {
-					completedCategories.add(category);
-					if (!isAbortError(error)) {
-						news.setError(category, String(error));
-					}
-				}
+	// Data fetching
+	async function loadNewsCategory(category: NewsCategory, token: number): Promise<void> {
+		const existing = inFlightCategoryLoads.get(category);
+		if (existing) return existing;
+
+		if (isCurrentLoadToken(token)) {
+			news.setLoading(category, true);
+		}
+
+		const request: Promise<void> = refreshAllNewsProgressive({
+			timeoutMs: 30000,
+			categoryConcurrency: 1,
+			categories: [category],
+			preferEdge: true,
+			onCachedCategory: (loadedCategory, items) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setItems(loadedCategory, items);
+			},
+			onFreshCategory: (loadedCategory, items) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setItems(loadedCategory, items);
+			},
+			onCategoryError: (failedCategory, error) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setError(failedCategory, String(error));
+			}
+		})
+			.then(() => undefined)
+			.catch((error) => {
+				if (!isCurrentLoadToken(token)) return;
+				news.setError(category, String(error));
+			})
+			.finally(() => {
+				inFlightCategoryLoads.delete(category);
 			});
-		} catch (error) {
-			aborted = isAbortError(error);
-			if (!aborted) {
-				for (const category of categoriesToLoad) {
-					if (!completedCategories.has(category)) {
-						news.setError(category, String(error));
-					}
-				}
-			}
-		} finally {
-			for (const category of categoriesToLoad) {
-				if (!completedCategories.has(category)) {
-					news.setLoading(category, false);
-				}
-			}
-			removeInFlightCategories(categoriesToLoad);
-			endLoad(options.reason);
-		}
 
-		if (aborted) {
-			return;
-		}
+		inFlightCategoryLoads.set(category, request);
+		return request;
+	}
+
+	async function loadNews(categories: NewsCategory[], token: number) {
+		await Promise.all(categories.map((category) => loadNewsCategory(category, token)));
 	}
 
 	async function loadMarkets() {
 		try {
 			const data = await fetchAllMarkets();
-			markets.setIndices(data.indices);
-			markets.setSectors(data.sectors);
-			markets.setCommodities(data.commodities);
-			markets.setCrypto(data.crypto);
+			markets.setAll(data);
 		} catch (error) {
 			console.error('Failed to load markets:', error);
 		}
@@ -250,20 +234,16 @@
 
 	// Refresh handlers
 	async function handleRefresh() {
-		tabSwitchController?.abort();
-		tabSwitchController = null;
 		refresh.startRefresh();
+		const token = beginLoadCycle();
 		try {
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
-			await Promise.all([
-				loadNews(visibleCategories, { reason: 'refresh', force: true }),
-				loadMarkets()
-			]);
-			if (remainingCategories.length > 0) {
-				void loadNews(remainingCategories, { reason: 'deferred', force: true });
+			await Promise.all([loadNews(visibleCategories, token), loadMarkets()]);
+			if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
+				scheduleDeferredCategoryLoad(remainingCategories, token);
 			}
-			runAlertDetection();
+			scheduleAlertDetection();
 			refresh.endRefresh();
 		} catch (error) {
 			refresh.endRefresh([String(error)]);
@@ -342,48 +322,22 @@
 	// Plain (non-reactive) flag to prevent double-loading intelligence data
 	let intelligenceLoadTriggered = false;
 
-	const iranSituationNews = $derived(
-		filterNews(
-			$allNewsItems.filter(
-				(n) =>
-					n.title.toLowerCase().includes('iran') ||
-					n.title.toLowerCase().includes('tehran') ||
-					n.title.toLowerCase().includes('irgc')
-			),
-			SITUATION_FILTER_OPTIONS
-		)
-	);
-
-	const venezuelaSituationNews = $derived(
-		filterNews(
-			$allNewsItems.filter(
-				(n) =>
-					n.title.toLowerCase().includes('venezuela') ||
-					n.title.toLowerCase().includes('maduro')
-			),
-			SITUATION_FILTER_OPTIONS
-		)
-	);
-
-	const greenlandSituationNews = $derived(
-		filterNews(
-			$allNewsItems.filter(
-				(n) =>
-					n.title.toLowerCase().includes('greenland') ||
-					n.title.toLowerCase().includes('arctic')
-			),
-			SITUATION_FILTER_OPTIONS
-		)
-	);
-
 	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
 		const tab = $activeTab;
-		if (!initialLoadDone) return;
-
-		tabSwitchController?.abort();
-		const controller = new AbortController();
-		tabSwitchController = controller;
+		if (typeof performance !== 'undefined' && typeof requestAnimationFrame === 'function') {
+			const currentSequence = ++tabSwitchSequence;
+			const start = performance.now();
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					if (currentSequence !== tabSwitchSequence) return;
+					const duration = performance.now() - start;
+					if (duration > 500) {
+						console.warn(`Slow tab switch detected (${tab}): ${Math.round(duration)}ms`);
+					}
+				});
+			});
+		}
 
 		// Load intelligence data on first visit to intelligence tab
 		if (tab === 'intelligence') {
@@ -395,47 +349,65 @@
 			return;
 		}
 
+		if (!initialLoadDone || loadedTabs.has(tab)) return;
+
 		const categories = getVisibleNewsCategories(tab);
-		const unloadedCategories = getUnloadedCategories(categories);
+		const unloadedCategories = categories.filter(
+			(cat) => get(news).categories[cat]?.items?.length === 0
+		);
+
 		if (unloadedCategories.length === 0) {
-			tabSwitchController = null;
+			loadedTabs = new Set([...loadedTabs, tab]);
 			return;
 		}
 
-		void loadNews(unloadedCategories, { reason: 'tabSwitch', signal: controller.signal }).finally(() => {
-			if (tabSwitchController === controller) {
-				tabSwitchController = null;
-			}
-		});
+		cancelTabLoadDebounce();
+		tabLoadDebounceTimer = setTimeout(() => {
+			const token = beginLoadCycle();
+			void loadNews(unloadedCategories, token).then(() => {
+				if (!isCurrentLoadToken(token)) return;
+				loadedTabs = new Set([...loadedTabs, tab]);
+			});
+		}, 250);
 	});
 
 	// Initial load
 	onMount(() => {
-		// Initialize tab store from localStorage
+		if (typeof PerformanceObserver !== 'undefined') {
+			try {
+				longTaskObserver = new PerformanceObserver((entryList) => {
+					for (const entry of entryList.getEntries()) {
+						if (entry.duration > 50) {
+							console.warn(`Long task detected: ${Math.round(entry.duration)}ms`);
+						}
+					}
+				});
+				longTaskObserver.observe({ entryTypes: ['longtask'] });
+			} catch {
+				// Long task API may not be supported by the current browser
+			}
+		}
+
 		activeTab.init();
 		sources.init();
 
 		// Load initial data: visible tab first, defer rest
 		async function initialLoad() {
 			refresh.startRefresh();
+			const token = beginLoadCycle();
 			try {
 				const currentTab = $activeTab;
 				const visibleCategories = getVisibleNewsCategories(currentTab);
-				await Promise.all([
-					loadNews(visibleCategories, { reason: 'initial' }),
-					loadMarkets(),
-					loadMiscData()
-				]);
+				await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData()]);
+				loadedTabs = new Set([currentTab]);
 				initialLoadDone = true;
-				runAlertDetection();
+				scheduleAlertDetection();
 				refresh.endRefresh();
 
 				// Defer remaining categories after 5s
 				const remainingCategories = getRemainingNewsCategories(visibleCategories);
-				if (remainingCategories.length > 0) {
-					deferredLoadTimer = setTimeout(() => {
-						void loadNews(remainingCategories, { reason: 'deferred' });
-					}, 5000);
+				if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
+					scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
 				}
 			} catch (error) {
 				initialLoadDone = true;
@@ -446,10 +418,13 @@
 		refresh.setupAutoRefresh(handleRefresh);
 
 		return () => {
-			tabSwitchController?.abort();
-			if (deferredLoadTimer) {
-				clearTimeout(deferredLoadTimer);
+			cancelTabLoadDebounce();
+			cancelDeferredCategoryLoad();
+			if (alertDetectionTimer) {
+				clearTimeout(alertDetectionTimer);
+				alertDetectionTimer = null;
 			}
+			longTaskObserver?.disconnect();
 			refresh.stopAutoRefresh();
 		};
 	});

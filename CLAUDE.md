@@ -104,13 +104,58 @@ Unique business logic for intelligence analysis:
 - **CORS proxy** (Cloudflare Worker) for RSS feed parsing
 - **CoinGecko API** for cryptocurrency data
 
+## Cloudflare Worker (`workers/cors-proxy.js`)
+
+Deployed at: `https://situation-monitor-proxy.projetip.workers.dev`
+
+### Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/?url=<encoded>` | CORS proxy for RSS/external feeds |
+| POST | `/news/refresh` | Trigger cached news refresh in KV |
+| POST | `/ai/brief` | Generate LLM brief via Groq (body: `{ headlines: string[] }`) |
+| POST | `/stability/snapshot` | Fetch country stability scores from GDELT |
+
+### Deploy & Secrets (run from repo root)
+
+```bash
+wrangler deploy workers/cors-proxy.js        # redeploy after changes
+wrangler secret put GROQ_API_KEY             # set/rotate Groq API key
+wrangler secret list                         # verify secrets are present
+```
+
+Get a Groq API key at: https://console.groq.com
+Model in use: `llama-3.3-70b-versatile`
+
+### Verify Worker Endpoints
+
+```bash
+# AI Brief (sends headlines; worker uses them directly)
+curl https://situation-monitor-proxy.projetip.workers.dev/ai/brief \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"headlines":["Test headline one","Test headline two"]}'
+
+# Country Stability (no body required)
+curl https://situation-monitor-proxy.projetip.workers.dev/stability/snapshot -X POST
+```
+
+### KV Namespace
+
+The worker uses a KV namespace (`SITUATION_STORE`) for caching:
+- `ai:brief` — cached AI brief (6-hour TTL, regenerated when headlines are sent)
+- `stability:snapshot` — cached stability scores (1-hour TTL)
+- `news:<category>` — cached RSS news per category
+
 ## TODO
 
 - Improve map interface (1-2)
 - check out world monitor for ideas (1-2)
 - alerts for economic indicators (2-3)
 - create rss feeds from sites or social media (1)
-- work module by module in the intelligence tab. once ready, move them to something else.
+- work module by module in the intelligence tab. once ready, move them to something else (2)
+- fix economy tab (2)
+
 
 ## General Guidance
 
