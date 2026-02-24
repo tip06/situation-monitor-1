@@ -203,6 +203,115 @@ describe('Narrative Tracker', () => {
 			expect(selic).toBeDefined();
 			expect(selic!.category).toBe('Economy');
 		});
+
+		it('should detect BRL/USD depreciation in real-pressure', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Real se desvaloriza frente ao dólar com aversão a risco global',
+					source: 'Valor',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'USD/BRL sobe e pressiona câmbio no Brasil',
+					source: 'InfoMoney',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const fxNarrative = results!.trendingNarratives.find((n) => n.id === 'real-pressure');
+			expect(fxNarrative).toBeDefined();
+			expect(fxNarrative!.region).toBe('brazil');
+		});
+
+		it('should avoid triggering real-pressure on generic market language', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Mercado de câmbio global fecha em alta',
+					source: 'Reuters',
+					category: 'finance'
+				}),
+				createNewsItem({
+					title: 'A desvalorização de ativos tech acelera em Wall Street',
+					source: 'Bloomberg',
+					category: 'finance'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const fxNarrative = results!.trendingNarratives.find((n) => n.id === 'real-pressure');
+			expect(fxNarrative).toBeUndefined();
+		});
+
+		it('should detect macro pressure drivers narrative with Brazil linkage', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Inflação no Brasil acelera e pressiona o câmbio do real',
+					source: 'Valor',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'Risco fiscal no Brasil sobe e pressiona o dólar e o BRL',
+					source: 'Reuters',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const drivers = results!.trendingNarratives.find((n) => n.id === 'real-pressure-drivers');
+			expect(drivers).toBeDefined();
+			expect(drivers!.region).toBe('brazil');
+		});
+
+		it('should avoid real-pressure-drivers on unrelated global sanctions/inflation', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'U.S. sanctions target shipping network in the Middle East',
+					source: 'Reuters',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'Inflation cools in Canada as food prices stabilize',
+					source: 'Bloomberg',
+					category: 'finance'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const drivers = results!.trendingNarratives.find((n) => n.id === 'real-pressure-drivers');
+			expect(drivers).toBeUndefined();
+		});
+
+		it('should detect both fx and macro-driver narratives when both are present', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Real cai frente ao dólar e BRL atinge menor nível em semanas',
+					source: 'InfoMoney',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'USD/BRL dispara com piora no câmbio brasileiro',
+					source: 'Valor',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'Risco fiscal no Brasil aumenta e pressiona real e dólar',
+					source: 'Exame',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'Commodity slump deepens and weighs on Brazil currency outlook',
+					source: 'Reuters',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const fxNarrative = results!.trendingNarratives.find((n) => n.id === 'real-pressure');
+			const drivers = results!.trendingNarratives.find((n) => n.id === 'real-pressure-drivers');
+			expect(fxNarrative).toBeDefined();
+			expect(drivers).toBeDefined();
+		});
 	});
 
 	describe('Latin America narratives', () => {

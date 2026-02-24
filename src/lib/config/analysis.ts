@@ -2425,8 +2425,26 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 	},
 	{
 		id: 'real-pressure',
-		name: 'Real Currency',
-		patterns: [/dolar.{0,10}real/i, /cambio/i, /desvaloriza/i, /real.{0,10}dolar/i],
+		name: 'Pressao no Real (FX)',
+		patterns: [
+			/\b(brl|real)\b.{0,20}\b(usd|d[oó]lar|dollar|c[âa]mbio|fx|exchange rate)\b/i,
+			/\b(usd|d[oó]lar|dollar)\b.{0,20}\b(brl|real)\b/i,
+			/\b(real|brl)\b.{0,20}\b(desvaloriza[çc][aã]o|desvaloriza|deprecia[çc][aã]o|depreciat|weakens?|enfraquece)\b/i,
+			/\b(c[âa]mbio|fx|exchange rate)\b.{0,20}\b(real|brl)\b.{0,20}\b(alta|dispara|pressure|volatil|deprecia|desvaloriz)\b/i
+		],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'real-pressure-drivers',
+		name: 'Vetores de Pressao no Real',
+		patterns: [
+			/\b(sanctions?|san[cç][õo]es|embargo|export controls?)\b.{0,25}\b(us|u\.s\.|eua|estados unidos)\b.{0,40}\b(d[oó]lar|usd|commodity|commodit|brasil|brazil|real|brl)\b/i,
+			/\b(infla[çc][aã]o|inflation|ipca)\b.{0,35}\b(brasil|brazil|real|brl|c[âa]mbio|d[oó]lar|usd)\b/i,
+			/\b(arcabou[cç]o fiscal|meta fiscal|d[ée]ficit|rombo fiscal|risco fiscal|fiscal pressure|fiscal stress|public debt|d[íi]vida p[úu]blica)\b.{0,35}\b(brasil|brazil|real|brl|c[âa]mbio|d[oó]lar|usd)\b/i,
+			/\b(commodit|commodity|soja|min[ée]rio|iron ore|petr[oó]leo|oil)\b.{0,30}\b(fall|queda|drop|deprecia|desvaloriza|slump)\b.{0,30}\b(brasil|brazil|real|brl|d[oó]lar|usd)\b/i,
+			/\b(queda das commodities|commodity slump|commodities downturn)\b.{0,30}\b(real|brl|c[âa]mbio|brasil|brazil)\b/i
+		],
 		category: 'Economy',
 		region: 'brazil'
 	},
