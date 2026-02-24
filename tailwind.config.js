@@ -19,6 +19,7 @@ export default {
 				info: '#4488ff'
 			},
 			fontFamily: {
+				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif', "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"],
 				mono: ['SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'monospace']
 			},
 			fontSize: {
