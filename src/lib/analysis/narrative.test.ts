@@ -131,6 +131,102 @@ describe('Narrative Tracker', () => {
 			expect(aiHype!.category).toBe('Tech');
 		});
 
+		it('should detect china-decoupling on policy restrictions with China context', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'U.S. expands export controls on advanced chips to China',
+					source: 'Reuters',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'EU weighs investment screening as de-risking strategy toward Beijing',
+					source: 'FT',
+					category: 'gov'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const chinaDecoupling = results!.trendingNarratives.find((n) => n.id === 'china-decoupling');
+			expect(chinaDecoupling).toBeDefined();
+			expect(chinaDecoupling!.region).toBe('global');
+		});
+
+		it('should detect china-decoupling with de-risking and friend-shoring language', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'G7 ministers back friend-shoring to reduce dependence on China supply chains',
+					source: 'Bloomberg',
+					category: 'finance'
+				}),
+				createNewsItem({
+					title: 'European firms accelerate de-risking plans from China manufacturing hubs',
+					source: 'WSJ',
+					category: 'finance'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const chinaDecoupling = results!.trendingNarratives.find((n) => n.id === 'china-decoupling');
+			expect(chinaDecoupling).toBeDefined();
+		});
+
+		it('should ignore generic decoupling stories in tech category', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Company decouples app backend from legacy services',
+					source: 'TechCrunch',
+					category: 'tech'
+				}),
+				createNewsItem({
+					title: 'Microservices decoupling improves platform reliability',
+					source: 'The Verge',
+					category: 'tech'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const chinaDecoupling = results!.trendingNarratives.find((n) => n.id === 'china-decoupling');
+			expect(chinaDecoupling).toBeUndefined();
+		});
+
+		it('should ignore decoupling language without China context', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Emerging markets decouple from U.S. growth cycle',
+					source: 'Reuters',
+					category: 'finance'
+				}),
+				createNewsItem({
+					title: 'Inflation decoupling from wages challenges central banks',
+					source: 'Bloomberg',
+					category: 'finance'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const chinaDecoupling = results!.trendingNarratives.find((n) => n.id === 'china-decoupling');
+			expect(chinaDecoupling).toBeUndefined();
+		});
+
+		it('should ignore China headlines without decoupling policy signal', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'China posts stronger retail sales this quarter',
+					source: 'Reuters',
+					category: 'finance'
+				}),
+				createNewsItem({
+					title: 'Beijing announces tourism stimulus measures',
+					source: 'BBC',
+					category: 'politics'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const chinaDecoupling = results!.trendingNarratives.find((n) => n.id === 'china-decoupling');
+			expect(chinaDecoupling).toBeUndefined();
+		});
+
 		it('should require minimum mentions for trending narratives', () => {
 			const news: NewsItem[] = [
 				createNewsItem({ title: 'One mention of soft landing', source: 'Reuters' })
@@ -141,6 +237,45 @@ describe('Narrative Tracker', () => {
 
 			const softLanding = results!.trendingNarratives.find((n) => n.id === 'soft-landing');
 			expect(softLanding).toBeUndefined();
+		});
+
+		it('should detect global election coverage from politics and gov categories', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Opposition candidate leads election polling in Germany',
+					source: 'Reuters',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'Runoff campaign heats up as ballot counting nears',
+					source: 'BBC',
+					category: 'gov'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const election = results!.trendingNarratives.find((n) => n.id === 'election-coverage');
+			expect(election).toBeDefined();
+			expect(election!.region).toBe('global');
+		});
+
+		it('should ignore election coverage in non-politics categories', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Election polling shakes currency markets',
+					source: 'Bloomberg',
+					category: 'finance'
+				}),
+				createNewsItem({
+					title: 'Campaign data platform expands AI tooling',
+					source: 'TechCrunch',
+					category: 'tech'
+				})
+			];
+
+			const results = analyzeNarratives(news);
+			const election = results!.trendingNarratives.find((n) => n.id === 'election-coverage');
+			expect(election).toBeUndefined();
 		});
 	});
 
@@ -311,6 +446,82 @@ describe('Narrative Tracker', () => {
 			const drivers = results!.trendingNarratives.find((n) => n.id === 'real-pressure-drivers');
 			expect(fxNarrative).toBeDefined();
 			expect(drivers).toBeDefined();
+		});
+
+		it('should detect brazil-election-coverage with election context and brazil entities', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'TSE divulga calendário da eleição presidencial no Brasil',
+					source: 'G1',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'PT e PL iniciam campanha com foco no segundo turno',
+					source: 'Folha',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const brazilElection = results!.trendingNarratives.find(
+				(n) => n.id === 'brazil-election-coverage'
+			);
+			expect(brazilElection).toBeDefined();
+			expect(brazilElection!.region).toBe('brazil');
+		});
+
+		it('should avoid brazil-election-coverage when election context is missing', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Lula discute novo pacote social com lideranças do PT',
+					source: 'G1',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'PL critica proposta fiscal em reunião com governadores',
+					source: 'Estadao',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const brazilElection = results!.trendingNarratives.find(
+				(n) => n.id === 'brazil-election-coverage'
+			);
+			expect(brazilElection).toBeUndefined();
+		});
+
+		it('should detect both global and brazil election narratives when both signals exist', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Opposition candidate gains in election polling before runoff',
+					source: 'Reuters',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'Government prepares ballot security operations for election day',
+					source: 'BBC',
+					category: 'gov'
+				}),
+				createNewsItem({
+					title: 'TSE reforça regras da campanha presidencial no Brasil',
+					source: 'G1',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'PL e PT ajustam estratégia para o segundo turno eleitoral',
+					source: 'Folha',
+					category: 'brazil'
+				})
+			];
+
+			const results = analyzeNarratives(news, 'pt-BR');
+			const globalElection = results!.trendingNarratives.find((n) => n.id === 'election-coverage');
+			const brazilElection = results!.trendingNarratives.find(
+				(n) => n.id === 'brazil-election-coverage'
+			);
+			expect(globalElection).toBeDefined();
+			expect(brazilElection).toBeDefined();
 		});
 	});
 
@@ -667,13 +878,58 @@ describe('Narrative Tracker', () => {
 
 		it('should detect brazil-right-framing narrative', () => {
 			const news: NewsItem[] = [
-				createNewsItem({ title: 'Esquerdistas dominam universidades, diz relatório', source: 'Gazeta' }),
-				createNewsItem({ title: 'Doutrinação nas escolas preocupa pais', source: 'Jovem Pan' })
+				createNewsItem({
+					title: 'No Brasil, esquerdistas dominam universidades, diz relatório',
+					source: 'Gazeta',
+					category: 'brazil'
+				}),
+				createNewsItem({
+					title: 'STF e Congresso no Brasil viram alvo de críticas por ativismo judicial',
+					source: 'Jovem Pan',
+					category: 'brazil'
+				})
 			];
 			const results = analyzeNarratives(news);
 			const narrative = results!.trendingNarratives.find((n) => n.id === 'brazil-right-framing');
 			expect(narrative).toBeDefined();
 			expect(narrative!.region).toBe('brazil');
+		});
+
+		it('should detect right-framing-global for non-brazil right framing', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Esquerdistas dominam universidades na América Latina, diz relatório',
+					source: 'El Pais',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'Ativismo judicial e aparelhamento viram pauta em debate europeu',
+					source: 'BBC',
+					category: 'politics'
+				})
+			];
+			const results = analyzeNarratives(news);
+			const globalRight = results!.trendingNarratives.find((n) => n.id === 'right-framing-global');
+			expect(globalRight).toBeDefined();
+			expect(globalRight!.region).toBe('global');
+		});
+
+		it('should avoid brazil-right-framing when brazil context is missing', () => {
+			const news: NewsItem[] = [
+				createNewsItem({
+					title: 'Esquerdistas dominam universidades na América Latina, diz relatório',
+					source: 'El Pais',
+					category: 'politics'
+				}),
+				createNewsItem({
+					title: 'Ativismo judicial e aparelhamento viram pauta em debate europeu',
+					source: 'BBC',
+					category: 'politics'
+				})
+			];
+			const results = analyzeNarratives(news);
+			const brazilRight = results!.trendingNarratives.find((n) => n.id === 'brazil-right-framing');
+			expect(brazilRight).toBeUndefined();
 		});
 
 		it('should detect brazil-left-framing narrative', () => {

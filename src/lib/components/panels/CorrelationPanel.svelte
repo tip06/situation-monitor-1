@@ -460,15 +460,15 @@
 									variant={getLevelVariant(pattern.level)}
 								/>
 							</div>
-							<div class="pattern-sources">
-								{pattern.sources.slice(0, 3).join(' · ')}
-								({t($language, 'correlation.items', { count: pattern.count })})
-								{#if pattern.zScore > 1}
-									<span class="z-score" class:high={pattern.zScore >= 2}>
-										z={pattern.zScore.toFixed(1)}
-									</span>
-								{/if}
-							</div>
+								<div class="pattern-sources">
+									{pattern.sources.slice(0, 3).join(' · ')}
+									({t($language, 'correlation.items', { count: pattern.count })})
+									{#if pattern.robustZScore > 1}
+										<span class="z-score" class:high={pattern.robustZScore >= 2.5}>
+											z={pattern.robustZScore.toFixed(1)}
+										</span>
+									{/if}
+								</div>
 						</div>
 					{/each}
 				</div>

@@ -170,9 +170,16 @@ function analyzeMainstreamNarratives(
 	for (const pattern of MAINSTREAM_NARRATIVE_PATTERNS) {
 		const matches: NewsItem[] = [];
 		const sources = new Set<string>();
+		const allowedCategories = pattern.sourceCategories
+			? new Set(pattern.sourceCategories)
+			: null;
 
 		// Find matching news items - check both title AND description
 		for (const item of allNews) {
+			if (allowedCategories && !allowedCategories.has(item.category)) {
+				continue;
+			}
+
 			const title = item.title || '';
 			const description = item.description || '';
 			const combinedText = `${title} ${description}`;

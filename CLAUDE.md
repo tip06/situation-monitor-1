@@ -112,7 +112,7 @@ Unique business logic for intelligence analysis:
 - make a cool loading screen (2-3)
 - create rss feeds from sites or social media (1)
 - intel feed may be not refreshing correctly
-- fix real currency keywords
+- fix feeds (2)
 
 ## General Guidance
 
