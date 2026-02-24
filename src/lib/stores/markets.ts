@@ -3,45 +3,41 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
-import type { MarketItem, CryptoItem, SectorPerformance } from '$lib/types';
+import type {
+	MarketItem,
+	CryptoItem,
+	SectorPerformance,
+	MarketCategoryKey,
+	MarketCategoryHealth
+} from '$lib/types';
+
+type MarketSection<T> = {
+	items: T[];
+	loading: boolean;
+	error: string | null;
+	lastUpdated: number | null;
+	isStale: boolean;
+	staleReason: string | null;
+	lastSuccess: number | null;
+};
 
 export interface MarketsState {
 	// Stock indices (DOW, S&P, NASDAQ, Russell)
-	indices: {
-		items: MarketItem[];
-		loading: boolean;
-		error: string | null;
-		lastUpdated: number | null;
-	};
+	indices: MarketSection<MarketItem>;
 
 	// Sector ETFs (XLK, XLF, etc.)
-	sectors: {
-		items: SectorPerformance[];
-		loading: boolean;
-		error: string | null;
-		lastUpdated: number | null;
-	};
+	sectors: MarketSection<SectorPerformance>;
 
 	// Commodities (Gold, Oil, VIX, etc.)
-	commodities: {
-		items: MarketItem[];
-		loading: boolean;
-		error: string | null;
-		lastUpdated: number | null;
-	};
+	commodities: MarketSection<MarketItem>;
 
 	// Crypto (BTC, ETH, SOL)
-	crypto: {
-		items: CryptoItem[];
-		loading: boolean;
-		error: string | null;
-		lastUpdated: number | null;
-	};
+	crypto: MarketSection<CryptoItem>;
 
 	initialized: boolean;
 }
 
-type MarketCategory = 'indices' | 'sectors' | 'commodities' | 'crypto';
+type MarketCategory = MarketCategoryKey;
 
 // Create initial state
 function createInitialState(): MarketsState {
@@ -49,7 +45,10 @@ function createInitialState(): MarketsState {
 		items: [],
 		loading: false,
 		error: null,
-		lastUpdated: null
+		lastUpdated: null,
+		isStale: false,
+		staleReason: null,
+		lastSuccess: null
 	};
 
 	return {
@@ -104,16 +103,36 @@ function createMarketsStore() {
 		},
 
 		/**
+		 * Set freshness metadata for a category
+		 */
+		setHealth(category: MarketCategory, health: MarketCategoryHealth | null | undefined) {
+			if (!health) return;
+			update((state) => ({
+				...state,
+				[category]: {
+					...state[category],
+					isStale: health.stale,
+					staleReason: health.reason,
+					lastSuccess: health.lastSuccess,
+					error: health.stale ? (health.reason ?? state[category].error) : null
+				}
+			}));
+		},
+
+		/**
 		 * Set indices data
 		 */
-		setIndices(items: MarketItem[]) {
+		setIndices(items: MarketItem[], health?: MarketCategoryHealth | null) {
 			update((state) => ({
 				...state,
 				indices: {
 					items,
 					loading: false,
-					error: null,
-					lastUpdated: Date.now()
+					error: health?.stale ? (health.reason ?? null) : null,
+					lastUpdated: Date.now(),
+					isStale: health?.stale ?? false,
+					staleReason: health?.reason ?? null,
+					lastSuccess: health?.lastSuccess ?? state.indices.lastSuccess
 				}
 			}));
 		},
@@ -121,14 +140,17 @@ function createMarketsStore() {
 		/**
 		 * Set sectors data
 		 */
-		setSectors(items: SectorPerformance[]) {
+		setSectors(items: SectorPerformance[], health?: MarketCategoryHealth | null) {
 			update((state) => ({
 				...state,
 				sectors: {
 					items,
 					loading: false,
-					error: null,
-					lastUpdated: Date.now()
+					error: health?.stale ? (health.reason ?? null) : null,
+					lastUpdated: Date.now(),
+					isStale: health?.stale ?? false,
+					staleReason: health?.reason ?? null,
+					lastSuccess: health?.lastSuccess ?? state.sectors.lastSuccess
 				}
 			}));
 		},
@@ -136,14 +158,17 @@ function createMarketsStore() {
 		/**
 		 * Set commodities data
 		 */
-		setCommodities(items: MarketItem[]) {
+		setCommodities(items: MarketItem[], health?: MarketCategoryHealth | null) {
 			update((state) => ({
 				...state,
 				commodities: {
 					items,
 					loading: false,
-					error: null,
-					lastUpdated: Date.now()
+					error: health?.stale ? (health.reason ?? null) : null,
+					lastUpdated: Date.now(),
+					isStale: health?.stale ?? false,
+					staleReason: health?.reason ?? null,
+					lastSuccess: health?.lastSuccess ?? state.commodities.lastSuccess
 				}
 			}));
 		},
@@ -151,14 +176,17 @@ function createMarketsStore() {
 		/**
 		 * Set crypto data
 		 */
-		setCrypto(items: CryptoItem[]) {
+		setCrypto(items: CryptoItem[], health?: MarketCategoryHealth | null) {
 			update((state) => ({
 				...state,
 				crypto: {
 					items,
 					loading: false,
-					error: null,
-					lastUpdated: Date.now()
+					error: health?.stale ? (health.reason ?? null) : null,
+					lastUpdated: Date.now(),
+					isStale: health?.stale ?? false,
+					staleReason: health?.reason ?? null,
+					lastSuccess: health?.lastSuccess ?? state.crypto.lastSuccess
 				}
 			}));
 		},

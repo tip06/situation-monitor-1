@@ -10,11 +10,21 @@ vi.mock('$lib/analysis/narrative', () => ({
 }));
 
 function createEmptyMarkets(): MarketsState {
+	const emptySection = {
+		items: [],
+		loading: false,
+		error: null,
+		lastUpdated: null,
+		isStale: false,
+		staleReason: null,
+		lastSuccess: null
+	};
+
 	return {
-		indices: { items: [], loading: false, error: null, lastUpdated: null },
-		sectors: { items: [], loading: false, error: null, lastUpdated: null },
-		commodities: { items: [], loading: false, error: null, lastUpdated: null },
-		crypto: { items: [], loading: false, error: null, lastUpdated: null },
+		indices: { ...emptySection },
+		sectors: { ...emptySection },
+		commodities: { ...emptySection },
+		crypto: { ...emptySection },
 		initialized: true
 	};
 }

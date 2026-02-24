@@ -82,6 +82,20 @@ export interface CryptoItem {
 	volume_24h?: number;
 }
 
+export type MarketCategoryKey = 'indices' | 'sectors' | 'commodities' | 'crypto';
+
+export interface MarketCategoryHealth {
+	category: MarketCategoryKey;
+	source: 'finnhub' | 'coingecko';
+	stale: boolean;
+	reason: string | null;
+	lastAttempt: number | null;
+	lastSuccess: number | null;
+	consecutiveFailures: number;
+}
+
+export type MarketHealthMap = Record<MarketCategoryKey, MarketCategoryHealth>;
+
 /**
  * Sector heatmap data
  */

@@ -186,10 +186,10 @@
 	async function loadMarkets() {
 		try {
 			const data = await fetchAllMarkets();
-			markets.setIndices(data.indices);
-			markets.setSectors(data.sectors);
-			markets.setCommodities(data.commodities);
-			markets.setCrypto(data.crypto);
+			markets.setIndices(data.indices, data.marketHealth?.indices);
+			markets.setSectors(data.sectors, data.marketHealth?.sectors);
+			markets.setCommodities(data.commodities, data.marketHealth?.commodities);
+			markets.setCrypto(data.crypto, data.marketHealth?.crypto);
 		} catch (error) {
 			console.error('Failed to load markets:', error);
 		}

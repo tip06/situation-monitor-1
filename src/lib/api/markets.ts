@@ -5,7 +5,13 @@
  * The client simply calls /api/markets.
  */
 
-import type { MarketItem, SectorPerformance, CryptoItem } from '$lib/types';
+import type {
+	MarketItem,
+	SectorPerformance,
+	CryptoItem,
+	MarketHealthMap,
+	MarketCategoryKey
+} from '$lib/types';
 import { INDICES, SECTORS, COMMODITIES, CRYPTO } from '$lib/config/markets';
 
 interface AllMarketsData {
@@ -13,6 +19,19 @@ interface AllMarketsData {
 	indices: MarketItem[];
 	sectors: SectorPerformance[];
 	commodities: MarketItem[];
+	marketHealth: MarketHealthMap;
+}
+
+function createDefaultHealth(category: MarketCategoryKey) {
+	return {
+		category,
+		source: category === 'crypto' ? 'coingecko' : 'finnhub',
+		stale: false,
+		reason: null,
+		lastAttempt: null,
+		lastSuccess: null,
+		consecutiveFailures: 0
+	} as const;
 }
 
 function createEmptyMarkets(): AllMarketsData {
@@ -47,7 +66,13 @@ function createEmptyMarkets(): AllMarketsData {
 			current_price: 0,
 			price_change_24h: 0,
 			price_change_percentage_24h: 0
-		}))
+		})),
+		marketHealth: {
+			indices: createDefaultHealth('indices'),
+			sectors: createDefaultHealth('sectors'),
+			commodities: createDefaultHealth('commodities'),
+			crypto: createDefaultHealth('crypto')
+		}
 	};
 }
 
@@ -63,7 +88,8 @@ export async function fetchAllMarkets(): Promise<AllMarketsData> {
 			indices: data.indices ?? [],
 			sectors: data.sectors ?? [],
 			commodities: data.commodities ?? [],
-			crypto: data.crypto ?? []
+			crypto: data.crypto ?? [],
+			marketHealth: data.marketHealth ?? createEmptyMarkets().marketHealth
 		};
 	} catch (error) {
 		console.error('Failed to fetch markets from server:', error);
