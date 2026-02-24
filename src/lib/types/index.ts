@@ -17,6 +17,22 @@ export type NewsCategory =
 	| 'greenland'
 	| 'fringe';
 
+export interface SourceRecord {
+	id: string;
+	category: NewsCategory;
+	name: string;
+	url: string;
+	enabled: boolean;
+	isCustom: boolean;
+}
+
+export type SourceMutationError =
+	| 'required'
+	| 'invalid-url'
+	| 'duplicate'
+	| 'not-found'
+	| 'built-in-protected';
+
 /**
  * A news item from any source (RSS, GDELT, etc.)
  */

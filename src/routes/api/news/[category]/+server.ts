@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import type { NewsCategory } from '$lib/types';
 import { getNewsByCategory } from '$lib/server/db';
 import { fetchCategoryNewsServer } from '$lib/server/fetcher';
+import { getEnabledFeedsByCategory } from '$lib/server/sources';
 
 const VALID_CATEGORIES: NewsCategory[] = [
 	'politics', 'tech', 'finance', 'gov', 'ai', 'intel',
@@ -24,7 +25,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 	// If no data in SQLite, trigger a server-side fetch
 	if (items.length === 0) {
-		items = await fetchCategoryNewsServer(category);
+		items = await fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category));
 	}
 
 	const checkpoint = items.length > 0 ? items[0].timestamp : Date.now();

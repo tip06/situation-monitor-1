@@ -58,6 +58,24 @@ function initSchema(db: Database.Database): void {
 			value TEXT NOT NULL,
 			updated_at INTEGER NOT NULL
 		);
+
+		CREATE TABLE IF NOT EXISTS news_custom_sources (
+			id TEXT PRIMARY KEY,
+			category TEXT NOT NULL,
+			name TEXT NOT NULL,
+			url TEXT NOT NULL,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		);
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_news_custom_sources_category_url
+			ON news_custom_sources(category, lower(url));
+
+		CREATE TABLE IF NOT EXISTS news_source_overrides (
+			id TEXT PRIMARY KEY,
+			enabled INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		);
 	`);
 }
 
@@ -169,6 +187,122 @@ export function getMarketData<T>(key: string): { data: T; updatedAt: number } | 
 		| undefined;
 	if (!row) return null;
 	return { data: JSON.parse(row.data) as T, updatedAt: row.updated_at };
+}
+
+// --- Sources operations ---
+
+export interface CustomSourceRow {
+	id: string;
+	category: string;
+	name: string;
+	url: string;
+	enabled: boolean;
+	createdAt: number;
+	updatedAt: number;
+}
+
+export interface SourceOverrideRow {
+	id: string;
+	enabled: boolean;
+	updatedAt: number;
+}
+
+export function getCustomSources(): CustomSourceRow[] {
+	const db = getDb();
+	const rows = db
+		.prepare(
+			'SELECT id, category, name, url, enabled, created_at, updated_at FROM news_custom_sources ORDER BY name COLLATE NOCASE ASC'
+		)
+		.all() as Array<{
+		id: string;
+		category: string;
+		name: string;
+		url: string;
+		enabled: number;
+		created_at: number;
+		updated_at: number;
+	}>;
+
+	return rows.map((row) => ({
+		id: row.id,
+		category: row.category,
+		name: row.name,
+		url: row.url,
+		enabled: row.enabled === 1,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at
+	}));
+}
+
+export function insertCustomSource(row: {
+	id: string;
+	category: string;
+	name: string;
+	url: string;
+	enabled?: boolean;
+}): void {
+	const db = getDb();
+	const now = Date.now();
+	db.prepare(
+		'INSERT INTO news_custom_sources (id, category, name, url, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+	).run(row.id, row.category, row.name, row.url, row.enabled === false ? 0 : 1, now, now);
+}
+
+export function updateCustomSource(
+	id: string,
+	updates: Partial<Pick<CustomSourceRow, 'category' | 'name' | 'url' | 'enabled'>>
+): boolean {
+	const db = getDb();
+	const current = db
+		.prepare('SELECT id, category, name, url, enabled FROM news_custom_sources WHERE id = ?')
+		.get(id) as
+		| { id: string; category: string; name: string; url: string; enabled: number }
+		| undefined;
+	if (!current) return false;
+
+	const next = {
+		category: updates.category ?? current.category,
+		name: updates.name ?? current.name,
+		url: updates.url ?? current.url,
+		enabled: updates.enabled === undefined ? current.enabled === 1 : updates.enabled
+	};
+
+	const result = db
+		.prepare(
+			'UPDATE news_custom_sources SET category = ?, name = ?, url = ?, enabled = ?, updated_at = ? WHERE id = ?'
+		)
+		.run(next.category, next.name, next.url, next.enabled ? 1 : 0, Date.now(), id);
+	return result.changes > 0;
+}
+
+export function deleteCustomSource(id: string): boolean {
+	const db = getDb();
+	const result = db.prepare('DELETE FROM news_custom_sources WHERE id = ?').run(id);
+	return result.changes > 0;
+}
+
+export function getSourceOverrides(): SourceOverrideRow[] {
+	const db = getDb();
+	const rows = db
+		.prepare('SELECT id, enabled, updated_at FROM news_source_overrides')
+		.all() as Array<{ id: string; enabled: number; updated_at: number }>;
+	return rows.map((row) => ({
+		id: row.id,
+		enabled: row.enabled === 1,
+		updatedAt: row.updated_at
+	}));
+}
+
+export function setSourceOverride(id: string, enabled: boolean): void {
+	const db = getDb();
+	db.prepare(
+		'INSERT OR REPLACE INTO news_source_overrides (id, enabled, updated_at) VALUES (?, ?, ?)'
+	).run(id, enabled ? 1 : 0, Date.now());
+}
+
+export function deleteSourceOverride(id: string): void {
+	const db = getDb();
+	db.prepare('DELETE FROM news_source_overrides WHERE id = ?').run(id);
 }
 
 // --- Meta operations ---

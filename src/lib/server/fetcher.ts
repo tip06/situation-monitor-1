@@ -38,6 +38,7 @@ import {
 	setMeta
 } from './db';
 import { env } from '$env/dynamic/private';
+import { getEnabledFeedsByCategory } from './sources';
 
 // --- Configuration ---
 
@@ -863,7 +864,7 @@ export async function refreshAllNews(
 
 	for (const category of targetCategories) {
 		try {
-			await fetchCategoryNewsServer(category);
+			await fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category));
 		} catch (error) {
 			const msg = `${category}: ${error instanceof Error ? error.message : String(error)}`;
 			errors.push(msg);

@@ -3,7 +3,7 @@
 	import FeedDiagnostics from './FeedDiagnostics.svelte';
 	import { settings, language, sources } from '$lib/stores';
 	import { t } from '$lib/i18n';
-	import type { NewsCategory } from '$lib/types';
+	import type { NewsCategory, SourceMutationError } from '$lib/types';
 
 	interface Props {
 		open: boolean;
@@ -32,6 +32,12 @@
 	let sourceName = $state('');
 	let sourceUrl = $state('');
 	let sourceError = $state('');
+	let editingSourceId = $state<string | null>(null);
+	let editCategory = $state<NewsCategory>('brazil');
+	let editName = $state('');
+	let editUrl = $state('');
+	let editEnabled = $state(true);
+	let editError = $state('');
 
 	function setLocale(locale: 'en' | 'pt-BR') {
 		language.setLocale(locale);
@@ -41,23 +47,86 @@
 		settings.setTheme(theme);
 	}
 
-	function addSource() {
+	function getSourceErrorMessage(error: SourceMutationError): string {
+		if (error === 'required') return t($language, 'settings.requiredField');
+		if (error === 'invalid-url') return t($language, 'settings.invalidUrl');
+		if (error === 'duplicate') return t($language, 'settings.duplicateSource');
+		if (error === 'not-found') return t($language, 'settings.sourceNotFound');
+		if (error === 'built-in-protected') return t($language, 'settings.sourceProtected');
+		return t($language, 'settings.sourceUpdateFailed');
+	}
+
+	async function addSource() {
 		const result = sources.addSource({
 			category: selectedCategory,
 			name: sourceName,
 			url: sourceUrl
 		});
+		const resolved = await result;
 
-		if (!result.ok) {
-			if (result.error === 'required') sourceError = t($language, 'settings.requiredField');
-			if (result.error === 'invalid-url') sourceError = t($language, 'settings.invalidUrl');
-			if (result.error === 'duplicate') sourceError = t($language, 'settings.duplicateSource');
+		if (!resolved.ok) {
+			sourceError = getSourceErrorMessage(resolved.error);
 			return;
 		}
 
 		sourceName = '';
 		sourceUrl = '';
 		sourceError = '';
+	}
+
+	function beginEdit(source: {
+		id: string;
+		category: NewsCategory;
+		name: string;
+		url: string;
+		enabled: boolean;
+	}) {
+		editingSourceId = source.id;
+		editCategory = source.category;
+		editName = source.name;
+		editUrl = source.url;
+		editEnabled = source.enabled;
+		editError = '';
+	}
+
+	function cancelEdit() {
+		editingSourceId = null;
+		editError = '';
+	}
+
+	async function saveEdit() {
+		if (!editingSourceId) return;
+		const result = await sources.updateSource({
+			id: editingSourceId,
+			category: editCategory,
+			name: editName,
+			url: editUrl,
+			enabled: editEnabled
+		});
+		if (!result.ok) {
+			editError = getSourceErrorMessage(result.error);
+			return;
+		}
+		editingSourceId = null;
+		editError = '';
+	}
+
+	async function toggleSource(id: string) {
+		const result = await sources.toggleSource(id);
+		if (!result.ok) {
+			sourceError = getSourceErrorMessage(result.error);
+		}
+	}
+
+	async function deleteSource(id: string) {
+		const result = await sources.deleteSource(id);
+		if (!result.ok) {
+			sourceError = getSourceErrorMessage(result.error);
+		}
+		if (editingSourceId === id) {
+			editingSourceId = null;
+			editError = '';
+		}
 	}
 </script>
 
@@ -168,20 +237,64 @@
 							<p class="empty">{t($language, 'settings.noSourcesInCategory')}</p>
 						{:else}
 							{#each items as source}
-								<label class="source-row">
+								<div class="source-row">
 									<div class="source-meta">
-										<span class="source-name">{source.name}</span>
-										<span class="source-url">{source.url}</span>
+										{#if source.isCustom && editingSourceId === source.id}
+											<div class="edit-grid">
+												<label>
+													<span>{t($language, 'settings.sourceCategory')}</span>
+													<select bind:value={editCategory}>
+														{#each SOURCE_CATEGORIES as cat}
+															{@const editCategoryLabel = `panelName.${cat}` as const}
+															<option value={cat}>{t($language, editCategoryLabel)}</option>
+														{/each}
+													</select>
+												</label>
+												<label>
+													<span>{t($language, 'settings.sourceName')}</span>
+													<input type="text" bind:value={editName} />
+												</label>
+												<label>
+													<span>{t($language, 'settings.sourceUrl')}</span>
+													<input type="url" bind:value={editUrl} />
+												</label>
+											</div>
+											{#if editError}
+												<p class="error">{editError}</p>
+											{/if}
+										{:else}
+											<span class="source-name">{source.name}</span>
+											<span class="source-url">{source.url}</span>
+										{/if}
 									</div>
-									<input
-										type="checkbox"
-										checked={source.enabled}
-										onchange={() => sources.toggleSource(source.id)}
-										aria-label={source.enabled
-											? t($language, 'settings.sourceEnabled')
-											: t($language, 'settings.sourceDisabled')}
-									/>
-								</label>
+									<div class="source-actions">
+										<input
+											type="checkbox"
+											checked={source.enabled}
+											onchange={() => toggleSource(source.id)}
+											aria-label={source.enabled
+												? t($language, 'settings.sourceEnabled')
+												: t($language, 'settings.sourceDisabled')}
+										/>
+										{#if source.isCustom}
+											{#if editingSourceId === source.id}
+												<button type="button" class="action-btn" onclick={saveEdit}>
+													{t($language, 'settings.saveSource')}
+												</button>
+												<button type="button" class="action-btn" onclick={cancelEdit}>
+													{t($language, 'settings.cancelEdit')}
+												</button>
+											{:else}
+												<button type="button" class="action-btn" onclick={() => beginEdit(source)}>
+													{t($language, 'settings.editSource')}
+												</button>
+											{/if}
+											<button type="button" class="action-btn danger" onclick={() => deleteSource(source.id)}>
+												{t($language, 'settings.deleteSource')}
+											</button>
+										{/if}
+									</div>
+								</div>
 							{/each}
 						{/if}
 					</div>
@@ -346,7 +459,7 @@
 	.source-row {
 		display: flex;
 		flex-direction: row;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.3rem 0;
@@ -375,5 +488,32 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		max-width: 280px;
+	}
+
+	.source-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.action-btn {
+		background: rgba(255, 255, 255, 0.04);
+		color: var(--text-secondary);
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		padding: 0.2rem 0.4rem;
+		font-size: 0.58rem;
+		cursor: pointer;
+	}
+
+	.action-btn.danger {
+		color: #ff9f9f;
+		border-color: rgba(255, 120, 120, 0.35);
+	}
+
+	.edit-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 0.35rem;
 	}
 </style>

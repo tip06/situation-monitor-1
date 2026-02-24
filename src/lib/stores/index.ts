@@ -110,4 +110,5 @@ export { language } from './language';
 export { alertNavigation, type AlertNavigationTarget } from './alertNavigation';
 
 // Sources store
-export { sources, getEnabledSourcesForCategory, type SourceRecord } from './sources';
+export { sources, getEnabledSourcesForCategory } from './sources';
+export type { SourceRecord } from '$lib/types';
