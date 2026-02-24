@@ -3,11 +3,10 @@
 	import { Modal } from '$lib/components/modals';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
 	import {
-		appendCompoundPatternManualAddition,
-		loadCompoundPatternManualAdditions,
 		type CompoundPatternAdditionCategory,
 		type CompoundPatternManualAdditions
 	} from '$lib/config/analysis';
+	import { createManualInsight, fetchManualAdditions } from '$lib/api';
 	import type { NewsItem } from '$lib/types';
 	import { language, alertNavigation } from '$lib/stores';
 	import { t } from '$lib/i18n';
@@ -104,16 +103,20 @@
 		addText = '';
 	}
 
-	function confirmAddAnalysis() {
+	async function confirmAddAnalysis() {
 		if (!addCompoundId) return;
 		const value = addText.trim();
 		if (!value) return;
-		compoundAdditions = appendCompoundPatternManualAddition(
-			$language,
-			addCompoundId,
-			addCategory,
-			value
-		);
+		try {
+			compoundAdditions = await createManualInsight({
+				locale: $language,
+				signalId: addCompoundId,
+				category: addCategory,
+				text: value
+			});
+		} catch {
+			// Keep existing UI state on network/API errors
+		}
 		addText = '';
 	}
 
@@ -153,7 +156,13 @@
 	}
 
 	$effect(() => {
-		compoundAdditions = loadCompoundPatternManualAdditions($language);
+		void fetchManualAdditions($language)
+			.then((additions) => {
+				compoundAdditions = additions;
+			})
+			.catch(() => {
+				compoundAdditions = {};
+			});
 	});
 
 	let lastNavNonce = 0;

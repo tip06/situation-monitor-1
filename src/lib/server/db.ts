@@ -76,6 +76,27 @@ function initSchema(db: Database.Database): void {
 			enabled INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		);
+
+		CREATE TABLE IF NOT EXISTS analysis_manual_insights (
+			id TEXT PRIMARY KEY,
+			locale TEXT NOT NULL,
+			signal_id TEXT NOT NULL,
+			category TEXT NOT NULL,
+			text TEXT NOT NULL,
+			created_at INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_analysis_manual_insights_signal_locale
+			ON analysis_manual_insights(signal_id, locale);
+
+		CREATE TABLE IF NOT EXISTS analysis_correlation_history (
+			hour_bucket INTEGER NOT NULL,
+			topic_id TEXT NOT NULL,
+			count INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL,
+			PRIMARY KEY (hour_bucket, topic_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_analysis_correlation_history_topic_hour
+			ON analysis_correlation_history(topic_id, hour_bucket DESC);
 	`);
 }
 
@@ -303,6 +324,100 @@ export function setSourceOverride(id: string, enabled: boolean): void {
 export function deleteSourceOverride(id: string): void {
 	const db = getDb();
 	db.prepare('DELETE FROM news_source_overrides WHERE id = ?').run(id);
+}
+
+// --- Analysis persistence operations ---
+
+export interface ManualInsightRow {
+	id: string;
+	locale: string;
+	signalId: string;
+	category: string;
+	text: string;
+	createdAt: number;
+}
+
+export interface CorrelationHistoryRow {
+	hourBucket: number;
+	topicId: string;
+	count: number;
+	updatedAt: number;
+}
+
+export function insertManualInsight(row: {
+	id: string;
+	locale: string;
+	signalId: string;
+	category: string;
+	text: string;
+}): void {
+	const db = getDb();
+	db.prepare(
+		'INSERT INTO analysis_manual_insights (id, locale, signal_id, category, text, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+	).run(row.id, row.locale, row.signalId, row.category, row.text, Date.now());
+}
+
+export function getManualInsights(locale: string): ManualInsightRow[] {
+	const db = getDb();
+	const rows = db
+		.prepare(
+			'SELECT id, locale, signal_id, category, text, created_at FROM analysis_manual_insights WHERE locale = ? ORDER BY created_at ASC'
+		)
+		.all(locale) as Array<{
+		id: string;
+		locale: string;
+		signal_id: string;
+		category: string;
+		text: string;
+		created_at: number;
+	}>;
+	return rows.map((row) => ({
+		id: row.id,
+		locale: row.locale,
+		signalId: row.signal_id,
+		category: row.category,
+		text: row.text,
+		createdAt: row.created_at
+	}));
+}
+
+export function upsertCorrelationHistoryPoint(
+	hourBucket: number,
+	topicId: string,
+	count: number
+): void {
+	const db = getDb();
+	db.prepare(
+		'INSERT OR REPLACE INTO analysis_correlation_history (hour_bucket, topic_id, count, updated_at) VALUES (?, ?, ?, ?)'
+	).run(hourBucket, topicId, count, Date.now());
+}
+
+export function getCorrelationHistorySince(minHourBucket: number): CorrelationHistoryRow[] {
+	const db = getDb();
+	const rows = db
+		.prepare(
+			'SELECT hour_bucket, topic_id, count, updated_at FROM analysis_correlation_history WHERE hour_bucket >= ? ORDER BY hour_bucket ASC'
+		)
+		.all(minHourBucket) as Array<{
+		hour_bucket: number;
+		topic_id: string;
+		count: number;
+		updated_at: number;
+	}>;
+	return rows.map((row) => ({
+		hourBucket: row.hour_bucket,
+		topicId: row.topic_id,
+		count: row.count,
+		updatedAt: row.updated_at
+	}));
+}
+
+export function pruneCorrelationHistory(olderThanHourBucket: number): number {
+	const db = getDb();
+	const result = db
+		.prepare('DELETE FROM analysis_correlation_history WHERE hour_bucket < ?')
+		.run(olderThanHourBucket);
+	return result.changes;
 }
 
 // --- Meta operations ---

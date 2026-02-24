@@ -3,6 +3,7 @@
  */
 
 import type { NewsItem } from '$lib/types';
+import { browser } from '$app/environment';
 import {
 	CORRELATION_TOPICS,
 	getCompoundPatterns,
@@ -11,6 +12,7 @@ import {
 	type CompoundPattern
 } from '$lib/config/analysis';
 import type { Locale } from '$lib/i18n/types';
+import { fetchCorrelationHistory, persistCorrelationHistory } from '$lib/api/analysis';
 
 // Types for correlation results
 export interface TopicStats {
@@ -106,72 +108,90 @@ const HISTORY_RETENTION_MINUTES = 30;
 const MOMENTUM_WINDOW_MINUTES = 10;
 
 // Persistence layer
-const STORAGE_KEY = 'correlation_history';
 const HISTORY_HOURS = 168; // 7 days of hourly data
 const PERSIST_THROTTLE_MS = 30000;
 
-let localStorageAvailability: boolean | null = null;
 let persistedHistoryCache: PersistedHistory | null = null;
 let lastPersistedHistorySaveAt = 0;
+let historyHydrationStarted = false;
 
 interface PersistedHistory {
 	hourlyAverages: Record<string, number[]>; // topicId -> last 168 hourly averages
 	lastUpdate: number;
 }
 
-function isLocalStorageAvailable(): boolean {
-	if (localStorageAvailability !== null) return localStorageAvailability;
-
-	try {
-		if (typeof localStorage === 'undefined' || typeof window === 'undefined') return false;
-		const testKey = '__test__';
-		localStorage.setItem(testKey, testKey);
-		localStorage.removeItem(testKey);
-		localStorageAvailability = true;
-		return localStorageAvailability;
-	} catch {
-		localStorageAvailability = false;
-		return localStorageAvailability;
-	}
-}
-
-function loadHistoryFromStorage(): PersistedHistory {
-	if (!isLocalStorageAvailable()) {
-		return { hourlyAverages: {}, lastUpdate: Date.now() };
-	}
-	try {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			const data = JSON.parse(stored);
-			if (data.hourlyAverages && data.lastUpdate) {
-				return data;
-			}
-		}
-	} catch (e) {
-		console.warn('Failed to load correlation history:', e);
-	}
+function createEmptyPersistedHistory(): PersistedHistory {
 	return { hourlyAverages: {}, lastUpdate: Date.now() };
 }
 
+function historyToPoints(history: PersistedHistory): Array<{
+	hourBucket: number;
+	topicId: string;
+	count: number;
+}> {
+	const points: Array<{ hourBucket: number; topicId: string; count: number }> = [];
+	for (const [topicId, values] of Object.entries(history.hourlyAverages)) {
+		const startHour = Math.floor(history.lastUpdate / 3600000) - values.length + 1;
+		values.forEach((count, index) => {
+			points.push({
+				hourBucket: startHour + index,
+				topicId,
+				count
+			});
+		});
+	}
+	return points;
+}
+
+function hydrateHistoryFromServer(): void {
+	if (!browser || historyHydrationStarted) return;
+	historyHydrationStarted = true;
+
+	void fetchCorrelationHistory(HISTORY_HOURS)
+		.then((points) => {
+			const now = Date.now();
+			const hourlyAverages: Record<string, number[]> = {};
+			const byTopic = new Map<string, Array<{ hourBucket: number; count: number }>>();
+
+			for (const point of points) {
+				const list = byTopic.get(point.topicId) ?? [];
+				list.push({ hourBucket: point.hourBucket, count: point.count });
+				byTopic.set(point.topicId, list);
+			}
+
+			for (const [topicId, list] of byTopic.entries()) {
+				list.sort((a, b) => a.hourBucket - b.hourBucket);
+				hourlyAverages[topicId] = list.slice(-HISTORY_HOURS).map((entry) => entry.count);
+			}
+
+			persistedHistoryCache = { hourlyAverages, lastUpdate: now };
+		})
+		.catch(() => {
+			// In-memory fallback only
+		});
+}
+
 function getPersistedHistory(): PersistedHistory {
+	hydrateHistoryFromServer();
 	if (persistedHistoryCache) return persistedHistoryCache;
-	persistedHistoryCache = loadHistoryFromStorage();
+	persistedHistoryCache = createEmptyPersistedHistory();
 	return persistedHistoryCache;
 }
 
 function saveHistory(history: PersistedHistory, force = false): void {
 	persistedHistoryCache = history;
-	if (!isLocalStorageAvailable()) return;
+	if (!browser) return;
 
 	const now = Date.now();
 	if (!force && now - lastPersistedHistorySaveAt < PERSIST_THROTTLE_MS) return;
 
-	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-		lastPersistedHistorySaveAt = now;
-	} catch (e) {
-		console.warn('Failed to save correlation history:', e);
-	}
+	void persistCorrelationHistory(historyToPoints(history), HISTORY_HOURS)
+		.then(() => {
+			lastPersistedHistorySaveAt = now;
+		})
+		.catch(() => {
+			// In-memory fallback only
+		});
 }
 
 function updatePersistedHistory(topicCounts: Record<string, number>): PersistedHistory {
@@ -598,9 +618,7 @@ export function clearCorrelationHistory(): void {
 export function clearPersistedHistory(): void {
 	persistedHistoryCache = null;
 	lastPersistedHistorySaveAt = 0;
-	if (isLocalStorageAvailable()) {
-		localStorage.removeItem(STORAGE_KEY);
-	}
+	historyHydrationStarted = false;
 }
 
 // Export for testing

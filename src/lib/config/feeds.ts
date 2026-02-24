@@ -91,14 +91,14 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		// === GENERAL (3) ===
 		{ name: 'G1 Brasil', url: 'https://g1.globo.com/rss/g1/' },
 		{ name: 'Folha de S.Paulo', url: 'https://feeds.folha.uol.com.br/emcimadahora/rss091.xml' },
-		{ name: 'Reuters Brazil', url: 'https://www.reuters.com/world/americas/rss' },
+		{ name: 'Reuters Brazil', url: 'https://news.google.com/rss/search?q=site%3Areuters.com%20%22brazil%22&hl=pt-BR&gl=BR&ceid=BR%3Apt-419' },
 		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' },
 
 
 		// === POLITICS (5) ===
 		{ name: 'G1 Politica', url: 'https://g1.globo.com/rss/g1/politica/' },
 		{ name: 'Gazeta do Povo', url: 'https://www.gazetadopovo.com.br/feed/rss/republica.xml' },
-		{ name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/politica/feed/' },
+		{ name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/tudo-sobre/politica/feed/feed/' },
 		{ name: 'Poder360', url: 'https://www.poder360.com.br/feed/' },
 		{
 			name: 'Agencia Brasil',
@@ -109,7 +109,8 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'G1 Economia', url: 'https://g1.globo.com/rss/g1/economia/' },
 		{ name: 'InfoMoney', url: 'https://www.infomoney.com.br/feed/' },
 		{ name: 'Gazeta Economia', url: 'https://www.gazetadopovo.com.br/feed/rss/economia.xml' },
-		{ name: 'Valor Economico', url: 'https://valor.globo.com/feed/' },
+		{ name: 'Valor Economico', url: 'https://news.google.com/rss/search?q=site%3Avalor.globo.com&hl=pt-BR&gl=BR&ceid=BR%3Apt-419' },
+		{ name: 'Banco Central', url: 'https://www.bcb.gov.br/api/feed/sitebcb/sitefeeds/blogdobc' },
 
 		// === MILITARY/DEFENSE (3) ===
 		{ name: 'DefesaNet', url: 'https://www.defesanet.com.br/feed/' },

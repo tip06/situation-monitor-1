@@ -16,3 +16,10 @@ export type { Prediction, WhaleTransaction, Contract, Layoff } from './misc';
 export { fetchWorldLeaders } from './leaders';
 export { fetchFedIndicators, fetchFedNews, isFredConfigured } from './fred';
 export type { FedIndicators, EconomicIndicator, FedNewsItem, FedNewsType } from './fred';
+export {
+	fetchManualAdditions,
+	createManualInsight,
+	fetchCorrelationHistory,
+	persistCorrelationHistory
+} from './analysis';
+export type { CorrelationHistoryPoint } from './analysis';
