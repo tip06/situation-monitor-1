@@ -4,9 +4,19 @@
 
 import type { NewsCategory } from '$lib/types';
 
+export interface HtmlSelectors {
+	article?: string;
+	title?: string;
+	link?: string;
+	date?: string;
+	description?: string;
+}
+
 export interface FeedSource {
 	name: string;
 	url: string;
+	sourceType?: 'rss' | 'html';
+	selectors?: HtmlSelectors;
 }
 
 export interface IntelSource extends FeedSource {
@@ -19,7 +29,10 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	politics: [
 		{ name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
 		{ name: 'NYT World', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' },
-		{ name: 'Washington Post', url: 'https://feeds.washingtonpost.com/rss/politics' },
+		{
+			name: 'Washington Post',
+			url: 'https://news.google.com/rss/search?q=site:washingtonpost.com%20politics&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'The Guardian', url: 'https://www.theguardian.com/world/rss' },
 		{ name: 'NPR News', url: 'https://feeds.npr.org/1001/rss.xml' },
 		{ name: 'Foreign Affairs', url: 'https://www.foreignaffairs.com/rss.xml' },
@@ -27,7 +40,10 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Foreign Policy', url: 'https://foreignpolicy.com/feed/' },
 		{ name: 'The Economist', url: 'https://www.economist.com/the-world-this-week/rss.xml' },
 		{ name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
-		{ name: 'WSJ Politics', url: 'https://feeds.wsj.com/xml/rss/3_7455.xml' }
+		{
+			name: 'WSJ Politics',
+			url: 'https://news.google.com/rss/search?q=site:wsj.com%20politics&hl=en&gl=US&ceid=US:en'
+		}
 	],
 	tech: [
 		{ name: 'Hacker News', url: 'https://hnrss.org/frontpage' },
@@ -41,15 +57,24 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
 		{ name: 'Gizmodo', url: 'https://gizmodo.com/rss' },
 		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' },
-		{ name: 'WSJ Tech', url: 'https://feeds.wsj.com/xml/rss/3_7014.xml' }
+		{
+			name: 'WSJ Tech',
+			url: 'https://news.google.com/rss/search?q=site:wsj.com%20technology&hl=en&gl=US&ceid=US:en'
+		}
 	],
 	finance: [
-		{ name: 'Reuters Business', url: 'https://www.reuters.com/business/rss' },
+		{
+			name: 'Reuters Business',
+			url: 'https://news.google.com/rss/search?q=site:reuters.com%20business&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss' },
 		{ name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
 		{ name: 'MarketWatch', url: 'https://feeds.marketwatch.com/marketwatch/topstories' },
 		{ name: 'Financial Times', url: 'https://www.ft.com/rss/home' },
-		{ name: 'Wall Street Journal', url: 'https://feeds.wsj.com/xml/rss/3_7085.xml' },
+		{
+			name: 'Wall Street Journal',
+			url: 'https://news.google.com/rss/search?q=site:wsj.com%20finance%20markets&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'The Economist', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
 		{ name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml' },
 		{ name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
@@ -78,10 +103,19 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		},
 		{ name: 'The War Zone', url: 'https://www.thedrive.com/the-war-zone/feed' },
 		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
-		{ name: 'CSIS', url: 'https://www.csis.org/analysis/feed' },
+		{
+			name: 'CSIS',
+			url: 'https://news.google.com/rss/search?q=site:csis.org&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Bellingcat', url: 'https://www.bellingcat.com/feed/' },
-		{ name: 'Chatham House', url: 'https://www.chathamhouse.org/rss/all' },
-		{ name: 'IISS', url: 'https://www.iiss.org/rss' },
+		{
+			name: 'Chatham House',
+			url: 'https://news.google.com/rss/search?q=site:chathamhouse.org&hl=en&gl=US&ceid=US:en'
+		},
+		{
+		name: 'IISS',
+		url: 'https://news.google.com/rss/search?q=site:iiss.org&hl=en&gl=US&ceid=US:en'
+	},
 		{
 			name: 'Military.com',
 			url: 'https://www.military.com/rss-feeds/content?feed=news-headlines.xml'
@@ -118,35 +152,65 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'Breaking Defense LATAM', url: 'https://breakingdefense.com/tag/latin-america/feed/' }
 	],
 	latam: [
-		{ name: 'Reuters Latin America', url: 'https://www.reuters.com/world/americas/rss' },
+		{
+			name: 'Reuters Latin America',
+			url: 'https://news.google.com/rss/search?q=site:reuters.com%20americas%20latin%20america&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Americas Quarterly', url: 'https://www.americasquarterly.org/feed/' },
 		{
 			name: 'El Pais America',
 			url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/america/portada'
 		},
-		{ name: 'Infobae America', url: 'https://www.infobae.com/america/rss/' }
+		{
+			name: 'Infobae America',
+			url: 'https://news.google.com/rss/search?q=site:infobae.com%20america&hl=es&gl=US&ceid=US:es'
+		}
 	],
 	iran: [
-		{ name: 'Tehran Times', url: 'https://www.tehrantimes.com/rss' },
+		{
+			name: 'Tehran Times',
+			url: 'https://news.google.com/rss/search?q=site:tehrantimes.com&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Al-Monitor', url: 'https://www.al-monitor.com/rss' },
-		{ name: 'Radio Farda', url: 'https://en.radiofarda.com/api/zp_qmtl-vomx-tpe_bimr' },
+		{
+			name: 'Radio Farda',
+			url: 'https://news.google.com/rss/search?q=site:radiofarda.com&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Mehr News', url: 'https://en.mehrnews.com/rss' },
-		{ name: 'ISNA', url: 'https://en.isna.ir/rss' },
+		{
+			name: 'ISNA',
+			url: 'https://news.google.com/rss/search?q=site:isna.ir%20english&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'IFP News', url: 'https://ifpnews.com/feed' },
-		{ name: 'IranWire', url: 'https://iranwire.com/en/feed' }
+		{
+			name: 'IranWire',
+			url: 'https://news.google.com/rss/search?q=site:iranwire.com&hl=en&gl=US&ceid=US:en'
+		}
 	],
 	venezuela: [
 		{ name: 'Caracas Chronicles', url: 'https://www.caracaschronicles.com/feed' },
 		{ name: 'El Nacional', url: 'https://www.elnacional.com/feed' },
 		{ name: 'Venezuelanalysis', url: 'https://venezuelanalysis.com/feed' },
-		{ name: 'VOA Americas', url: 'https://www.vozdeamerica.com/api/zt-pemyvi' },
-		{ name: 'Reuters Americas', url: 'https://www.reuters.com/world/americas/rss' }
+		{
+			name: 'VOA Americas',
+			url: 'https://news.google.com/rss/search?q=site:voanews.com%20americas&hl=en&gl=US&ceid=US:en'
+		},
+		{
+			name: 'Reuters Americas',
+			url: 'https://news.google.com/rss/search?q=site:reuters.com%20americas%20latin%20america&hl=en&gl=US&ceid=US:en'
+		}
 	],
 	greenland: [
 		{ name: 'Arctic Today', url: 'https://www.arctictoday.com/feed' },
-		{ name: 'High North News', url: 'https://en.highnorthnews.com/feed' },
+		{
+			name: 'High North News',
+			url: 'https://news.google.com/rss/search?q=site:highnorthnews.com&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'The Arctic Institute', url: 'https://www.thearcticinstitute.org/feed' },
-		{ name: 'Arctic Council', url: 'https://arctic-council.org/feed' },
+		{
+			name: 'Arctic Council',
+			url: 'https://news.google.com/rss/search?q=site:arctic-council.org&hl=en&gl=US&ceid=US:en'
+		},
 		{ name: 'Eye on the Arctic', url: 'https://www.rcinet.ca/eye-on-the-arctic/feed/' }
 	],
 	fringe: [
@@ -160,7 +224,7 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 export const INTEL_SOURCES: IntelSource[] = [
 	{
 		name: 'CSIS',
-		url: 'https://www.csis.org/analysis/feed',
+		url: 'https://news.google.com/rss/search?q=site:csis.org&hl=en&gl=US&ceid=US:en',
 		type: 'think-tank',
 		topics: ['defense', 'geopolitics']
 	},

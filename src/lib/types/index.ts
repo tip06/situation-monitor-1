@@ -24,6 +24,8 @@ export interface SourceRecord {
 	url: string;
 	enabled: boolean;
 	isCustom: boolean;
+	sourceType?: 'rss' | 'html';
+	selectors?: import('$lib/config/feeds').HtmlSelectors;
 }
 
 export type SourceMutationError =

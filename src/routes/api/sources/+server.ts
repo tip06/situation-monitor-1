@@ -8,7 +8,13 @@ export const GET: RequestHandler = async () => {
 };
 
 export const POST: RequestHandler = async ({ request }) => {
-	let payload: { category?: NewsCategory; name?: string; url?: string };
+	let payload: {
+		category?: NewsCategory;
+		name?: string;
+		url?: string;
+		sourceType?: 'rss' | 'html';
+		selectors?: Record<string, string>;
+	};
 	try {
 		payload = await request.json();
 	} catch {
@@ -18,7 +24,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	const result = addSource({
 		category: payload.category as NewsCategory,
 		name: payload.name ?? '',
-		url: payload.url ?? ''
+		url: payload.url ?? '',
+		sourceType: payload.sourceType,
+		selectors: payload.selectors
 	});
 
 	if (!result.ok) {

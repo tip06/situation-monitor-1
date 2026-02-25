@@ -31,12 +31,16 @@
 	let selectedCategory = $state<NewsCategory>('brazil');
 	let sourceName = $state('');
 	let sourceUrl = $state('');
+	let sourceType = $state<'rss' | 'html' | 'auto'>('rss');
 	let sourceError = $state('');
+	let testResult = $state<{ ok: boolean; message: string; suggestion?: string; googleNewsUrl?: string } | null>(null);
+	let isTesting = $state(false);
 	let editingSourceId = $state<string | null>(null);
 	let editCategory = $state<NewsCategory>('brazil');
 	let editName = $state('');
 	let editUrl = $state('');
 	let editEnabled = $state(true);
+	let editSourceType = $state<'rss' | 'html' | 'auto'>('rss');
 	let editError = $state('');
 
 	function setLocale(locale: 'en' | 'pt-BR') {
@@ -60,7 +64,8 @@
 		const result = sources.addSource({
 			category: selectedCategory,
 			name: sourceName,
-			url: sourceUrl
+			url: sourceUrl,
+			...(sourceType !== 'auto' ? { sourceType } : {})
 		});
 		const resolved = await result;
 
@@ -71,7 +76,57 @@
 
 		sourceName = '';
 		sourceUrl = '';
+		sourceType = 'rss';
 		sourceError = '';
+		testResult = null;
+	}
+
+	async function testSource() {
+		if (!sourceUrl.trim()) {
+			sourceError = t($language, 'settings.requiredField');
+			return;
+		}
+		isTesting = true;
+		testResult = null;
+		sourceError = '';
+
+		try {
+			const res = await fetch('/api/sources/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					url: sourceUrl,
+					...(sourceType !== 'auto' ? { sourceType } : {})
+				})
+			});
+			const data = await res.json();
+
+			if (data.ok) {
+				testResult = {
+					ok: true,
+					message: `${t($language, 'settings.testSuccess').replace('{count}', String(data.itemCount))} (${t($language, 'settings.testDetectedAs').replace('{type}', data.detectedType?.toUpperCase() ?? 'RSS')})`
+				};
+			} else {
+				testResult = {
+					ok: false,
+					message: data.error ?? t($language, 'settings.testFailed'),
+					suggestion: data.suggestion,
+					googleNewsUrl: data.googleNewsUrl
+				};
+			}
+		} catch {
+			testResult = { ok: false, message: t($language, 'settings.testFailed') };
+		} finally {
+			isTesting = false;
+		}
+	}
+
+	function applyGoogleNews() {
+		if (testResult?.googleNewsUrl) {
+			sourceUrl = testResult.googleNewsUrl;
+			sourceType = 'rss';
+			testResult = null;
+		}
 	}
 
 	function beginEdit(source: {
@@ -80,12 +135,14 @@
 		name: string;
 		url: string;
 		enabled: boolean;
+		sourceType?: 'rss' | 'html';
 	}) {
 		editingSourceId = source.id;
 		editCategory = source.category;
 		editName = source.name;
 		editUrl = source.url;
 		editEnabled = source.enabled;
+		editSourceType = source.sourceType ?? 'auto';
 		editError = '';
 	}
 
@@ -101,7 +158,8 @@
 			category: editCategory,
 			name: editName,
 			url: editUrl,
-			enabled: editEnabled
+			enabled: editEnabled,
+			...(editSourceType !== 'auto' ? { sourceType: editSourceType } : {})
 		});
 		if (!result.ok) {
 			editError = getSourceErrorMessage(result.error);
@@ -211,18 +269,54 @@
 					</select>
 				</label>
 				<label>
+					<span>{t($language, 'settings.sourceType')}</span>
+					<div class="segmented-control compact">
+						<button type="button" class="segmented-btn" class:active={sourceType === 'rss'} onclick={() => sourceType = 'rss'}>
+							{t($language, 'settings.sourceTypeRss')}
+						</button>
+						<button type="button" class="segmented-btn" class:active={sourceType === 'html'} onclick={() => sourceType = 'html'}>
+							{t($language, 'settings.sourceTypeHtml')}
+						</button>
+						<button type="button" class="segmented-btn" class:active={sourceType === 'auto'} onclick={() => sourceType = 'auto'}>
+							{t($language, 'settings.sourceTypeAuto')}
+						</button>
+					</div>
+				</label>
+				<label>
 					<span>{t($language, 'settings.sourceName')}</span>
 					<input type="text" bind:value={sourceName} placeholder={t($language, 'settings.sourceName')} />
 				</label>
 				<label>
 					<span>{t($language, 'settings.sourceUrl')}</span>
-					<input type="url" bind:value={sourceUrl} placeholder="https://example.com/rss.xml" />
+					<input
+						type="url"
+						bind:value={sourceUrl}
+						placeholder={sourceType === 'html' ? 'https://example.com/news' : 'https://example.com/feed.xml'}
+					/>
 				</label>
 			</div>
 			{#if sourceError}
 				<p class="error">{sourceError}</p>
 			{/if}
-			<button class="primary-btn" onclick={addSource}>{t($language, 'settings.addSource')}</button>
+			{#if testResult}
+				<p class={testResult.ok ? 'test-success' : 'test-error'}>
+					{testResult.message}
+				</p>
+				{#if testResult.suggestion === 'google-news' && testResult.googleNewsUrl}
+					<div class="google-news-suggestion">
+						<span>{t($language, 'settings.tryGoogleNews')}</span>
+						<button type="button" class="action-btn" onclick={applyGoogleNews}>
+							{t($language, 'settings.applyGoogleNews')}
+						</button>
+					</div>
+				{/if}
+			{/if}
+			<div class="btn-row">
+				<button class="primary-btn" onclick={addSource}>{t($language, 'settings.addSource')}</button>
+				<button class="primary-btn secondary" onclick={testSource} disabled={isTesting}>
+					{isTesting ? t($language, 'settings.testing') : t($language, 'settings.testSource')}
+				</button>
+			</div>
 		</section>
 
 		<section class="settings-section">
@@ -251,6 +345,14 @@
 													</select>
 												</label>
 												<label>
+													<span>{t($language, 'settings.sourceType')}</span>
+													<div class="segmented-control compact">
+														<button type="button" class="segmented-btn" class:active={editSourceType === 'rss'} onclick={() => editSourceType = 'rss'}>RSS</button>
+														<button type="button" class="segmented-btn" class:active={editSourceType === 'html'} onclick={() => editSourceType = 'html'}>HTML</button>
+														<button type="button" class="segmented-btn" class:active={editSourceType === 'auto'} onclick={() => editSourceType = 'auto'}>Auto</button>
+													</div>
+												</label>
+												<label>
 													<span>{t($language, 'settings.sourceName')}</span>
 													<input type="text" bind:value={editName} />
 												</label>
@@ -263,7 +365,12 @@
 												<p class="error">{editError}</p>
 											{/if}
 										{:else}
-											<span class="source-name">{source.name}</span>
+											<div class="source-name-row">
+												<span class="source-name">{source.name}</span>
+												{#if source.sourceType}
+													<span class="source-type-badge">{source.sourceType.toUpperCase()}</span>
+												{/if}
+											</div>
 											<span class="source-url">{source.url}</span>
 										{/if}
 									</div>
@@ -515,5 +622,70 @@
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: 0.35rem;
+	}
+
+	.segmented-control.compact {
+		padding: 0.2rem;
+	}
+
+	.segmented-control.compact .segmented-btn {
+		padding: 0.3rem 0.5rem;
+		font-size: 0.6rem;
+	}
+
+	.btn-row {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+	}
+
+	.primary-btn.secondary {
+		background: rgba(255, 255, 255, 0.04);
+		border-color: var(--border);
+	}
+
+	.primary-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.test-success {
+		margin: 0;
+		font-size: 0.6rem;
+		color: #6fcf97;
+	}
+
+	.test-error {
+		margin: 0;
+		font-size: 0.6rem;
+		color: var(--danger);
+	}
+
+	.google-news-suggestion {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: 0.58rem;
+		color: var(--text-secondary);
+		background: rgba(255, 200, 50, 0.08);
+		border: 1px solid rgba(255, 200, 50, 0.2);
+		border-radius: 4px;
+		padding: 0.3rem 0.5rem;
+	}
+
+	.source-name-row {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.source-type-badge {
+		font-size: 0.48rem;
+		padding: 0.1rem 0.3rem;
+		border-radius: 3px;
+		background: rgba(var(--accent-rgb), 0.12);
+		color: var(--text-secondary);
+		font-weight: 600;
+		letter-spacing: 0.04em;
 	}
 </style>

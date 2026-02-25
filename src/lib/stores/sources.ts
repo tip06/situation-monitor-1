@@ -11,6 +11,7 @@ interface AddSourceInput {
 	category: NewsCategory;
 	name: string;
 	url: string;
+	sourceType?: 'rss' | 'html';
 }
 
 interface UpdateSourceInput {
@@ -19,6 +20,7 @@ interface UpdateSourceInput {
 	name: string;
 	url: string;
 	enabled: boolean;
+	sourceType?: 'rss' | 'html';
 }
 
 type SourceMutationResult = { ok: true } | { ok: false; error: SourceMutationError };
@@ -101,7 +103,12 @@ function createSourcesStore() {
 			const res = await fetch('/api/sources', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(input)
+				body: JSON.stringify({
+					category: input.category,
+					name: input.name,
+					url: input.url,
+					...(input.sourceType ? { sourceType: input.sourceType } : {})
+				})
 			});
 			const result = await parseMutationResponse(res);
 			if (!result.ok) return result;
@@ -130,7 +137,8 @@ function createSourcesStore() {
 					category: input.category,
 					name: input.name,
 					url: input.url,
-					enabled: input.enabled
+					enabled: input.enabled,
+					...(input.sourceType ? { sourceType: input.sourceType } : {})
 				})
 			});
 			const result = await parseMutationResponse(res);
@@ -151,7 +159,11 @@ function createSourcesStore() {
 			const state = get({ subscribe });
 			return state.records
 				.filter((record) => record.category === category && record.enabled)
-				.map((record) => ({ name: record.name, url: record.url }));
+				.map((record) => ({
+					name: record.name,
+					url: record.url,
+					...(record.sourceType ? { sourceType: record.sourceType } : {})
+				}));
 		},
 
 		getByCategory(category: NewsCategory): SourceRecord[] {
@@ -174,5 +186,9 @@ export function getEnabledSourcesForCategory(category: NewsCategory): FeedSource
 	}
 	return state.records
 		.filter((record) => record.category === category && record.enabled)
-		.map((record) => ({ name: record.name, url: record.url }));
+		.map((record) => ({
+			name: record.name,
+			url: record.url,
+			...(record.sourceType ? { sourceType: record.sourceType } : {})
+		}));
 }

@@ -98,6 +98,23 @@ function initSchema(db: Database.Database): void {
 		CREATE INDEX IF NOT EXISTS idx_analysis_correlation_history_topic_hour
 			ON analysis_correlation_history(topic_id, hour_bucket DESC);
 	`);
+
+	// Migration: add source_type and selectors columns to news_custom_sources
+	runMigrations(db);
+}
+
+function runMigrations(db: Database.Database): void {
+	const hasColumn = (table: string, column: string): boolean => {
+		const cols = db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+		return cols.some((c) => c.name === column);
+	};
+
+	if (!hasColumn('news_custom_sources', 'source_type')) {
+		db.exec(`ALTER TABLE news_custom_sources ADD COLUMN source_type TEXT DEFAULT 'rss'`);
+	}
+	if (!hasColumn('news_custom_sources', 'selectors')) {
+		db.exec(`ALTER TABLE news_custom_sources ADD COLUMN selectors TEXT`);
+	}
 }
 
 // --- News operations ---
@@ -218,6 +235,8 @@ export interface CustomSourceRow {
 	name: string;
 	url: string;
 	enabled: boolean;
+	sourceType: 'rss' | 'html';
+	selectors?: string; // JSON string of HtmlSelectors
 	createdAt: number;
 	updatedAt: number;
 }
@@ -232,7 +251,7 @@ export function getCustomSources(): CustomSourceRow[] {
 	const db = getDb();
 	const rows = db
 		.prepare(
-			'SELECT id, category, name, url, enabled, created_at, updated_at FROM news_custom_sources ORDER BY name COLLATE NOCASE ASC'
+			'SELECT id, category, name, url, enabled, source_type, selectors, created_at, updated_at FROM news_custom_sources ORDER BY name COLLATE NOCASE ASC'
 		)
 		.all() as Array<{
 		id: string;
@@ -240,6 +259,8 @@ export function getCustomSources(): CustomSourceRow[] {
 		name: string;
 		url: string;
 		enabled: number;
+		source_type: string | null;
+		selectors: string | null;
 		created_at: number;
 		updated_at: number;
 	}>;
@@ -250,6 +271,8 @@ export function getCustomSources(): CustomSourceRow[] {
 		name: row.name,
 		url: row.url,
 		enabled: row.enabled === 1,
+		sourceType: (row.source_type as 'rss' | 'html') || 'rss',
+		selectors: row.selectors || undefined,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at
 	}));
@@ -261,23 +284,25 @@ export function insertCustomSource(row: {
 	name: string;
 	url: string;
 	enabled?: boolean;
+	sourceType?: 'rss' | 'html';
+	selectors?: string;
 }): void {
 	const db = getDb();
 	const now = Date.now();
 	db.prepare(
-		'INSERT INTO news_custom_sources (id, category, name, url, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-	).run(row.id, row.category, row.name, row.url, row.enabled === false ? 0 : 1, now, now);
+		'INSERT INTO news_custom_sources (id, category, name, url, enabled, source_type, selectors, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+	).run(row.id, row.category, row.name, row.url, row.enabled === false ? 0 : 1, row.sourceType || 'rss', row.selectors || null, now, now);
 }
 
 export function updateCustomSource(
 	id: string,
-	updates: Partial<Pick<CustomSourceRow, 'category' | 'name' | 'url' | 'enabled'>>
+	updates: Partial<Pick<CustomSourceRow, 'category' | 'name' | 'url' | 'enabled' | 'sourceType' | 'selectors'>>
 ): boolean {
 	const db = getDb();
 	const current = db
-		.prepare('SELECT id, category, name, url, enabled FROM news_custom_sources WHERE id = ?')
+		.prepare('SELECT id, category, name, url, enabled, source_type, selectors FROM news_custom_sources WHERE id = ?')
 		.get(id) as
-		| { id: string; category: string; name: string; url: string; enabled: number }
+		| { id: string; category: string; name: string; url: string; enabled: number; source_type: string | null; selectors: string | null }
 		| undefined;
 	if (!current) return false;
 
@@ -285,14 +310,16 @@ export function updateCustomSource(
 		category: updates.category ?? current.category,
 		name: updates.name ?? current.name,
 		url: updates.url ?? current.url,
-		enabled: updates.enabled === undefined ? current.enabled === 1 : updates.enabled
+		enabled: updates.enabled === undefined ? current.enabled === 1 : updates.enabled,
+		sourceType: updates.sourceType ?? current.source_type ?? 'rss',
+		selectors: updates.selectors !== undefined ? updates.selectors : current.selectors
 	};
 
 	const result = db
 		.prepare(
-			'UPDATE news_custom_sources SET category = ?, name = ?, url = ?, enabled = ?, updated_at = ? WHERE id = ?'
+			'UPDATE news_custom_sources SET category = ?, name = ?, url = ?, enabled = ?, source_type = ?, selectors = ?, updated_at = ? WHERE id = ?'
 		)
-		.run(next.category, next.name, next.url, next.enabled ? 1 : 0, Date.now(), id);
+		.run(next.category, next.name, next.url, next.enabled ? 1 : 0, next.sourceType, next.selectors || null, Date.now(), id);
 	return result.changes > 0;
 }
 

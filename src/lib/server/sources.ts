@@ -1,4 +1,4 @@
-import type { FeedSource } from '$lib/config/feeds';
+import type { FeedSource, HtmlSelectors } from '$lib/config/feeds';
 import { FEEDS } from '$lib/config/feeds';
 import type { NewsCategory, SourceMutationError, SourceRecord } from '$lib/types';
 import {
@@ -44,7 +44,9 @@ function createBuiltInSources(): SourceRecord[] {
 				name: feed.name,
 				url: feed.url,
 				enabled: true,
-				isCustom: false
+				isCustom: false,
+				sourceType: feed.sourceType,
+				selectors: feed.selectors
 			}))
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
@@ -58,7 +60,9 @@ export function getAllSources(): SourceRecord[] {
 		name: record.name,
 		url: record.url,
 		enabled: record.enabled,
-		isCustom: true
+		isCustom: true,
+		sourceType: record.sourceType,
+		selectors: record.selectors ? JSON.parse(record.selectors) : undefined
 	}));
 	const overrides = new Map(getSourceOverrides().map((row) => [row.id, row.enabled]));
 
@@ -73,13 +77,20 @@ export function getAllSources(): SourceRecord[] {
 export function getEnabledFeedsByCategory(category: NewsCategory): FeedSource[] {
 	return getAllSources()
 		.filter((record) => record.category === category && record.enabled)
-		.map((record) => ({ name: record.name, url: record.url }));
+		.map((record) => ({
+			name: record.name,
+			url: record.url,
+			sourceType: record.sourceType,
+			selectors: record.selectors
+		}));
 }
 
 export function addSource(input: {
 	category: NewsCategory;
 	name: string;
 	url: string;
+	sourceType?: 'rss' | 'html';
+	selectors?: HtmlSelectors;
 }): SourceMutationResult {
 	if (!VALID_CATEGORIES.has(input.category)) {
 		return { ok: false, error: 'required' };
@@ -103,7 +114,9 @@ export function addSource(input: {
 			category: input.category,
 			name,
 			url,
-			enabled: true
+			enabled: true,
+			sourceType: input.sourceType,
+			selectors: input.selectors ? JSON.stringify(input.selectors) : undefined
 		});
 	} catch {
 		return { ok: false, error: 'duplicate' };
@@ -117,7 +130,9 @@ export function addSource(input: {
 			name,
 			url,
 			enabled: true,
-			isCustom: true
+			isCustom: true,
+			sourceType: input.sourceType,
+			selectors: input.selectors
 		}
 	};
 }
@@ -143,7 +158,7 @@ export function toggleSource(id: string): SourceMutationResult {
 
 export function updateSource(
 	id: string,
-	updates: Partial<Pick<SourceRecord, 'category' | 'name' | 'url' | 'enabled'>>
+	updates: Partial<Pick<SourceRecord, 'category' | 'name' | 'url' | 'enabled' | 'sourceType' | 'selectors'>>
 ): SourceMutationResult {
 	const source = getAllSources().find((record) => record.id === id);
 	if (!source) return { ok: false, error: 'not-found' };
@@ -153,6 +168,8 @@ export function updateSource(
 	const nextName = (updates.name ?? source.name).trim();
 	const nextUrl = (updates.url ?? source.url).trim();
 	const nextEnabled = updates.enabled ?? source.enabled;
+	const nextSourceType = updates.sourceType ?? source.sourceType;
+	const nextSelectors = updates.selectors !== undefined ? updates.selectors : source.selectors;
 
 	if (!VALID_CATEGORIES.has(nextCategory) || !nextName || !nextUrl) {
 		return { ok: false, error: 'required' };
@@ -173,7 +190,9 @@ export function updateSource(
 			category: nextCategory,
 			name: nextName,
 			url: nextUrl,
-			enabled: nextEnabled
+			enabled: nextEnabled,
+			sourceType: nextSourceType,
+			selectors: nextSelectors ? JSON.stringify(nextSelectors) : undefined
 		});
 	} catch {
 		return { ok: false, error: 'duplicate' };
@@ -190,7 +209,9 @@ export function updateSource(
 			name: nextName,
 			url: nextUrl,
 			enabled: nextEnabled,
-			isCustom: true
+			isCustom: true,
+			sourceType: nextSourceType,
+			selectors: nextSelectors
 		}
 	};
 }

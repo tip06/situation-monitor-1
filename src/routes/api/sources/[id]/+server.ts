@@ -10,6 +10,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		name?: string;
 		url?: string;
 		enabled?: boolean;
+		sourceType?: 'rss' | 'html';
+		selectors?: Record<string, string>;
 	};
 
 	try {
@@ -31,7 +33,9 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			category: payload.category,
 			name: payload.name,
 			url: payload.url,
-			enabled: payload.enabled
+			enabled: payload.enabled,
+			sourceType: payload.sourceType,
+			selectors: payload.selectors
 		});
 		if (!updated.ok) {
 			return json({ error: updated.error }, { status: 400 });

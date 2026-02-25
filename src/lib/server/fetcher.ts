@@ -13,7 +13,8 @@ import type {
 	MarketCategoryHealth,
 	MarketHealthMap
 } from '$lib/types';
-import { FEEDS, type FeedSource } from '$lib/config/feeds';
+import { FEEDS, type FeedSource, type HtmlSelectors } from '$lib/config/feeds';
+import { parseHtmlPage, isHtmlContent } from './html-parser';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
 import {
@@ -310,7 +311,9 @@ async function fetchRssFeedServer(
 	url: string,
 	sourceName: string,
 	category: NewsCategory,
-	timeoutMs: number = FEED_TIMEOUT_MS
+	timeoutMs: number = FEED_TIMEOUT_MS,
+	sourceType?: 'rss' | 'html',
+	selectors?: HtmlSelectors
 ): Promise<NewsItem[]> {
 	if (shouldSkipFeed(category, sourceName)) {
 		return [];
@@ -325,10 +328,14 @@ async function fetchRssFeedServer(
 		return [];
 	}
 
+	const isHtmlSource = sourceType === 'html';
+	const acceptHeader = isHtmlSource
+		? 'text/html, */*'
+		: 'application/rss+xml, application/xml, text/xml, */*';
+
 	const start = Date.now();
 	try {
-		// Direct fetch - no CORS proxy needed on server!
-		const response = await fetchWithTimeout(url, timeoutMs, 'application/rss+xml, application/xml, text/xml, */*');
+		const response = await fetchWithTimeout(url, timeoutMs, acceptHeader);
 
 		if (!response.ok) {
 			breaker.recordFailure();
@@ -336,13 +343,43 @@ async function fetchRssFeedServer(
 			return [];
 		}
 
-		const xml = await response.text();
-		const items = parseRssFeedXml(xml, sourceName, category);
+		const text = await response.text();
+
+		// If explicitly marked as HTML, parse as HTML directly
+		if (isHtmlSource) {
+			const items = parseHtmlPage(text, url, sourceName, category, selectors);
+			if (items.length > 0) {
+				console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items (HTML)`);
+			} else {
+				console.warn(`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`);
+			}
+			breaker.recordSuccess();
+			updateFeedHealth(category, sourceName, items.length > 0, Date.now() - start);
+			return items;
+		}
+
+		// Default: try RSS parsing first
+		const items = parseRssFeedXml(text, sourceName, category);
 		if (items.length > 0) {
 			console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items`);
-		} else {
-			console.warn(`[Fetcher] ${category}/${sourceName}: 0 items (xml length: ${xml.length})`);
+			breaker.recordSuccess();
+			updateFeedHealth(category, sourceName, true, Date.now() - start);
+			return items;
 		}
+
+		// Auto-detect fallback: if RSS parsing yielded 0 items and content looks like HTML
+		if (text.length > 200 && isHtmlContent(text)) {
+			console.log(`[Fetcher] ${category}/${sourceName}: RSS yielded 0 items, trying HTML parser`);
+			const htmlItems = parseHtmlPage(text, url, sourceName, category, selectors);
+			if (htmlItems.length > 0) {
+				console.log(`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`);
+				breaker.recordSuccess();
+				updateFeedHealth(category, sourceName, true, Date.now() - start);
+				return htmlItems;
+			}
+		}
+
+		console.warn(`[Fetcher] ${category}/${sourceName}: 0 items (text length: ${text.length})`);
 		breaker.recordSuccess();
 		updateFeedHealth(category, sourceName, true, Date.now() - start);
 		return items;
@@ -407,7 +444,7 @@ export async function fetchCategoryNewsServer(
 
 	// Build RSS fetch tasks with concurrency pool
 	const rssTasks = categoryFeeds.map(
-		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category)
+		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category, FEED_TIMEOUT_MS, feed.sourceType, feed.selectors)
 	);
 	const rssResults = await promisePool(rssTasks, FEED_CONCURRENCY);
 	const rssItems = rssResults.flat();
