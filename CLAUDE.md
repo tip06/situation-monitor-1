@@ -111,8 +111,7 @@ Unique business logic for intelligence analysis:
 - alerts for economic indicators (2-3)
 - make a cool loading screen (2-3)
 - create rss feeds from sites or social media (1)
-- intel feed may be not refreshing correctly
-- fix feeds (2)
+- fix feeds (2). maybe introduce a separate rss filtering system. maybe work with google news.
 
 ## General Guidance
 
