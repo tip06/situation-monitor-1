@@ -101,21 +101,21 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 			name: 'Defense News',
 			url: 'https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml'
 		},
-		{ name: 'The War Zone', url: 'https://www.thedrive.com/the-war-zone/feed' },
-		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
 		{
-			name: 'CSIS',
-			url: 'https://news.google.com/rss/search?q=site:csis.org&hl=en&gl=US&ceid=US:en'
+			name: 'The War Zone',
+			url: 'https://news.google.com/rss/search?q=site:thedrive.com&hl=en&gl=US&ceid=US:en'
 		},
+		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
+		{ name: 'CSIS', url: 'https://www.csis.org/rss.xml' },
 		{ name: 'Bellingcat', url: 'https://www.bellingcat.com/feed/' },
 		{
 			name: 'Chatham House',
 			url: 'https://news.google.com/rss/search?q=site:chathamhouse.org&hl=en&gl=US&ceid=US:en'
 		},
 		{
-		name: 'IISS',
-		url: 'https://news.google.com/rss/search?q=site:iiss.org&hl=en&gl=US&ceid=US:en'
-	},
+			name: 'IISS',
+			url: 'https://news.google.com/rss/search?q=site:iiss.org&hl=en&gl=US&ceid=US:en'
+		},
 		{
 			name: 'Military.com',
 			url: 'https://www.military.com/rss-feeds/content?feed=news-headlines.xml'
@@ -123,16 +123,25 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 	],
 	brazil: [
 		// === GENERAL (3) ===
-		{ name: 'G1 Brasil', url: 'https://g1.globo.com/rss/g1/' },
+		{
+			name: 'G1 Brasil',
+			url: 'https://news.google.com/rss/search?q=site:g1.globo.com&hl=pt-BR&gl=BR&ceid=BR:pt-419'
+		},
 		{ name: 'Folha de S.Paulo', url: 'https://feeds.folha.uol.com.br/emcimadahora/rss091.xml' },
 		{ name: 'Reuters Brazil', url: 'https://news.google.com/rss/search?q=site%3Areuters.com%20%22brazil%22&hl=pt-BR&gl=BR&ceid=BR%3Apt-419' },
 		{ name: 'Canaltech', url: 'https://feeds.feedburner.com/canaltechbr' },
 
 
 		// === POLITICS (5) ===
-		{ name: 'G1 Politica', url: 'https://g1.globo.com/rss/g1/politica/' },
+		{
+			name: 'G1 Politica',
+			url: 'https://news.google.com/rss/search?q=site:g1.globo.com+politica&hl=pt-BR&gl=BR&ceid=BR:pt-419'
+		},
 		{ name: 'Gazeta do Povo', url: 'https://www.gazetadopovo.com.br/feed/rss/republica.xml' },
-		{ name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/tudo-sobre/politica/feed/feed/' },
+		{
+			name: 'CNN Brasil',
+			url: 'https://news.google.com/rss/search?q=site:cnnbrasil.com.br+politica&hl=pt-BR&gl=BR&ceid=BR:pt-419'
+		},
 		{ name: 'Poder360', url: 'https://www.poder360.com.br/feed/' },
 		{
 			name: 'Agencia Brasil',
@@ -201,7 +210,10 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		}
 	],
 	greenland: [
-		{ name: 'Arctic Today', url: 'https://www.arctictoday.com/feed' },
+		{
+			name: 'Arctic Today',
+			url: 'https://news.google.com/rss/search?q=site:arctictoday.com&hl=en&gl=US&ceid=US:en'
+		},
 		{
 			name: 'High North News',
 			url: 'https://news.google.com/rss/search?q=site:highnorthnews.com&hl=en&gl=US&ceid=US:en'
@@ -217,14 +229,17 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		{ name: 'ZeroHedge', url: 'https://feeds.feedburner.com/zerohedge/feed' },
 		{ name: 'Breitbart', url: 'https://feeds.feedburner.com/breitbart' },
 		{ name: 'Daily Caller', url: 'https://dailycaller.com/feed/' },
-		{ name: 'Epoch Times', url: 'https://www.theepochtimes.com/c-us/feed' }
+		{
+			name: 'Epoch Times',
+			url: 'https://news.google.com/rss/search?q=site:theepochtimes.com+US&hl=en&gl=US&ceid=US:en'
+		}
 	]
 };
 
 export const INTEL_SOURCES: IntelSource[] = [
 	{
 		name: 'CSIS',
-		url: 'https://news.google.com/rss/search?q=site:csis.org&hl=en&gl=US&ceid=US:en',
+		url: 'https://www.csis.org/rss.xml',
 		type: 'think-tank',
 		topics: ['defense', 'geopolitics']
 	},
@@ -260,7 +275,7 @@ export const INTEL_SOURCES: IntelSource[] = [
 	},
 	{
 		name: 'The Drive War Zone',
-		url: 'https://www.thedrive.com/the-war-zone/feed',
+		url: 'https://news.google.com/rss/search?q=site:thedrive.com&hl=en&gl=US&ceid=US:en',
 		type: 'defense',
 		topics: ['military']
 	},
