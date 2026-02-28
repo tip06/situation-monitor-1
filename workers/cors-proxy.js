@@ -610,24 +610,103 @@ const COUNTRY_STABILITY_QUERIES = {
 	germany: 'Germany OR Berlin OR Bundestag'
 };
 
-const INSTABILITY_KEYWORDS = [
-	['coup', 25], ['revolution', 22], ['civil war', 22], ['invasion', 20],
-	['conflict', 15], ['protest', 12], ['unrest', 12], ['crisis', 10],
-	['sanctions', 8], ['military', 7], ['strike', 6], ['tensions', 5],
-	['ceasefire', -5], ['peace', -4], ['agreement', -3]
+const COUNTRY_STABILITY_BASELINE = {
+	usa: 72,
+	china: 67,
+	russia: 44,
+	iran: 34,
+	israel: 56,
+	ukraine: 28,
+	venezuela: 30,
+	brazil: 62,
+	india: 59,
+	pakistan: 41,
+	northkorea: 32,
+	taiwan: 69,
+	saudiarabia: 58,
+	turkey: 55,
+	germany: 79
+};
+
+const INSTABILITY_PATTERNS = [
+	[/\bcoup\b/i, 32],
+	[/\bcivil war\b/i, 30],
+	[/\binvasion\b/i, 30],
+	[/\bstate of emergency\b/i, 28],
+	[/\bassassinat(?:ion|ed)\b/i, 26],
+	[/\bmissile\b/i, 24],
+	[/\bdrone strike\b/i, 24],
+	[/\bterror(?:ist|ism)\b/i, 24],
+	[/\bairstrike\b/i, 22],
+	[/\bmilitary offensive\b/i, 22],
+	[/\briot(?:s)?\b/i, 18],
+	[/\bprotest(?:s)?\b/i, 15],
+	[/\bunrest\b/i, 15],
+	[/\bclash(?:es)?\b/i, 14],
+	[/\bsanction(?:s|ed)?\b/i, 12],
+	[/\bcrisis\b/i, 11],
+	[/\btension(?:s)?\b/i, 10],
+	[/\bstrike(?:s)?\b/i, 8]
 ];
 
-function computeStabilityScore(items) {
-	if (items.length === 0) return 75;
-	let instability = 0;
+const STABILIZING_PATTERNS = [
+	[/\bceasefire\b/i, 12],
+	[/\bde-?escalat(?:e|ion)\b/i, 10],
+	[/\bpeace talk(?:s)?\b/i, 10],
+	[/\bdiplomatic breakthrough\b/i, 9],
+	[/\bagreement\b/i, 8],
+	[/\btruce\b/i, 8],
+	[/\bmediation\b/i, 7],
+	[/\breform\b/i, 6],
+	[/\bstability\b/i, 4]
+];
+
+function computeStabilityScore(items, baseline) {
+	if (!Array.isArray(items) || items.length === 0) return baseline;
+
+	let riskPoints = 0;
+	let stabilizingPoints = 0;
+	let riskArticleCount = 0;
+	let severeArticleCount = 0;
+
 	for (const item of items) {
-		const text = (item.title + ' ' + (item.description || '')).toLowerCase();
-		for (const [kw, weight] of INSTABILITY_KEYWORDS) {
-			if (text.includes(kw)) instability += weight;
+		const text = `${item?.title || ''} ${item?.description || ''}`.toLowerCase().trim();
+		if (!text) continue;
+
+		let articleRisk = 0;
+		let articleStabilizing = 0;
+		for (const [pattern, weight] of INSTABILITY_PATTERNS) {
+			if (pattern.test(text)) articleRisk += weight;
 		}
+		for (const [pattern, weight] of STABILIZING_PATTERNS) {
+			if (pattern.test(text)) articleStabilizing += weight;
+		}
+
+		if (articleRisk > 0) {
+			riskArticleCount += 1;
+			if (articleRisk >= 24) severeArticleCount += 1;
+		}
+
+		riskPoints += Math.min(articleRisk, 45);
+		stabilizingPoints += Math.min(articleStabilizing, 20);
 	}
-	const raw = Math.max(0, Math.min(100, 100 - (instability / items.length) * 3));
-	return Math.round(raw);
+
+	const sampleSize = Math.max(1, Math.min(items.length, 50));
+	const confidence = Math.min(1, sampleSize / 20);
+	const avgRisk = riskPoints / sampleSize;
+	const avgStabilizing = stabilizingPoints / sampleSize;
+	const riskShare = riskArticleCount / sampleSize;
+	const severeShare = severeArticleCount / sampleSize;
+
+	// Baseline captures structural country risk; recent headlines move score up/down.
+	const pressure =
+		avgRisk * 1.15 +
+		riskShare * 24 +
+		severeShare * 18 -
+		avgStabilizing * 1.4;
+	const adjustedPressure = pressure * (0.5 + confidence * 0.5);
+	const score = baseline - adjustedPressure;
+	return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 async function handleAiBrief(request, env) {
@@ -689,7 +768,8 @@ async function handleAiBrief(request, env) {
 }
 
 async function handleStabilitySnapshot(request, env) {
-	const cached = await getStoreValue(env, 'stability:snapshot');
+	const cacheKey = 'stability:snapshot:v2';
+	const cached = await getStoreValue(env, cacheKey);
 	if (cached && Date.now() - cached.generatedAt < 60 * 60 * 1000) {
 		return jsonResponse(cached);
 	}
@@ -697,6 +777,7 @@ async function handleStabilitySnapshot(request, env) {
 	const scores = {};
 	await Promise.all(
 		Object.entries(COUNTRY_STABILITY_QUERIES).map(async ([country, query]) => {
+			const baseline = COUNTRY_STABILITY_BASELINE[country] ?? 60;
 			try {
 				const url =
 					'https://api.gdeltproject.org/api/v2/doc/doc?query=' +
@@ -705,15 +786,15 @@ async function handleStabilitySnapshot(request, env) {
 				const res = await fetchWithTimeout(url);
 				const data = res.ok ? await res.json() : { articles: [] };
 				const items = Array.isArray(data?.articles) ? data.articles : [];
-				scores[country] = computeStabilityScore(items);
+				scores[country] = computeStabilityScore(items, baseline);
 			} catch {
-				scores[country] = 75;
+				scores[country] = baseline;
 			}
 		})
 	);
 
 	const snapshot = { scores, generatedAt: Date.now() };
-	await setStoreValue(env, 'stability:snapshot', snapshot);
+	await setStoreValue(env, cacheKey, snapshot);
 	return jsonResponse(snapshot);
 }
 
