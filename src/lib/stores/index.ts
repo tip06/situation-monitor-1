@@ -111,7 +111,5 @@ export { language } from './language';
 export { alertNavigation, type AlertNavigationTarget } from './alertNavigation';
 
 // Sources store
-export { sources, getEnabledSourcesForCategory, type SourceRecord } from './sources';
-
-// Intelligence store
-export { intelligence, type IntelligenceState } from './intelligence';
+export { sources, getEnabledSourcesForCategory } from './sources';
+export type { SourceRecord } from '$lib/types';

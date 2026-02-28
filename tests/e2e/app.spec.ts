@@ -20,4 +20,19 @@ test.describe('Situation Monitor - SvelteKit App', () => {
 		await expect(page.locator('text=Economia')).toBeVisible();
 		await expect(page.locator('text=Tendências e análise')).toBeVisible();
 	});
+
+	test('remains responsive after repeated tab switches', async ({ page }) => {
+		await page.goto('/');
+
+		const tabs = page.locator('.tab');
+		await expect(tabs).toHaveCount(5);
+
+		for (let iteration = 0; iteration < 6; iteration++) {
+			for (let index = 0; index < 5; index++) {
+				await tabs.nth(index).click();
+				await expect(tabs.nth(index)).toHaveClass(/active/);
+				await expect(page.locator('.tab.active')).toHaveCount(1);
+			}
+		}
+	});
 });

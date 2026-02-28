@@ -1,23 +1,6 @@
-import { browser } from '$app/environment';
 import { get, writable } from 'svelte/store';
-import type { NewsCategory } from '$lib/types';
+import type { NewsCategory, SourceMutationError, SourceRecord } from '$lib/types';
 import { FEEDS, type FeedSource } from '$lib/config/feeds';
-
-const STORAGE_KEYS = {
-	overrides: 'newsSourcesOverrides',
-	custom: 'newsCustomSources'
-} as const;
-
-type SourceId = string;
-
-export interface SourceRecord {
-	id: SourceId;
-	category: NewsCategory;
-	name: string;
-	url: string;
-	enabled: boolean;
-	isCustom: boolean;
-}
 
 interface SourcesState {
 	records: SourceRecord[];
@@ -28,160 +11,159 @@ interface AddSourceInput {
 	category: NewsCategory;
 	name: string;
 	url: string;
+	sourceType?: 'rss' | 'html';
 }
 
-function normalizeValue(value: string): string {
-	return value.trim().toLowerCase();
+interface UpdateSourceInput {
+	id: string;
+	category: NewsCategory;
+	name: string;
+	url: string;
+	enabled: boolean;
+	sourceType?: 'rss' | 'html';
 }
 
-function buildSourceId(category: NewsCategory, name: string, url: string): SourceId {
-	const normalized = `${category}::${normalizeValue(name)}::${normalizeValue(url)}`;
-	return normalized.replace(/[^a-z0-9:/._-]+/g, '-');
+type SourceMutationResult = { ok: true } | { ok: false; error: SourceMutationError };
+
+function isMutationError(value: unknown): value is SourceMutationError {
+	return (
+		value === 'required' ||
+		value === 'invalid-url' ||
+		value === 'duplicate' ||
+		value === 'not-found' ||
+		value === 'built-in-protected'
+	);
 }
 
-function isValidHttpUrl(value: string): boolean {
-	try {
-		const url = new URL(value);
-		return url.protocol === 'http:' || url.protocol === 'https:';
-	} catch {
-		return false;
+async function loadSourcesFromServer(): Promise<SourceRecord[]> {
+	const res = await fetch('/api/sources');
+	if (!res.ok) {
+		throw new Error(`Failed to load sources (${res.status})`);
 	}
+	const data = (await res.json()) as { records?: SourceRecord[] };
+	return Array.isArray(data.records) ? data.records : [];
 }
 
-function createBuiltInSources(): SourceRecord[] {
-	return (Object.entries(FEEDS) as [NewsCategory, FeedSource[]][])
-		.flatMap(([category, feeds]) =>
-			feeds.map((feed) => ({
-				id: buildSourceId(category, feed.name, feed.url),
-				category,
-				name: feed.name,
-				url: feed.url,
-				enabled: true,
-				isCustom: false
-			}))
-		)
-		.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function loadOverrides(): Record<string, boolean> {
-	if (!browser) return {};
-	try {
-		const value = localStorage.getItem(STORAGE_KEYS.overrides);
-		return value ? JSON.parse(value) : {};
-	} catch {
-		return {};
+function readMutationError(data: unknown): SourceMutationError {
+	if (
+		typeof data === 'object' &&
+		data !== null &&
+		'error' in data &&
+		isMutationError((data as { error?: unknown }).error)
+	) {
+		return (data as { error: SourceMutationError }).error;
 	}
+	return 'required';
 }
 
-function loadCustomSources(): SourceRecord[] {
-	if (!browser) return [];
+async function parseMutationResponse(res: Response): Promise<SourceMutationResult> {
 	try {
-		const value = localStorage.getItem(STORAGE_KEYS.custom);
-		const raw = value ? (JSON.parse(value) as SourceRecord[]) : [];
-		return raw.filter(
-			(item) =>
-				item &&
-				typeof item.id === 'string' &&
-				typeof item.name === 'string' &&
-				typeof item.url === 'string' &&
-				typeof item.category === 'string'
-		);
+		if (!res.ok) {
+			const data = await res.json();
+			return { ok: false, error: readMutationError(data) };
+		}
+		return { ok: true };
 	} catch {
-		return [];
+		return { ok: false, error: 'required' };
 	}
-}
-
-function saveOverrides(records: SourceRecord[]): void {
-	if (!browser) return;
-	const builtInState = records
-		.filter((record) => !record.isCustom)
-		.reduce<Record<string, boolean>>((acc, record) => {
-			acc[record.id] = record.enabled;
-			return acc;
-		}, {});
-	localStorage.setItem(STORAGE_KEYS.overrides, JSON.stringify(builtInState));
-}
-
-function saveCustomSources(records: SourceRecord[]): void {
-	if (!browser) return;
-	const custom = records.filter((record) => record.isCustom);
-	localStorage.setItem(STORAGE_KEYS.custom, JSON.stringify(custom));
 }
 
 function createInitialState(): SourcesState {
 	return {
-		records: createBuiltInSources(),
+		records: [],
 		initialized: false
 	};
 }
 
 function createSourcesStore() {
-	const { subscribe, set, update } = writable<SourcesState>(createInitialState());
+	const { subscribe, update } = writable<SourcesState>(createInitialState());
 
 	return {
 		subscribe,
 
 		init() {
-			update((state) => {
-				if (state.initialized) return state;
-
-				const overrides = loadOverrides();
-				const customSources = loadCustomSources();
-				const builtIn = createBuiltInSources().map((record) => ({
-					...record,
-					enabled: overrides[record.id] ?? true
-				}));
-				const records = [...builtIn, ...customSources].sort((a, b) => a.name.localeCompare(b.name));
-				return { records, initialized: true };
-			});
+			void loadSourcesFromServer()
+				.then((records) => {
+					update((state) => ({
+						...state,
+						records: records.sort((a, b) => a.name.localeCompare(b.name)),
+						initialized: true
+					}));
+				})
+				.catch(() => {
+					update((state) => ({
+						...state,
+						records: state.records.length > 0 ? state.records : [],
+						initialized: true
+					}));
+				});
 		},
 
-		addSource(input: AddSourceInput): { ok: true } | { ok: false; error: 'required' | 'invalid-url' | 'duplicate' } {
-			const name = input.name.trim();
-			const url = input.url.trim();
-			if (!name || !url) return { ok: false, error: 'required' };
-			if (!isValidHttpUrl(url)) return { ok: false, error: 'invalid-url' };
-
-			const candidateUrl = normalizeValue(url);
-			const state = get({ subscribe });
-			const duplicate = state.records.some(
-				(record) => record.category === input.category && normalizeValue(record.url) === candidateUrl
-			);
-			if (duplicate) return { ok: false, error: 'duplicate' };
-
-			update((current) => {
-				const newRecord: SourceRecord = {
-					id: buildSourceId(input.category, name, url),
+		async addSource(input: AddSourceInput): Promise<SourceMutationResult> {
+			const res = await fetch('/api/sources', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
 					category: input.category,
-					name,
-					url,
-					enabled: true,
-					isCustom: true
-				};
-				const records = [...current.records, newRecord].sort((a, b) => a.name.localeCompare(b.name));
-				saveCustomSources(records);
-				return { ...current, records };
+					name: input.name,
+					url: input.url,
+					...(input.sourceType ? { sourceType: input.sourceType } : {})
+				})
 			});
-
+			const result = await parseMutationResponse(res);
+			if (!result.ok) return result;
+			this.init();
 			return { ok: true };
 		},
 
-		toggleSource(id: SourceId) {
-			update((state) => {
-				const records = state.records.map((record) =>
-					record.id === id ? { ...record, enabled: !record.enabled } : record
-				);
-				saveOverrides(records);
-				saveCustomSources(records);
-				return { ...state, records };
+		async toggleSource(id: string): Promise<SourceMutationResult> {
+			const res = await fetch(`/api/sources/${encodeURIComponent(id)}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'toggle' })
 			});
+			const result = await parseMutationResponse(res);
+			if (!result.ok) return result;
+			this.init();
+			return { ok: true };
+		},
+
+		async updateSource(input: UpdateSourceInput): Promise<SourceMutationResult> {
+			const res = await fetch(`/api/sources/${encodeURIComponent(input.id)}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action: 'update',
+					category: input.category,
+					name: input.name,
+					url: input.url,
+					enabled: input.enabled,
+					...(input.sourceType ? { sourceType: input.sourceType } : {})
+				})
+			});
+			const result = await parseMutationResponse(res);
+			if (!result.ok) return result;
+			this.init();
+			return { ok: true };
+		},
+
+		async deleteSource(id: string): Promise<SourceMutationResult> {
+			const res = await fetch(`/api/sources/${encodeURIComponent(id)}`, { method: 'DELETE' });
+			const result = await parseMutationResponse(res);
+			if (!result.ok) return result;
+			this.init();
+			return { ok: true };
 		},
 
 		getEnabledByCategory(category: NewsCategory): FeedSource[] {
 			const state = get({ subscribe });
 			return state.records
 				.filter((record) => record.category === category && record.enabled)
-				.map((record) => ({ name: record.name, url: record.url }));
+				.map((record) => ({
+					name: record.name,
+					url: record.url,
+					...(record.sourceType ? { sourceType: record.sourceType } : {})
+				}));
 		},
 
 		getByCategory(category: NewsCategory): SourceRecord[] {
@@ -190,11 +172,7 @@ function createSourcesStore() {
 		},
 
 		reset() {
-			if (browser) {
-				localStorage.removeItem(STORAGE_KEYS.overrides);
-				localStorage.removeItem(STORAGE_KEYS.custom);
-			}
-			set(createInitialState());
+			this.init();
 		}
 	};
 }
@@ -208,5 +186,9 @@ export function getEnabledSourcesForCategory(category: NewsCategory): FeedSource
 	}
 	return state.records
 		.filter((record) => record.category === category && record.enabled)
-		.map((record) => ({ name: record.name, url: record.url }));
+		.map((record) => ({
+			name: record.name,
+			url: record.url,
+			...(record.sourceType ? { sourceType: record.sourceType } : {})
+		}));
 }

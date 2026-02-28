@@ -3,7 +3,23 @@
 	import { activeTab, language } from '$lib/stores';
 	import { t } from '$lib/i18n';
 
+	let tabClickSequence = 0;
+
 	function handleTabClick(tabId: TabId) {
+		if (typeof performance !== 'undefined' && typeof requestAnimationFrame === 'function') {
+			const sequence = ++tabClickSequence;
+			const start = performance.now();
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					if (sequence !== tabClickSequence) return;
+					const duration = performance.now() - start;
+					if (duration > 500) {
+						console.warn(`Slow tab activation (${tabId}): ${Math.round(duration)}ms`);
+					}
+				});
+			});
+		}
+
 		activeTab.setTab(tabId);
 	}
 </script>

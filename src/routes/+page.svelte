@@ -85,6 +85,7 @@
 		venezuela: 'venezuela',
 		greenland: 'greenland'
 	};
+	const SITUATION_FILTER_OPTIONS = { maxItems: 10, maxAgeDays: 7 };
 	const ENABLE_BACKGROUND_PREFETCH = false;
 
 	function getVisibleNewsCategories(tabId: TabId): NewsCategory[] {
@@ -170,7 +171,7 @@
 			},
 			onFreshCategory: (loadedCategory, items) => {
 				if (!isCurrentLoadToken(token)) return;
-				news.setItems(loadedCategory, items);
+				news.mergeItems(loadedCategory, items);
 			},
 			onCategoryError: (failedCategory, error) => {
 				if (!isCurrentLoadToken(token)) return;
@@ -197,7 +198,10 @@
 	async function loadMarkets() {
 		try {
 			const data = await fetchAllMarkets();
-			markets.setAll(data);
+			markets.setIndices(data.indices, data.marketHealth?.indices);
+			markets.setSectors(data.sectors, data.marketHealth?.sectors);
+			markets.setCommodities(data.commodities, data.marketHealth?.commodities);
+			markets.setCrypto(data.crypto, data.marketHealth?.crypto);
 		} catch (error) {
 			console.error('Failed to load markets:', error);
 		}
@@ -319,8 +323,40 @@
 	let loadedTabs = $state<Set<string>>(new Set());
 	let initialLoadDone = $state(false);
 	let tabSwitchSequence = 0;
-	// Plain (non-reactive) flag to prevent double-loading intelligence data
-	let intelligenceLoadTriggered = false;
+
+	const iranSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('iran') ||
+					n.title.toLowerCase().includes('tehran') ||
+					n.title.toLowerCase().includes('irgc')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const venezuelaSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('venezuela') ||
+					n.title.toLowerCase().includes('maduro')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
+
+	const greenlandSituationNews = $derived(
+		filterNews(
+			$allNewsItems.filter(
+				(n) =>
+					n.title.toLowerCase().includes('greenland') ||
+					n.title.toLowerCase().includes('arctic')
+			),
+			SITUATION_FILTER_OPTIONS
+		)
+	);
 
 	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
@@ -337,16 +373,6 @@
 					}
 				});
 			});
-		}
-
-		// Load intelligence data on first visit to intelligence tab
-		if (tab === 'intelligence') {
-			if (!intelligenceLoadTriggered) {
-				intelligenceLoadTriggered = true;
-				void loadIntelligence();
-			}
-			loadedTabs = new Set([...loadedTabs, tab]);
-			return;
 		}
 
 		if (!initialLoadDone || loadedTabs.has(tab)) return;
@@ -388,45 +414,44 @@
 			}
 		}
 
-		activeTab.init();
 		sources.init();
 
 		// Load initial data: visible tab first, defer rest
-		async function initialLoad() {
-			refresh.startRefresh();
-			const token = beginLoadCycle();
-			try {
-				const currentTab = $activeTab;
-				const visibleCategories = getVisibleNewsCategories(currentTab);
-				await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData()]);
-				loadedTabs = new Set([currentTab]);
-				initialLoadDone = true;
-				scheduleAlertDetection();
-				refresh.endRefresh();
+			async function initialLoad() {
+				refresh.startRefresh();
+				const token = beginLoadCycle();
+				try {
+					const currentTab = $activeTab;
+					const visibleCategories = getVisibleNewsCategories(currentTab);
+					await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData(), loadIntelligence()]);
+					loadedTabs = new Set([currentTab]);
+					initialLoadDone = true;
+					scheduleAlertDetection();
+					refresh.endRefresh();
 
-				// Defer remaining categories after 5s
-				const remainingCategories = getRemainingNewsCategories(visibleCategories);
-				if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
-					scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
+						// Defer remaining categories after 5s
+						const remainingCategories = getRemainingNewsCategories(visibleCategories);
+						if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
+							scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
+						}
+				} catch (error) {
+					initialLoadDone = true;
+					refresh.endRefresh([String(error)]);
 				}
-			} catch (error) {
-				initialLoadDone = true;
-				refresh.endRefresh([String(error)]);
 			}
-		}
 		initialLoad();
 		refresh.setupAutoRefresh(handleRefresh);
 
-		return () => {
-			cancelTabLoadDebounce();
-			cancelDeferredCategoryLoad();
-			if (alertDetectionTimer) {
-				clearTimeout(alertDetectionTimer);
-				alertDetectionTimer = null;
-			}
-			longTaskObserver?.disconnect();
-			refresh.stopAutoRefresh();
-		};
+			return () => {
+				cancelTabLoadDebounce();
+				cancelDeferredCategoryLoad();
+				if (alertDetectionTimer) {
+					clearTimeout(alertDetectionTimer);
+					alertDetectionTimer = null;
+				}
+				longTaskObserver?.disconnect();
+				refresh.stopAutoRefresh();
+			};
 	});
 </script>
 
@@ -478,15 +503,7 @@
 											'khamenei'
 										]
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('iran') ||
-												n.title.toLowerCase().includes('tehran') ||
-												n.title.toLowerCase().includes('irgc')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={iranSituationNews}
 								/>
 							</div>
 						{/if}
@@ -500,14 +517,7 @@
 										subtitle: t($language, 'situation.venezuela.subtitle'),
 										criticalKeywords: ['maduro', 'caracas', 'venezuela', 'guaido']
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('venezuela') ||
-												n.title.toLowerCase().includes('maduro')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={venezuelaSituationNews}
 								/>
 							</div>
 						{/if}
@@ -521,14 +531,7 @@
 										subtitle: t($language, 'situation.greenland.subtitle'),
 										criticalKeywords: ['greenland', 'arctic', 'nuuk', 'denmark']
 									}}
-									news={filterNews(
-										$allNewsItems.filter(
-											(n) =>
-												n.title.toLowerCase().includes('greenland') ||
-												n.title.toLowerCase().includes('arctic')
-										),
-										{ maxItems: 10, maxAgeDays: 7 }
-									)}
+									news={greenlandSituationNews}
 								/>
 							</div>
 						{/if}

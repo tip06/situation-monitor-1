@@ -3,6 +3,7 @@
  */
 
 import type { Locale } from '$lib/i18n/types';
+import type { NewsCategory } from '$lib/types';
 
 export interface CorrelationTopic {
 	id: string;
@@ -2142,6 +2143,7 @@ export interface MainstreamNarrativePattern {
 	patterns: RegExp[];
 	category: string;
 	region?: 'global' | 'brazil' | 'latam' | 'mena';
+	sourceCategories?: NewsCategory[];
 }
 
 export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
@@ -2170,9 +2172,18 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 	{
 		id: 'china-decoupling',
 		name: 'China Decoupling',
-		patterns: [/decouple/i, /chip ban/i, /tech war/i, /decoupling/i, /china.{0,20}restrict/i],
+		patterns: [
+			/\b(china|beijing|prc)\b.{0,60}\b(decoupl|de-?risk(?:ing)?|friend-?shor(?:ing)?|supply chain shift|strategic autonomy)\b/i,
+			/\b(decoupl|de-?risk(?:ing)?|friend-?shor(?:ing)?|supply chain shift|strategic autonomy)\b.{0,60}\b(china|beijing|prc)\b/i,
+			/\b(us|usa|u\.s\.?|united states|eu|european union|g7|western)\b.{0,80}\b(china|beijing|prc)\b.{0,100}\b(export controls?|tariffs?|sanctions?|entity list|investment screening|chip (ban|restriction)|technology restriction|trade restriction)\b/i,
+			/\b(china|beijing|prc)\b.{0,80}\b(export controls?|tariffs?|sanctions?|entity list|investment screening|chip (ban|restriction)|technology restriction|trade restriction)\b.{0,100}\b(us|usa|u\.s\.?|united states|eu|european union|g7|western)\b/i,
+			/\b(us|usa|u\.s\.?|united states|eu|european union|g7|western)\b.{0,80}\b(export controls?|tariffs?|sanctions?|entity list|investment screening|chip (ban|restriction)|technology restriction|trade restriction)\b.{0,100}\b(china|beijing|prc)\b/i,
+			/\b(china|beijing|prc)\b.{0,100}\b(export curbs?|rare earth|gallium|germanium|graphite)\b.{0,80}\b(us|usa|u\.s\.?|eu|europe|western|g7|decoupl|de-?risk(?:ing)?)\b/i,
+			/\b(china|beijing|prc)\b.{0,80}\b(semiconductors?|chips?)\b.{0,80}\b(export controls?|ban|restriction|license)\b/i
+		],
 		category: 'Geopolitics',
-		region: 'global'
+		region: 'global',
+		sourceCategories: ['politics', 'gov', 'finance']
 	},
 
 	// === TECH/AI ===
@@ -2208,10 +2219,31 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 	// === POLITICAL ===
 	{
 		id: 'election-coverage',
-		name: 'Election Coverage',
-		patterns: [/election/i, /campaign/i, /polling/i, /ballot/i, /candidate/i, /vote.{0,5}count/i],
+		name: 'Global Election Coverage',
+		patterns: [
+			/election/i,
+			/campaign/i,
+			/polling/i,
+			/ballot/i,
+			/candidate/i,
+			/vote.{0,5}count/i,
+			/\brunoff\b/i,
+			/\bincumbent\b/i,
+			/\bopposition\b/i
+		],
 		category: 'Politics',
-		region: 'global'
+		region: 'global',
+		sourceCategories: ['politics', 'gov']
+	},
+	{
+		id: 'brazil-election-coverage',
+		name: 'Brazil Election Coverage',
+		patterns: [
+			/\b(elei[cç][aã]o|eleitoral|presidencial|presidenci[aá]vel|pr[eé]-?candidat[oa]|campanha|segundo turno|urna|apura[cç][aã]o|tse|tribunal superior eleitoral)\b.{0,60}\b(brasil|brazil|pt|pl|psdb|mdb|uni[aã]o brasil|pdt|psb|psd|lula|bolsonaro|tarc[ií]sio|haddad|ciro gomes|simone tebet)\b/i,
+			/\b(brasil|brazil|pt|pl|psdb|mdb|uni[aã]o brasil|pdt|psb|psd|lula|bolsonaro|tarc[ií]sio|haddad|ciro gomes|simone tebet)\b.{0,60}\b(elei[cç][aã]o|eleitoral|presidencial|presidenci[aá]vel|pr[eé]-?candidat[oa]|campanha|segundo turno|urna|apura[cç][aã]o|tse|tribunal superior eleitoral)\b/i
+		],
+		category: 'Politics',
+		region: 'brazil'
 	},
 
 	// === NEW GLOBAL — Geopolitics & Security ===
@@ -2342,6 +2374,13 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 		category: 'Politics',
 		region: 'global'
 	},
+	{
+		id: 'right-framing-global',
+		name: 'Right Framing (Global)',
+		patterns: [/esquerdistas?/i, /comunistas?/i, /marxistas?/i, /doutrina[çc][ãa]o/i, /ideologia de g[êe]nero/i, /vagabundos?/i, /mamata/i, /petralhas?/i, /bolivarianos?/i, /ditadura do judici[áa]rio/i, /ativismo judicial/i, /aparelhamento/i],
+		category: 'Politics',
+		region: 'global'
+	},
 
 	// === GLOBAL — Frame Battles ===
 	{
@@ -2425,8 +2464,26 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 	},
 	{
 		id: 'real-pressure',
-		name: 'Real Currency',
-		patterns: [/dolar.{0,10}real/i, /cambio/i, /desvaloriza/i, /real.{0,10}dolar/i],
+		name: 'Pressao no Real (FX)',
+		patterns: [
+			/\b(brl|real)\b.{0,20}\b(usd|d[oó]lar|dollar|c[âa]mbio|fx|exchange rate)\b/i,
+			/\b(usd|d[oó]lar|dollar)\b.{0,20}\b(brl|real)\b/i,
+			/\b(real|brl)\b.{0,20}\b(desvaloriza[çc][aã]o|desvaloriza|deprecia[çc][aã]o|depreciat|weakens?|enfraquece)\b/i,
+			/\b(c[âa]mbio|fx|exchange rate)\b.{0,20}\b(real|brl)\b.{0,20}\b(alta|dispara|pressure|volatil|deprecia|desvaloriz)\b/i
+		],
+		category: 'Economy',
+		region: 'brazil'
+	},
+	{
+		id: 'real-pressure-drivers',
+		name: 'Vetores de Pressao no Real',
+		patterns: [
+			/\b(sanctions?|san[cç][õo]es|embargo|export controls?)\b.{0,25}\b(us|u\.s\.|eua|estados unidos)\b.{0,40}\b(d[oó]lar|usd|commodity|commodit|brasil|brazil|real|brl)\b/i,
+			/\b(infla[çc][aã]o|inflation|ipca)\b.{0,35}\b(brasil|brazil|real|brl|c[âa]mbio|d[oó]lar|usd)\b/i,
+			/\b(arcabou[cç]o fiscal|meta fiscal|d[ée]ficit|rombo fiscal|risco fiscal|fiscal pressure|fiscal stress|public debt|d[íi]vida p[úu]blica)\b.{0,35}\b(brasil|brazil|real|brl|c[âa]mbio|d[oó]lar|usd)\b/i,
+			/\b(commodit|commodity|soja|min[ée]rio|iron ore|petr[oó]leo|oil)\b.{0,30}\b(fall|queda|drop|deprecia|desvaloriza|slump)\b.{0,30}\b(brasil|brazil|real|brl|d[oó]lar|usd)\b/i,
+			/\b(queda das commodities|commodity slump|commodities downturn)\b.{0,30}\b(real|brl|c[âa]mbio|brasil|brazil)\b/i
+		],
 		category: 'Economy',
 		region: 'brazil'
 	},
@@ -2505,7 +2562,10 @@ export const MAINSTREAM_NARRATIVE_PATTERNS: MainstreamNarrativePattern[] = [
 	{
 		id: 'brazil-right-framing',
 		name: 'Brazil Right Framing',
-		patterns: [/esquerdista/i, /comunista/i, /marxista/i, /doutrina[çc][ãa]o/i, /ideologia de g[êe]nero/i, /vagabundo/i, /mamata/i, /petralha/i, /bolivariano/i, /ditadura do judici[áa]rio/i, /ativismo judicial/i, /aparelhamento/i],
+		patterns: [
+			/\b(esquerdistas?|comunistas?|marxistas?|doutrina[çc][ãa]o|ideologia de g[êe]nero|vagabundos?|mamata|petralhas?|bolivarianos?|ditadura do judici[áa]rio|ativismo judicial|aparelhamento)\b.{0,60}\b(brasil|brazil|planalto|stf|lula|bolsonaro|pt|pl|congresso|c[âa]mara dos deputados|senado|tse|governo federal)\b/i,
+			/\b(brasil|brazil|planalto|stf|lula|bolsonaro|pt|pl|congresso|c[âa]mara dos deputados|senado|tse|governo federal)\b.{0,60}\b(esquerdistas?|comunistas?|marxistas?|doutrina[çc][ãa]o|ideologia de g[êe]nero|vagabundos?|mamata|petralhas?|bolivarianos?|ditadura do judici[áa]rio|ativismo judicial|aparelhamento)\b/i
+		],
 		category: 'Politics',
 		region: 'brazil'
 	},

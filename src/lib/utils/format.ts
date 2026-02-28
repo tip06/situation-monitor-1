@@ -39,11 +39,12 @@ export function getRelativeTime(dateInput: string | number | Date, locale: Local
  * Format currency value
  */
 export function formatCurrency(
-	value: number,
+	value: number | null | undefined,
 	options: { decimals?: number; compact?: boolean; symbol?: string } = {},
 	locale: Locale = 'en'
 ): string {
 	const { decimals = 2, compact = false, symbol = '$' } = options;
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
 
 	if (compact) {
 		if (Math.abs(value) >= 1e12) return symbol + (value / 1e12).toFixed(1) + 'T';
@@ -59,6 +60,7 @@ export function formatCurrency(
  * Format number with compact notation
  */
 export function formatNumber(value: number, decimals = 2, locale: Locale = 'en'): string {
+	if (!Number.isFinite(value)) return '—';
 	if (Math.abs(value) >= 1e9) return (value / 1e9).toFixed(1) + 'B';
 	if (Math.abs(value) >= 1e6) return (value / 1e6).toFixed(1) + 'M';
 	if (Math.abs(value) >= 1e3) return (value / 1e3).toFixed(1) + 'K';
@@ -71,7 +73,8 @@ export function formatNumber(value: number, decimals = 2, locale: Locale = 'en')
 /**
  * Format percent change with sign
  */
-export function formatPercentChange(value: number, decimals = 2): string {
+export function formatPercentChange(value: number | null | undefined, decimals = 2): string {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
 	const sign = value > 0 ? '+' : '';
 	return sign + value.toFixed(decimals) + '%';
 }
@@ -79,7 +82,8 @@ export function formatPercentChange(value: number, decimals = 2): string {
 /**
  * Get CSS class for positive/negative change
  */
-export function getChangeClass(value: number): 'up' | 'down' | '' {
+export function getChangeClass(value: number | null | undefined): 'up' | 'down' | '' {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '';
 	if (value > 0) return 'up';
 	if (value < 0) return 'down';
 	return '';

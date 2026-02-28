@@ -40,3 +40,7 @@ archive/
 # SQLite database
 data/
 .firecrawl/
+data/situation-monitor.db
+data/situation-monitor.db-shm
+data/situation-monitor.db-wal
+data/situation-monitor.db-wal

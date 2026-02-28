@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import type { NewsCategory } from '$lib/types';
 import { getNewsByCategoryBatch } from '$lib/server/db';
 import { fetchCategoryNewsServer } from '$lib/server/fetcher';
+import { getEnabledFeedsByCategory } from '$lib/server/sources';
 
 const VALID_CATEGORIES: Set<NewsCategory> = new Set([
 	'politics', 'tech', 'finance', 'gov', 'ai', 'intel',
@@ -43,7 +44,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	for (const category of categories) {
 		if (result[category].length === 0) {
 			fetchPromises.push(
-				fetchCategoryNewsServer(category).then((items) => {
+				fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category)).then((items) => {
 					result[category] = items;
 				})
 			);

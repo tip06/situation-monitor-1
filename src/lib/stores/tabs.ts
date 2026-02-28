@@ -42,7 +42,7 @@ function saveTab(tabId: TabId): void {
  * Create the tab store
  */
 function createTabStore() {
-	const { subscribe, set } = writable<TabId>(DEFAULT_TAB);
+	const { subscribe, set } = writable<TabId>(loadSavedTab());
 
 	return {
 		subscribe,

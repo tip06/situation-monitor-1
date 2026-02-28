@@ -3,8 +3,18 @@
  * Fetches RSS feeds directly (no CORS proxy needed), GDELT, Finnhub, CoinGecko
  */
 
-import type { NewsItem, NewsCategory, MarketItem, SectorPerformance, CryptoItem } from '$lib/types';
-import { FEEDS, type FeedSource } from '$lib/config/feeds';
+import type {
+	NewsItem,
+	NewsCategory,
+	MarketItem,
+	SectorPerformance,
+	CryptoItem,
+	MarketCategoryKey,
+	MarketCategoryHealth,
+	MarketHealthMap
+} from '$lib/types';
+import { FEEDS, type FeedSource, type HtmlSelectors } from '$lib/config/feeds';
+import { parseHtmlPage, isHtmlContent } from './html-parser';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
 import {
@@ -24,9 +34,12 @@ import {
 import {
 	upsertNewsItems,
 	setMarketData,
+	getMarketData,
 	getMeta,
 	setMeta
 } from './db';
+import { env } from '$env/dynamic/private';
+import { getEnabledFeedsByCategory } from './sources';
 
 // --- Configuration ---
 
@@ -39,8 +52,10 @@ const BETWEEN_CATEGORIES_DELAY_MS = 500;
 const FEED_HEALTH_MAX_FAILURES = 5;
 const FEED_HEALTH_RETRY_AFTER_MS = 60 * 60 * 1000; // 1 hour
 
-const FINNHUB_API_KEY = process.env.VITE_FINNHUB_API_KEY ?? '';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
+const FINNHUB_API_KEY = env.FINNHUB_API_KEY ?? env.VITE_FINNHUB_API_KEY ?? '';
+const USING_DEPRECATED_FINNHUB_KEY = !env.FINNHUB_API_KEY && !!env.VITE_FINNHUB_API_KEY;
+let loggedFinnhubDeprecationWarning = false;
 
 // --- Circuit Breakers ---
 
@@ -155,6 +170,44 @@ function shouldSkipFeed(category: string, sourceName: string): boolean {
 	return Date.now() - health.lastAttempt < FEED_HEALTH_RETRY_AFTER_MS;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+	return typeof value === 'number' && Number.isFinite(value);
+}
+
+function getDefaultMarketHealth(category: MarketCategoryKey): MarketCategoryHealth {
+	return {
+		category,
+		source: category === 'crypto' ? 'coingecko' : 'finnhub',
+		stale: false,
+		reason: null,
+		lastAttempt: null,
+		lastSuccess: null,
+		consecutiveFailures: 0
+	};
+}
+
+function getMarketHealth(category: MarketCategoryKey): MarketCategoryHealth {
+	return getMeta<MarketCategoryHealth>(`marketHealth:${category}`)?.value ?? getDefaultMarketHealth(category);
+}
+
+function setMarketHealth(
+	category: MarketCategoryKey,
+	update: { stale: boolean; reason?: string; success?: boolean }
+): MarketCategoryHealth {
+	const current = getMarketHealth(category);
+	const now = Date.now();
+	const next: MarketCategoryHealth = {
+		...current,
+		stale: update.stale,
+		reason: update.reason ?? null,
+		lastAttempt: now,
+		lastSuccess: update.success ? now : current.lastSuccess,
+		consecutiveFailures: update.success ? 0 : current.consecutiveFailures + 1
+	};
+	setMeta(`marketHealth:${category}`, next);
+	return next;
+}
+
 // --- RSS Parsing (server-side, no DOMParser) ---
 
 function parseRssFeedXml(xml: string, sourceName: string, category: NewsCategory): NewsItem[] {
@@ -258,7 +311,9 @@ async function fetchRssFeedServer(
 	url: string,
 	sourceName: string,
 	category: NewsCategory,
-	timeoutMs: number = FEED_TIMEOUT_MS
+	timeoutMs: number = FEED_TIMEOUT_MS,
+	sourceType?: 'rss' | 'html',
+	selectors?: HtmlSelectors
 ): Promise<NewsItem[]> {
 	if (shouldSkipFeed(category, sourceName)) {
 		return [];
@@ -273,10 +328,14 @@ async function fetchRssFeedServer(
 		return [];
 	}
 
+	const isHtmlSource = sourceType === 'html';
+	const acceptHeader = isHtmlSource
+		? 'text/html, */*'
+		: 'application/rss+xml, application/xml, text/xml, */*';
+
 	const start = Date.now();
 	try {
-		// Direct fetch - no CORS proxy needed on server!
-		const response = await fetchWithTimeout(url, timeoutMs, 'application/rss+xml, application/xml, text/xml, */*');
+		const response = await fetchWithTimeout(url, timeoutMs, acceptHeader);
 
 		if (!response.ok) {
 			breaker.recordFailure();
@@ -284,13 +343,43 @@ async function fetchRssFeedServer(
 			return [];
 		}
 
-		const xml = await response.text();
-		const items = parseRssFeedXml(xml, sourceName, category);
+		const text = await response.text();
+
+		// If explicitly marked as HTML, parse as HTML directly
+		if (isHtmlSource) {
+			const items = parseHtmlPage(text, url, sourceName, category, selectors);
+			if (items.length > 0) {
+				console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items (HTML)`);
+			} else {
+				console.warn(`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`);
+			}
+			breaker.recordSuccess();
+			updateFeedHealth(category, sourceName, items.length > 0, Date.now() - start);
+			return items;
+		}
+
+		// Default: try RSS parsing first
+		const items = parseRssFeedXml(text, sourceName, category);
 		if (items.length > 0) {
 			console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items`);
-		} else {
-			console.warn(`[Fetcher] ${category}/${sourceName}: 0 items (xml length: ${xml.length})`);
+			breaker.recordSuccess();
+			updateFeedHealth(category, sourceName, true, Date.now() - start);
+			return items;
 		}
+
+		// Auto-detect fallback: if RSS parsing yielded 0 items and content looks like HTML
+		if (text.length > 200 && isHtmlContent(text)) {
+			console.log(`[Fetcher] ${category}/${sourceName}: RSS yielded 0 items, trying HTML parser`);
+			const htmlItems = parseHtmlPage(text, url, sourceName, category, selectors);
+			if (htmlItems.length > 0) {
+				console.log(`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`);
+				breaker.recordSuccess();
+				updateFeedHealth(category, sourceName, true, Date.now() - start);
+				return htmlItems;
+			}
+		}
+
+		console.warn(`[Fetcher] ${category}/${sourceName}: 0 items (text length: ${text.length})`);
 		breaker.recordSuccess();
 		updateFeedHealth(category, sourceName, true, Date.now() - start);
 		return items;
@@ -355,7 +444,7 @@ export async function fetchCategoryNewsServer(
 
 	// Build RSS fetch tasks with concurrency pool
 	const rssTasks = categoryFeeds.map(
-		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category)
+		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category, FEED_TIMEOUT_MS, feed.sourceType, feed.selectors)
 	);
 	const rssResults = await promisePool(rssTasks, FEED_CONCURRENCY);
 	const rssItems = rssResults.flat();
@@ -408,6 +497,16 @@ interface FinnhubQuote {
 	t: number;
 }
 
+interface FinnhubQuoteResult {
+	quote: FinnhubQuote | null;
+	error: string | null;
+}
+
+interface MarketFetchResult<T> {
+	items: T[];
+	health: MarketCategoryHealth;
+}
+
 const INDEX_ETF_MAP: Record<string, string> = {
 	'^DJI': 'DIA',
 	'^GSPC': 'SPY',
@@ -424,8 +523,10 @@ const COMMODITY_SYMBOL_MAP: Record<string, string> = {
 	'HG=F': 'CPER'
 };
 
-async function fetchFinnhubQuote(symbol: string): Promise<FinnhubQuote | null> {
-	if (!finnhubBreaker.canRequest()) return null;
+async function fetchFinnhubQuote(symbol: string): Promise<FinnhubQuoteResult> {
+	if (!finnhubBreaker.canRequest()) {
+		return { quote: null, error: 'Circuit breaker open' };
+	}
 
 	try {
 		const url = `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_API_KEY}`;
@@ -433,102 +534,230 @@ async function fetchFinnhubQuote(symbol: string): Promise<FinnhubQuote | null> {
 
 		if (!response.ok) {
 			finnhubBreaker.recordFailure();
-			return null;
+			return { quote: null, error: `HTTP ${response.status}` };
 		}
 
 		const data: FinnhubQuote = await response.json();
-		if (data.c === 0 && data.pc === 0) return null;
+		if (data.c === 0 && data.pc === 0) {
+			return { quote: null, error: 'Empty quote payload' };
+		}
 
 		finnhubBreaker.recordSuccess();
-		return data;
-	} catch {
+		return { quote: data, error: null };
+	} catch (error) {
 		finnhubBreaker.recordFailure();
-		return null;
+		return { quote: null, error: error instanceof Error ? error.message : String(error) };
 	}
 }
 
-async function fetchIndicesServer(): Promise<MarketItem[]> {
+async function fetchIndicesServer(): Promise<MarketFetchResult<MarketItem>> {
+	const cachedItems = getMarketData<MarketItem[]>('indices')?.data ?? [];
+	const cachedBySymbol = new Map(cachedItems.map((item) => [item.symbol, item]));
+
 	if (!FINNHUB_API_KEY) {
-		return INDICES.map((i) => ({
-			symbol: i.symbol,
-			name: i.name,
-			price: NaN,
-			change: NaN,
-			changePercent: NaN,
-			type: 'index' as const
-		}));
+		const fallback = INDICES.map((index) => {
+			const cached = cachedBySymbol.get(index.symbol);
+			return (
+				cached ?? {
+					symbol: index.symbol,
+					name: index.name,
+					price: NaN,
+					change: NaN,
+					changePercent: NaN,
+					type: 'index' as const
+				}
+			);
+		});
+		return {
+			items: fallback,
+			health: setMarketHealth('indices', {
+				stale: true,
+				reason: 'Missing FINNHUB API key',
+				success: false
+			})
+		};
 	}
 
+	let freshCount = 0;
+	let fallbackCount = 0;
+	let lastError: string | null = null;
 	const results: MarketItem[] = [];
 	for (const index of INDICES) {
+		const cached = cachedBySymbol.get(index.symbol);
 		const etfSymbol = INDEX_ETF_MAP[index.symbol] || index.symbol;
-		const quote = await fetchFinnhubQuote(etfSymbol);
+		const { quote, error } = await fetchFinnhubQuote(etfSymbol);
+		const hasFreshQuote =
+			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
+		if (hasFreshQuote && quote) {
+			freshCount++;
+		} else if (
+			cached &&
+			isFiniteNumber(cached.price) &&
+			isFiniteNumber(cached.change) &&
+			isFiniteNumber(cached.changePercent)
+		) {
+			fallbackCount++;
+		}
+		if (error) lastError = error;
+
 		results.push({
 			symbol: index.symbol,
 			name: index.name,
-			price: quote?.c ?? NaN,
-			change: quote?.d ?? NaN,
-			changePercent: quote?.dp ?? NaN,
+			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
+			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
+			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN),
 			type: 'index' as const
 		});
 		await delay(FINNHUB_STAGGER_MS);
 	}
-	return results;
+
+	const stale = fallbackCount > 0 || freshCount === 0;
+	const health = setMarketHealth('indices', {
+		stale,
+		reason: stale ? (lastError ?? 'Using cached index data') : undefined,
+		success: !stale
+	});
+
+	return { items: results, health };
 }
 
-async function fetchSectorsServer(): Promise<SectorPerformance[]> {
+async function fetchSectorsServer(): Promise<MarketFetchResult<SectorPerformance>> {
+	const cachedItems = getMarketData<SectorPerformance[]>('sectors')?.data ?? [];
+	const cachedBySymbol = new Map(cachedItems.map((item) => [item.symbol, item]));
+
 	if (!FINNHUB_API_KEY) {
-		return SECTORS.map((s) => ({
-			symbol: s.symbol,
-			name: s.name,
-			price: NaN,
-			change: NaN,
-			changePercent: NaN
-		}));
+		const fallback = SECTORS.map((sector) => {
+			const cached = cachedBySymbol.get(sector.symbol);
+			return (
+				cached ?? {
+					symbol: sector.symbol,
+					name: sector.name,
+					price: NaN,
+					change: NaN,
+					changePercent: NaN
+				}
+			);
+		});
+		return {
+			items: fallback,
+			health: setMarketHealth('sectors', {
+				stale: true,
+				reason: 'Missing FINNHUB API key',
+				success: false
+			})
+		};
 	}
 
+	let freshCount = 0;
+	let fallbackCount = 0;
+	let lastError: string | null = null;
 	const results: SectorPerformance[] = [];
 	for (const sector of SECTORS) {
-		const quote = await fetchFinnhubQuote(sector.symbol);
+		const cached = cachedBySymbol.get(sector.symbol);
+		const { quote, error } = await fetchFinnhubQuote(sector.symbol);
+		const hasFreshQuote =
+			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
+		if (hasFreshQuote && quote) {
+			freshCount++;
+		} else if (
+			cached &&
+			isFiniteNumber(cached.price) &&
+			isFiniteNumber(cached.change) &&
+			isFiniteNumber(cached.changePercent)
+		) {
+			fallbackCount++;
+		}
+		if (error) lastError = error;
+
 		results.push({
 			symbol: sector.symbol,
 			name: sector.name,
-			price: quote?.c ?? NaN,
-			change: quote?.d ?? NaN,
-			changePercent: quote?.dp ?? NaN
+			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
+			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
+			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN)
 		});
 		await delay(FINNHUB_STAGGER_MS);
 	}
-	return results;
+
+	const stale = fallbackCount > 0 || freshCount === 0;
+	const health = setMarketHealth('sectors', {
+		stale,
+		reason: stale ? (lastError ?? 'Using cached sector data') : undefined,
+		success: !stale
+	});
+
+	return { items: results, health };
 }
 
-async function fetchCommoditiesServer(): Promise<MarketItem[]> {
+async function fetchCommoditiesServer(): Promise<MarketFetchResult<MarketItem>> {
+	const cachedItems = getMarketData<MarketItem[]>('commodities')?.data ?? [];
+	const cachedBySymbol = new Map(cachedItems.map((item) => [item.symbol, item]));
+
 	if (!FINNHUB_API_KEY) {
-		return COMMODITIES.map((c) => ({
-			symbol: c.symbol,
-			name: c.name,
-			price: NaN,
-			change: NaN,
-			changePercent: NaN,
-			type: 'commodity' as const
-		}));
+		const fallback = COMMODITIES.map((commodity) => {
+			const cached = cachedBySymbol.get(commodity.symbol);
+			return (
+				cached ?? {
+					symbol: commodity.symbol,
+					name: commodity.name,
+					price: NaN,
+					change: NaN,
+					changePercent: NaN,
+					type: 'commodity' as const
+				}
+			);
+		});
+		return {
+			items: fallback,
+			health: setMarketHealth('commodities', {
+				stale: true,
+				reason: 'Missing FINNHUB API key',
+				success: false
+			})
+		};
 	}
 
+	let freshCount = 0;
+	let fallbackCount = 0;
+	let lastError: string | null = null;
 	const results: MarketItem[] = [];
 	for (const commodity of COMMODITIES) {
+		const cached = cachedBySymbol.get(commodity.symbol);
 		const finnhubSymbol = COMMODITY_SYMBOL_MAP[commodity.symbol] || commodity.symbol;
-		const quote = await fetchFinnhubQuote(finnhubSymbol);
+		const { quote, error } = await fetchFinnhubQuote(finnhubSymbol);
+		const hasFreshQuote =
+			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
+		if (hasFreshQuote && quote) {
+			freshCount++;
+		} else if (
+			cached &&
+			isFiniteNumber(cached.price) &&
+			isFiniteNumber(cached.change) &&
+			isFiniteNumber(cached.changePercent)
+		) {
+			fallbackCount++;
+		}
+		if (error) lastError = error;
+
 		results.push({
 			symbol: commodity.symbol,
 			name: commodity.name,
-			price: quote?.c ?? NaN,
-			change: quote?.d ?? NaN,
-			changePercent: quote?.dp ?? NaN,
+			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
+			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
+			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN),
 			type: 'commodity' as const
 		});
 		await delay(FINNHUB_STAGGER_MS);
 	}
-	return results;
+
+	const stale = fallbackCount > 0 || freshCount === 0;
+	const health = setMarketHealth('commodities', {
+		stale,
+		reason: stale ? (lastError ?? 'Using cached commodities data') : undefined,
+		success: !stale
+	});
+
+	return { items: results, health };
 }
 
 interface CoinGeckoPrice {
@@ -536,26 +765,41 @@ interface CoinGeckoPrice {
 	usd_24h_change?: number;
 }
 
-async function fetchCryptoServer(): Promise<CryptoItem[]> {
+async function fetchCryptoServer(): Promise<MarketFetchResult<CryptoItem>> {
+	const cachedItems = getMarketData<CryptoItem[]>('crypto')?.data ?? [];
+	const cachedById = new Map(cachedItems.map((item) => [item.id, item]));
+
 	try {
 		const ids = CRYPTO.map((c) => c.id).join(',');
 		const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
 		const response = await fetchWithTimeout(url, FEED_TIMEOUT_MS);
 
 		if (!response.ok) {
-			return CRYPTO.map((c) => ({
-				id: c.id,
-				symbol: c.symbol,
-				name: c.name,
-				current_price: 0,
-				price_change_24h: 0,
-				price_change_percentage_24h: 0
-			}));
+			const fallback = CRYPTO.map((crypto) => {
+				const cached = cachedById.get(crypto.id);
+				return (
+					cached ?? {
+						id: crypto.id,
+						symbol: crypto.symbol,
+						name: crypto.name,
+						current_price: 0,
+						price_change_24h: 0,
+						price_change_percentage_24h: 0
+					}
+				);
+			});
+			return {
+				items: fallback,
+				health: setMarketHealth('crypto', {
+					stale: true,
+					reason: `CoinGecko HTTP ${response.status}`,
+					success: false
+				})
+			};
 		}
 
 		const data: Record<string, CoinGeckoPrice> = await response.json();
-
-		return CRYPTO.map((crypto) => {
+		const items = CRYPTO.map((crypto) => {
 			const priceData = data[crypto.id];
 			return {
 				id: crypto.id,
@@ -566,15 +810,35 @@ async function fetchCryptoServer(): Promise<CryptoItem[]> {
 				price_change_percentage_24h: priceData?.usd_24h_change || 0
 			};
 		});
-	} catch {
-		return CRYPTO.map((c) => ({
-			id: c.id,
-			symbol: c.symbol,
-			name: c.name,
-			current_price: 0,
-			price_change_24h: 0,
-			price_change_percentage_24h: 0
-		}));
+		return {
+			items,
+			health: setMarketHealth('crypto', {
+				stale: false,
+				success: true
+			})
+		};
+	} catch (error) {
+		const fallback = CRYPTO.map((crypto) => {
+			const cached = cachedById.get(crypto.id);
+			return (
+				cached ?? {
+					id: crypto.id,
+					symbol: crypto.symbol,
+					name: crypto.name,
+					current_price: 0,
+					price_change_24h: 0,
+					price_change_percentage_24h: 0
+				}
+			);
+		});
+		return {
+			items: fallback,
+			health: setMarketHealth('crypto', {
+				stale: true,
+				reason: error instanceof Error ? error.message : String(error),
+				success: false
+			})
+		};
 	}
 }
 
@@ -583,31 +847,45 @@ export interface AllMarketsServerData {
 	sectors: SectorPerformance[];
 	commodities: MarketItem[];
 	crypto: CryptoItem[];
+	marketHealth: MarketHealthMap;
 	updatedAt: number;
 }
 
 export async function fetchAllMarketsServer(): Promise<AllMarketsServerData> {
+	if (USING_DEPRECATED_FINNHUB_KEY && !loggedFinnhubDeprecationWarning) {
+		console.warn(
+			'[Fetcher] Using deprecated VITE_FINNHUB_API_KEY on server. Please migrate to FINNHUB_API_KEY.'
+		);
+		loggedFinnhubDeprecationWarning = true;
+	}
+
 	// Fetch crypto in parallel with sequential Finnhub calls
 	const cryptoPromise = fetchCryptoServer();
 
-	const indices = await fetchIndicesServer();
-	const sectors = await fetchSectorsServer();
-	const commodities = await fetchCommoditiesServer();
-	const crypto = await cryptoPromise;
+	const indicesResult = await fetchIndicesServer();
+	const sectorsResult = await fetchSectorsServer();
+	const commoditiesResult = await fetchCommoditiesServer();
+	const cryptoResult = await cryptoPromise;
 
 	const data: AllMarketsServerData = {
-		indices,
-		sectors,
-		commodities,
-		crypto,
+		indices: indicesResult.items,
+		sectors: sectorsResult.items,
+		commodities: commoditiesResult.items,
+		crypto: cryptoResult.items,
+		marketHealth: {
+			indices: indicesResult.health,
+			sectors: sectorsResult.health,
+			commodities: commoditiesResult.health,
+			crypto: cryptoResult.health
+		},
 		updatedAt: Date.now()
 	};
 
 	// Store in SQLite
-	setMarketData('indices', indices);
-	setMarketData('sectors', sectors);
-	setMarketData('commodities', commodities);
-	setMarketData('crypto', crypto);
+	setMarketData('indices', data.indices);
+	setMarketData('sectors', data.sectors);
+	setMarketData('commodities', data.commodities);
+	setMarketData('crypto', data.crypto);
 
 	return data;
 }
@@ -623,7 +901,7 @@ export async function refreshAllNews(
 
 	for (const category of targetCategories) {
 		try {
-			await fetchCategoryNewsServer(category);
+			await fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category));
 		} catch (error) {
 			const msg = `${category}: ${error instanceof Error ? error.message : String(error)}`;
 			errors.push(msg);
@@ -651,5 +929,14 @@ export function getCircuitBreakerStatus(): Record<string, ReturnType<CircuitBrea
 	return {
 		finnhub: finnhubBreaker.getState(),
 		...feedBreakerRegistry.getStatus()
+	};
+}
+
+export function getAllMarketHealth(): MarketHealthMap {
+	return {
+		indices: getMarketHealth('indices'),
+		sectors: getMarketHealth('sectors'),
+		commodities: getMarketHealth('commodities'),
+		crypto: getMarketHealth('crypto')
 	};
 }

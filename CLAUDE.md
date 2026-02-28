@@ -149,13 +149,11 @@ The worker uses a KV namespace (`SITUATION_STORE`) for caching:
 
 ## TODO
 
-- Improve map interface (1-2)
+- Improve map interface. use glint as inspiration (1-2)
 - check out world monitor for ideas (1-2)
 - alerts for economic indicators (2-3)
-- create rss feeds from sites or social media (1)
-- work module by module in the intelligence tab. once ready, move them to something else (2)
-- fix economy tab (2)
-
+- make a cool loading screen (2-3)
+- create rss feeds from social media (1)
 
 ## General Guidance
 

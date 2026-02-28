@@ -17,6 +17,24 @@ export type NewsCategory =
 	| 'greenland'
 	| 'fringe';
 
+export interface SourceRecord {
+	id: string;
+	category: NewsCategory;
+	name: string;
+	url: string;
+	enabled: boolean;
+	isCustom: boolean;
+	sourceType?: 'rss' | 'html';
+	selectors?: import('$lib/config/feeds').HtmlSelectors;
+}
+
+export type SourceMutationError =
+	| 'required'
+	| 'invalid-url'
+	| 'duplicate'
+	| 'not-found'
+	| 'built-in-protected';
+
 /**
  * A news item from any source (RSS, GDELT, etc.)
  */
@@ -81,6 +99,20 @@ export interface CryptoItem {
 	market_cap?: number;
 	volume_24h?: number;
 }
+
+export type MarketCategoryKey = 'indices' | 'sectors' | 'commodities' | 'crypto';
+
+export interface MarketCategoryHealth {
+	category: MarketCategoryKey;
+	source: 'finnhub' | 'coingecko';
+	stale: boolean;
+	reason: string | null;
+	lastAttempt: number | null;
+	lastSuccess: number | null;
+	consecutiveFailures: number;
+}
+
+export type MarketHealthMap = Record<MarketCategoryKey, MarketCategoryHealth>;
 
 /**
  * Sector heatmap data

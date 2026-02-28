@@ -3,6 +3,7 @@
  */
 
 import type { NewsItem } from '$lib/types';
+import { browser } from '$app/environment';
 import {
 	CORRELATION_TOPICS,
 	getCompoundPatterns,
@@ -11,6 +12,7 @@ import {
 	type CompoundPattern
 } from '$lib/config/analysis';
 import type { Locale } from '$lib/i18n/types';
+import { fetchCorrelationHistory, persistCorrelationHistory } from '$lib/api/analysis';
 
 // Types for correlation results
 export interface TopicStats {
@@ -33,6 +35,11 @@ export interface EmergingPattern {
 	sources: string[];
 	headlines: Array<{ title: string; link: string; source: string }>;
 	zScore: number;
+	robustZScore: number;
+	baselineMedian: number;
+	baselineMad: number;
+	baselinePoints: number;
+	isStatisticallySignificant: boolean;
 }
 
 export interface MomentumSignal {
@@ -91,6 +98,10 @@ export interface CorrelationResults {
 	topicStats: Record<string, TopicStats>;
 }
 
+let lastCorrelationInput: NewsItem[] | null = null;
+let lastCorrelationLocale: Locale = 'en';
+let lastCorrelationResult: CorrelationResults | null = null;
+
 // Topic history for momentum analysis (in-memory)
 const topicHistory: Record<number, Record<string, number>> = {};
 const velocityHistory: Record<string, number[]> = {};
@@ -102,74 +113,125 @@ const HISTORY_RETENTION_MINUTES = 30;
 const MOMENTUM_WINDOW_MINUTES = 10;
 
 // Persistence layer
-const STORAGE_KEY = 'correlation_history';
-const HISTORY_HOURS = 168; // 7 days of hourly data
+const BASELINE_HOURS = 168; // 7 days of hourly data
+const PERSIST_THROTTLE_MS = 30000;
+const MIN_BASELINE_POINTS = 24;
+const MIN_ABSOLUTE_COUNT = 3;
+const MIN_SOURCE_COUNT = 2;
+const ROBUST_Z_EMERGING = 1.5;
+const ROBUST_Z_ELEVATED = 2.5;
+const ROBUST_Z_HIGH = 3.5;
+const COLD_START_COUNT_THRESHOLD = 8;
+const COLD_START_SOURCE_THRESHOLD = 3;
+
+let persistedHistoryCache: PersistedHistory | null = null;
+let lastPersistedHistorySaveAt = 0;
+let historyHydrationStarted = false;
 
 interface PersistedHistory {
 	hourlyAverages: Record<string, number[]>; // topicId -> last 168 hourly averages
 	lastUpdate: number;
 }
 
-function isLocalStorageAvailable(): boolean {
-	try {
-		if (typeof localStorage === 'undefined' || typeof window === 'undefined') return false;
-		const testKey = '__test__';
-		localStorage.setItem(testKey, testKey);
-		localStorage.removeItem(testKey);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-function loadHistory(): PersistedHistory {
-	if (!isLocalStorageAvailable()) {
-		return { hourlyAverages: {}, lastUpdate: Date.now() };
-	}
-	try {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			const data = JSON.parse(stored);
-			if (data.hourlyAverages && data.lastUpdate) {
-				return data;
-			}
-		}
-	} catch (e) {
-		console.warn('Failed to load correlation history:', e);
-	}
+function createEmptyPersistedHistory(): PersistedHistory {
 	return { hourlyAverages: {}, lastUpdate: Date.now() };
 }
 
-function saveHistory(history: PersistedHistory): void {
-	if (!isLocalStorageAvailable()) return;
-	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-	} catch (e) {
-		console.warn('Failed to save correlation history:', e);
+function historyToPoints(history: PersistedHistory): Array<{
+	hourBucket: number;
+	topicId: string;
+	count: number;
+}> {
+	const points: Array<{ hourBucket: number; topicId: string; count: number }> = [];
+	for (const [topicId, values] of Object.entries(history.hourlyAverages)) {
+		const startHour = Math.floor(history.lastUpdate / 3600000) - values.length + 1;
+		values.forEach((count, index) => {
+			points.push({
+				hourBucket: startHour + index,
+				topicId,
+				count
+			});
+		});
 	}
+	return points;
+}
+
+function hydrateHistoryFromServer(): void {
+	if (!browser || historyHydrationStarted) return;
+	historyHydrationStarted = true;
+
+	void fetchCorrelationHistory(BASELINE_HOURS)
+		.then((points) => {
+			const now = Date.now();
+			const hourlyAverages: Record<string, number[]> = {};
+			const byTopic = new Map<string, Array<{ hourBucket: number; count: number }>>();
+
+			for (const point of points) {
+				const list = byTopic.get(point.topicId) ?? [];
+				list.push({ hourBucket: point.hourBucket, count: point.count });
+				byTopic.set(point.topicId, list);
+			}
+
+			for (const [topicId, list] of byTopic.entries()) {
+				list.sort((a, b) => a.hourBucket - b.hourBucket);
+				hourlyAverages[topicId] = list.slice(-BASELINE_HOURS).map((entry) => entry.count);
+			}
+
+			persistedHistoryCache = { hourlyAverages, lastUpdate: now };
+		})
+		.catch(() => {
+			// In-memory fallback only
+		});
+}
+
+function getPersistedHistory(): PersistedHistory {
+	hydrateHistoryFromServer();
+	if (persistedHistoryCache) return persistedHistoryCache;
+	persistedHistoryCache = createEmptyPersistedHistory();
+	return persistedHistoryCache;
+}
+
+function saveHistory(history: PersistedHistory, force = false): void {
+	persistedHistoryCache = history;
+	if (!browser) return;
+
+	const now = Date.now();
+	if (!force && now - lastPersistedHistorySaveAt < PERSIST_THROTTLE_MS) return;
+
+	void persistCorrelationHistory(historyToPoints(history), BASELINE_HOURS)
+		.then(() => {
+			lastPersistedHistorySaveAt = now;
+		})
+		.catch(() => {
+			// In-memory fallback only
+		});
 }
 
 function updatePersistedHistory(topicCounts: Record<string, number>): PersistedHistory {
-	const history = loadHistory();
+	const history = getPersistedHistory();
 	const now = Date.now();
 	const currentHour = Math.floor(now / 3600000);
 	const lastHour = Math.floor(history.lastUpdate / 3600000);
 
 	// Only update once per hour
 	if (currentHour > lastHour) {
-		for (const [topicId, count] of Object.entries(topicCounts)) {
+		const trackedTopicIds = Array.from(
+			new Set([...Object.keys(history.hourlyAverages), ...CORRELATION_TOPICS.map((topic) => topic.id)])
+		);
+		for (const topicId of trackedTopicIds) {
+			const count = topicCounts[topicId] ?? 0;
 			if (!history.hourlyAverages[topicId]) {
 				history.hourlyAverages[topicId] = [];
 			}
 			history.hourlyAverages[topicId].push(count);
 
 			// Trim to last 168 hours (7 days)
-			if (history.hourlyAverages[topicId].length > HISTORY_HOURS) {
-				history.hourlyAverages[topicId] = history.hourlyAverages[topicId].slice(-HISTORY_HOURS);
+			if (history.hourlyAverages[topicId].length > BASELINE_HOURS) {
+				history.hourlyAverages[topicId] = history.hourlyAverages[topicId].slice(-BASELINE_HOURS);
 			}
 		}
 		history.lastUpdate = now;
-		saveHistory(history);
+		saveHistory(history, true);
 	}
 
 	return history;
@@ -186,6 +248,34 @@ function calculateZScore(value: number, historyValues: number[]): number {
 
 	if (stdDev === 0) return 0;
 	return (value - mean) / stdDev;
+}
+
+function calculateMedian(values: number[]): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	const middle = Math.floor(sorted.length / 2);
+	return sorted.length % 2 === 0
+		? (sorted[middle - 1] + sorted[middle]) / 2
+		: sorted[middle];
+}
+
+function calculateMad(values: number[], median: number): number {
+	if (values.length === 0) return 0;
+	const deviations = values.map((v) => Math.abs(v - median));
+	return calculateMedian(deviations);
+}
+
+function calculateRobustZScore(value: number, historyValues: number[]): number {
+	if (historyValues.length < 3) return 0;
+
+	const median = calculateMedian(historyValues);
+	const mad = calculateMad(historyValues, median);
+	if (mad > 0) {
+		return (0.6745 * (value - median)) / mad;
+	}
+
+	// Fallback to classic z-score when MAD collapses but variance remains informative.
+	return calculateZScore(value, historyValues);
 }
 
 function calculateVelocity(
@@ -234,10 +324,13 @@ function formatTopicName(id: string, locale: Locale): string {
 /**
  * Get pattern level based on z-score and count
  */
-function getPatternLevel(zScore: number, count: number): EmergingPattern['level'] {
-	// Z-score based (statistical significance)
-	if (zScore >= 2.5 || count >= 8) return 'high'; // >99% unusual
-	if (zScore >= 1.5 || count >= 5) return 'elevated'; // >93% unusual
+function getPatternLevel(
+	robustZScore: number,
+	count: number,
+	sourceCount: number
+): EmergingPattern['level'] {
+	if (robustZScore >= ROBUST_Z_HIGH || (count >= 12 && sourceCount >= 4)) return 'high';
+	if (robustZScore >= ROBUST_Z_ELEVATED) return 'elevated';
 	return 'emerging'; // Default
 }
 
@@ -302,7 +395,16 @@ export function analyzeCorrelations(
 	allNews: NewsItem[],
 	locale: Locale = 'en'
 ): CorrelationResults | null {
-	if (!allNews || allNews.length === 0) return null;
+	if (!allNews || allNews.length === 0) {
+		lastCorrelationInput = allNews;
+		lastCorrelationLocale = locale;
+		lastCorrelationResult = null;
+		return null;
+	}
+
+	if (lastCorrelationInput === allNews && lastCorrelationLocale === locale && lastCorrelationResult) {
+		return lastCorrelationResult;
+	}
 
 	const now = Date.now();
 	const currentTime = Math.floor(now / 60000); // Current minute
@@ -405,12 +507,29 @@ export function analyzeCorrelations(
 		const oldCount = oldCounts[topic.id] || 0;
 		const delta = count - oldCount;
 		const zScore = stats.zScore;
+		const historyValues = persistedHistory.hourlyAverages[topic.id] || [];
+		const baselineMedian = calculateMedian(historyValues);
+		const baselineMad = calculateMad(historyValues, baselineMedian);
+		const baselinePoints = historyValues.length;
+		const robustZScore = calculateRobustZScore(count, historyValues);
+		const sourceCount = sources.length;
+		const hasSufficientBaseline = baselinePoints >= MIN_BASELINE_POINTS;
+		const meetsStatisticalGate =
+			hasSufficientBaseline &&
+			count >= MIN_ABSOLUTE_COUNT &&
+			sourceCount >= MIN_SOURCE_COUNT &&
+			robustZScore >= ROBUST_Z_EMERGING;
+		const meetsColdStartFallback =
+			!hasSufficientBaseline &&
+			count >= COLD_START_COUNT_THRESHOLD &&
+			sourceCount >= COLD_START_SOURCE_THRESHOLD;
+		const isStatisticallySignificant = meetsStatisticalGate;
 		const velocity = stats.velocity;
 		const acceleration = stats.acceleration;
 
-		// Emerging Patterns (3+ mentions)
-		if (count >= 3) {
-			const level = getPatternLevel(zScore, count);
+		// Emerging Patterns (statistical significance with cold-start fallback)
+		if (meetsStatisticalGate || meetsColdStartFallback) {
+			const level = getPatternLevel(robustZScore, count, sourceCount);
 
 			results.emergingPatterns.push({
 				id: topic.id,
@@ -421,7 +540,12 @@ export function analyzeCorrelations(
 				level,
 				sources,
 				headlines,
-				zScore
+				zScore,
+				robustZScore,
+				baselineMedian,
+				baselineMad,
+				baselinePoints,
+				isStatisticallySignificant
 			});
 		}
 
@@ -487,10 +611,19 @@ export function analyzeCorrelations(
 	results.topicStats = topicStats;
 
 	// Sort results
-	results.emergingPatterns.sort((a, b) => b.weightedCount - a.weightedCount);
+	results.emergingPatterns.sort(
+		(a, b) =>
+			Number(b.isStatisticallySignificant) - Number(a.isStatisticallySignificant) ||
+			b.robustZScore - a.robustZScore ||
+			b.weightedCount - a.weightedCount
+	);
 	results.momentumSignals.sort((a, b) => b.velocity - a.velocity || b.delta - a.delta);
 	results.crossSourceCorrelations.sort((a, b) => b.sourceCount - a.sourceCount);
 	results.predictiveSignals.sort((a, b) => b.score - a.score);
+
+	lastCorrelationInput = allNews;
+	lastCorrelationLocale = locale;
+	lastCorrelationResult = results;
 
 	return results;
 }
@@ -544,6 +677,8 @@ export function getCorrelationSummary(results: CorrelationResults | null): {
  * Clear topic history (for testing or reset)
  */
 export function clearCorrelationHistory(): void {
+	lastCorrelationInput = null;
+	lastCorrelationResult = null;
 	for (const key of Object.keys(topicHistory)) {
 		delete topicHistory[parseInt(key)];
 	}
@@ -556,11 +691,24 @@ export function clearCorrelationHistory(): void {
  * Clear persisted history (for testing)
  */
 export function clearPersistedHistory(): void {
-	if (isLocalStorageAvailable()) {
-		localStorage.removeItem(STORAGE_KEY);
-	}
+	persistedHistoryCache = null;
+	lastPersistedHistorySaveAt = 0;
+	historyHydrationStarted = false;
+}
+
+export function seedPersistedHistoryForTesting(history: PersistedHistory): void {
+	persistedHistoryCache = history;
+	historyHydrationStarted = true;
 }
 
 // Export for testing
-export { calculateZScore, calculateVelocity, calculateAcceleration, detectCompoundPatterns };
+export {
+	calculateZScore,
+	calculateMedian,
+	calculateMad,
+	calculateRobustZScore,
+	calculateVelocity,
+	calculateAcceleration,
+	detectCompoundPatterns
+};
 export type { PersistedHistory };

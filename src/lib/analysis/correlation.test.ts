@@ -8,14 +8,24 @@ import {
 	getCorrelationSummary,
 	clearCorrelationHistory,
 	clearPersistedHistory,
+	seedPersistedHistoryForTesting,
 	calculateZScore,
+	calculateMedian,
+	calculateMad,
+	calculateRobustZScore,
 	calculateVelocity,
 	calculateAcceleration,
 	detectCompoundPatterns,
-	type TopicStats
+	type TopicStats,
+	type PersistedHistory
 } from './correlation';
 import type { NewsItem } from '$lib/types';
-import { getSourceWeight, COMPOUND_PATTERNS, COMPOUND_PATTERNS_PT_BR } from '$lib/config/analysis';
+import {
+	getSourceWeight,
+	COMPOUND_PATTERNS,
+	COMPOUND_PATTERNS_PT_BR,
+	CORRELATION_TOPICS
+} from '$lib/config/analysis';
 
 function createCorrelationNewsItem(overrides: Partial<NewsItem> = {}): NewsItem {
 	return {
@@ -23,9 +33,22 @@ function createCorrelationNewsItem(overrides: Partial<NewsItem> = {}): NewsItem 
 		title: 'Test headline',
 		link: 'https://example.com/news',
 		timestamp: Date.now(),
-		source: 'Reuters',
+		source: `Source-${Math.random().toString(36).slice(2, 8)}`,
 		category: 'politics',
 		...overrides
+	};
+}
+
+function buildSeededHistory(points = 48): PersistedHistory {
+	const hourlyAverages: Record<string, number[]> = {};
+	for (const topic of CORRELATION_TOPICS) {
+		hourlyAverages[topic.id] = Array.from({ length: points }, (_, index) =>
+			index % 2 === 0 ? 0 : 1
+		);
+	}
+	return {
+		hourlyAverages,
+		lastUpdate: Date.now()
 	};
 }
 
@@ -33,6 +56,7 @@ describe('Correlation Engine', () => {
 	beforeEach(() => {
 		clearCorrelationHistory();
 		clearPersistedHistory();
+		seedPersistedHistoryForTesting(buildSeededHistory());
 	});
 
 	it('should return null for empty news', () => {
@@ -76,7 +100,9 @@ describe('Correlation Engine', () => {
 		const ukrainePattern = results!.emergingPatterns.find((p) => p.id === 'russia-ukraine');
 		expect(ukrainePattern).toBeDefined();
 		expect(ukrainePattern!.count).toBeGreaterThanOrEqual(3);
-		expect(ukrainePattern!.level).toBe('emerging');
+		expect(ukrainePattern!.level).toBe('elevated');
+		expect(ukrainePattern!.isStatisticallySignificant).toBe(true);
+		expect(ukrainePattern!.baselinePoints).toBeGreaterThanOrEqual(24);
 	});
 
 	it('should categorize pattern levels correctly', () => {
@@ -94,6 +120,41 @@ describe('Correlation Engine', () => {
 		const ukrainePattern = results?.emergingPatterns.find((p) => p.id === 'russia-ukraine');
 
 		expect(ukrainePattern?.level).toBe('high');
+	});
+
+	it('should suppress emerging activation when anomaly strength is low', () => {
+		const lowAnomalyHistory = buildSeededHistory();
+		lowAnomalyHistory.hourlyAverages['russia-ukraine'] = Array.from({ length: 48 }, () => 3);
+		seedPersistedHistoryForTesting(lowAnomalyHistory);
+
+		const news: NewsItem[] = [
+			createCorrelationNewsItem({ title: 'Ukraine security update', source: 'BBC' }),
+			createCorrelationNewsItem({ title: 'Ukraine diplomatic meeting', source: 'CNN' }),
+			createCorrelationNewsItem({ title: 'Ukraine economic briefing', source: 'NYT' })
+		];
+
+		const results = analyzeCorrelations(news);
+		const ukrainePattern = results?.emergingPatterns.find((p) => p.id === 'russia-ukraine');
+		expect(ukrainePattern).toBeUndefined();
+	});
+
+	it('should activate cold-start fallback only with high count and source breadth', () => {
+		clearPersistedHistory();
+		seedPersistedHistoryForTesting({ hourlyAverages: {}, lastUpdate: Date.now() - 3600000 });
+
+		const news: NewsItem[] = Array.from({ length: 8 }, (_, index) =>
+			createCorrelationNewsItem({
+				id: `cold-${index}`,
+				title: `Ukraine battlefield update ${index}`,
+				source: `Source-${index}`,
+				category: 'politics'
+			})
+		);
+
+		const results = analyzeCorrelations(news);
+		const ukrainePattern = results?.emergingPatterns.find((p) => p.id === 'russia-ukraine');
+		expect(ukrainePattern).toBeDefined();
+		expect(ukrainePattern!.isStatisticallySignificant).toBe(false);
 	});
 
 	it('should track cross-source correlations', () => {
@@ -296,6 +357,12 @@ describe('Correlation Engine', () => {
 });
 
 describe('Source Weights', () => {
+	beforeEach(() => {
+		clearCorrelationHistory();
+		clearPersistedHistory();
+		seedPersistedHistoryForTesting(buildSeededHistory());
+	});
+
 	it('should return correct weights for known sources', () => {
 		expect(getSourceWeight('Reuters')).toBe(1.5);
 		expect(getSourceWeight('AP News')).toBe(1.5);
@@ -404,6 +471,35 @@ describe('Statistical Functions', () => {
 			const history = [5, 6, 7, 5, 6, 7];
 			const zScore = calculateZScore(2, history);
 			expect(zScore).toBeLessThan(0);
+		});
+	});
+
+	describe('calculateMedian', () => {
+		it('should calculate median for odd and even lists', () => {
+			expect(calculateMedian([1, 3, 2])).toBe(2);
+			expect(calculateMedian([1, 2, 3, 4])).toBe(2.5);
+		});
+	});
+
+	describe('calculateMad', () => {
+		it('should calculate median absolute deviation', () => {
+			const values = [0, 1, 0, 1, 0, 1];
+			const median = calculateMedian(values);
+			const mad = calculateMad(values, median);
+			expect(median).toBe(0.5);
+			expect(mad).toBe(0.5);
+		});
+	});
+
+	describe('calculateRobustZScore', () => {
+		it('should calculate robust z-score when MAD is non-zero', () => {
+			const z = calculateRobustZScore(3, [0, 1, 0, 1, 0, 1]);
+			expect(z).toBeGreaterThan(3);
+		});
+
+		it('should fallback to classic z-score when MAD collapses', () => {
+			const z = calculateRobustZScore(8, [5, 5, 5, 5, 6, 4]);
+			expect(z).not.toBe(0);
 		});
 	});
 
@@ -766,6 +862,7 @@ describe('New Correlation Topics Coverage', () => {
 	beforeEach(() => {
 		clearCorrelationHistory();
 		clearPersistedHistory();
+		seedPersistedHistoryForTesting(buildSeededHistory());
 	});
 
 	it('should detect cyberattack topic', () => {
