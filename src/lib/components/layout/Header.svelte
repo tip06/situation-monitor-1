@@ -120,7 +120,7 @@
 									</div>
 									{#if alert.detail}
 										<div class="alerts-item-detail">
-											{t($language, 'alerts.example', { value: alert.detail })}
+											{alert.detail}
 										</div>
 									{/if}
 								</li>

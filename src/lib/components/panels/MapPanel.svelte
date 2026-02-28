@@ -8,7 +8,6 @@
 		CABLE_LANDINGS,
 		NUCLEAR_SITES,
 		MILITARY_BASES,
-		OCEANS,
 		SANCTIONED_COUNTRY_IDS,
 		THREAT_COLORS,
 		WEATHER_CODES
@@ -39,11 +38,21 @@
 	let mapGroup: any = null;
 	let projection: any = null;
 	let path: any = null;
-	let zoom: any = null;
 	/* eslint-enable @typescript-eslint/no-explicit-any */
 
 	const WIDTH = 800;
 	const HEIGHT = 400;
+	const DEFAULT_ROTATION: [number, number, number] = [-16, -18, 0];
+	const DEFAULT_GLOBE_SCALE = 239.5;
+	const MIN_GLOBE_SCALE = 138;
+	const MAX_GLOBE_SCALE = 245;
+	const ZOOM_STEP = 1.18;
+	const MAX_LAT_ROTATION = 55;
+
+	let globeRotation: [number, number, number] = [...DEFAULT_ROTATION];
+	let globeScale = DEFAULT_GLOBE_SCALE;
+	let worldFeatures: GeoJSON.FeatureCollection | null = null;
+	const countryNameById = new Map<string, string>();
 
 	// Tooltip state
 	let tooltipContent = $state<{
@@ -122,37 +131,24 @@
 		}
 	}
 
-	// Enable zoom/pan behavior on the map
-	function enableZoom(): void {
-		if (!svg || !zoom) return;
-		svg.call(zoom);
+	function isPointVisible(lon: number, lat: number): boolean {
+		if (!projection || !d3Module) return false;
+		const rotate = projection.rotate() as [number, number, number];
+		const center: [number, number] = [-rotate[0], -rotate[1]];
+		return d3Module.geoDistance([lon, lat], center) <= Math.PI / 2;
 	}
 
-	// Calculate day/night terminator points
-	function calculateTerminator(): [number, number][] {
-		const now = new Date();
-		const dayOfYear = Math.floor(
-			(now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
-		);
-		const declination = -23.45 * Math.cos(((360 / 365) * (dayOfYear + 10) * Math.PI) / 180);
-		const hourAngle = (now.getUTCHours() + now.getUTCMinutes() / 60) * 15 - 180;
+	function projectPoint(lon: number, lat: number): [number, number] | null {
+		if (!projection || !isPointVisible(lon, lat)) return null;
+		const projected = projection([lon, lat]) as [number, number] | null;
+		if (!projected) return null;
+		const [x, y] = projected;
+		if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+		return [x, y];
+	}
 
-		const terminatorPoints: [number, number][] = [];
-		for (let lat = -90; lat <= 90; lat += 2) {
-			const tanDec = Math.tan((declination * Math.PI) / 180);
-			const tanLat = Math.tan((lat * Math.PI) / 180);
-			let lon = -hourAngle + (Math.acos(-tanDec * tanLat) * 180) / Math.PI;
-			if (isNaN(lon)) lon = lat * declination > 0 ? -hourAngle + 180 : -hourAngle;
-			terminatorPoints.push([lon, lat]);
-		}
-		for (let lat = 90; lat >= -90; lat -= 2) {
-			const tanDec = Math.tan((declination * Math.PI) / 180);
-			const tanLat = Math.tan((lat * Math.PI) / 180);
-			let lon = -hourAngle - (Math.acos(-tanDec * tanLat) * 180) / Math.PI;
-			if (isNaN(lon)) lon = lat * declination > 0 ? -hourAngle - 180 : -hourAngle;
-			terminatorPoints.push([lon, lat]);
-		}
-		return terminatorPoints;
+	function clampGlobeScale(nextScale: number): number {
+		return Math.max(MIN_GLOBE_SCALE, Math.min(MAX_GLOBE_SCALE, nextScale));
 	}
 
 	// Show tooltip using state (safe rendering)
@@ -215,6 +211,247 @@
 		}
 	}
 
+	function setupGlobeInteractions(): void {
+		if (!d3Module || !svg || !projection) return;
+		const dragBehavior = d3Module
+			.drag<SVGSVGElement, unknown>()
+			.on('drag', (event) => {
+				if (!projection) return;
+				const nextLon = globeRotation[0] + event.dx * 0.42;
+				const nextLat = Math.max(
+					-MAX_LAT_ROTATION,
+					Math.min(MAX_LAT_ROTATION, globeRotation[1] - event.dy * 0.42)
+				);
+				globeRotation = [nextLon, nextLat, 0];
+				projection.rotate(globeRotation);
+				renderMap();
+			});
+		svg.call(dragBehavior as any);
+	}
+
+	function renderMap(): void {
+		if (!mapGroup || !path || !worldFeatures || !d3Module) return;
+
+		mapGroup.selectAll('*').remove();
+
+		mapGroup
+			.append('path')
+			.datum({ type: 'Sphere' } as any)
+			.attr('class', 'globe-sphere')
+			.attr('d', path as unknown as string);
+
+		const graticule = d3Module.geoGraticule().step([20, 20]);
+		mapGroup
+			.append('path')
+			.datum(graticule())
+			.attr('class', 'globe-graticule')
+			.attr('d', path as unknown as string);
+
+		mapGroup
+			.selectAll('path.country')
+			.data(worldFeatures.features)
+			.enter()
+			.append('path')
+			.attr('class', 'country')
+			.attr('d', path as unknown as string)
+			.attr('fill', (d: GeoJSON.Feature) =>
+				SANCTIONED_COUNTRY_IDS.includes(+(d.id || 0)) ? '#311922' : '#103549'
+			)
+			.attr('stroke', (d: GeoJSON.Feature) =>
+				SANCTIONED_COUNTRY_IDS.includes(+(d.id || 0)) ? '#9d3158' : '#3f6e88'
+			)
+			.attr('stroke-width', 0.55)
+			.on('mouseenter', (event: MouseEvent, d: GeoJSON.Feature) => {
+				const featureId = String(d.id ?? '').trim();
+				const numericFeatureId = Number(featureId);
+				const featureProps = d.properties as Record<string, unknown> | undefined;
+				const propName = typeof featureProps?.name === 'string' ? featureProps.name : undefined;
+				const countryName =
+					countryNameById.get(featureId) ||
+					(Number.isFinite(numericFeatureId)
+						? countryNameById.get(String(numericFeatureId))
+						: undefined) ||
+					propName ||
+					'Unknown';
+				showTooltip(event, countryName, '#9ecbe6');
+			})
+			.on('mousemove', moveTooltip)
+			.on('mouseleave', hideTooltip);
+
+		mapGroup
+			.append('path')
+			.datum({ type: 'Sphere' } as any)
+			.attr('class', 'globe-atmosphere')
+			.attr('d', path as unknown as string);
+
+		// Draw conflict zones - in a group for toggling
+		const conflictZonesGroup = mapGroup.append('g').attr('class', 'layer-conflict-zones');
+		CONFLICT_ZONES.forEach((zone) => {
+			conflictZonesGroup
+				.append('path')
+				.datum({ type: 'Polygon', coordinates: [zone.coords] } as GeoJSON.Polygon)
+				.attr('d', path as unknown as string)
+				.attr('fill', zone.color)
+				.attr('fill-opacity', 0.18)
+				.attr('stroke', zone.color)
+				.attr('stroke-width', 0.7)
+				.attr('stroke-opacity', 0.5);
+		});
+
+		// Draw chokepoints - in a group for toggling
+		const chokepointsGroup = mapGroup.append('g').attr('class', 'layer-chokepoints');
+		CHOKEPOINTS.forEach((cp) => {
+			const projected = projectPoint(cp.lon, cp.lat);
+			if (!projected) return;
+			const [x, y] = projected;
+			chokepointsGroup
+				.append('rect')
+				.attr('x', x - 4)
+				.attr('y', y - 4)
+				.attr('width', 8)
+				.attr('height', 8)
+				.attr('fill', '#00aaff')
+				.attr('opacity', 0.8)
+				.attr('transform', `rotate(45,${x},${y})`);
+			chokepointsGroup
+				.append('text')
+				.attr('x', x + 8)
+				.attr('y', y + 3)
+				.attr('fill', '#00aaff')
+				.attr('font-size', '7px')
+				.attr('font-family', 'monospace')
+				.text(cp.name);
+			chokepointsGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 10)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) => showTooltip(event, `⬥ ${cp.desc}`, '#00aaff'))
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw cable landings - in a group for toggling
+		const cableLandingsGroup = mapGroup.append('g').attr('class', 'layer-cable-landings');
+		CABLE_LANDINGS.forEach((cl) => {
+			const projected = projectPoint(cl.lon, cl.lat);
+			if (!projected) return;
+			const [x, y] = projected;
+			cableLandingsGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 3)
+				.attr('fill', 'none')
+				.attr('stroke', '#aa44ff')
+				.attr('stroke-width', 1.5);
+			cableLandingsGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 10)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) => showTooltip(event, `◎ ${cl.desc}`, '#aa44ff'))
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw nuclear sites - in a group for toggling
+		const nuclearSitesGroup = mapGroup.append('g').attr('class', 'layer-nuclear-sites');
+		NUCLEAR_SITES.forEach((ns) => {
+			const projected = projectPoint(ns.lon, ns.lat);
+			if (!projected) return;
+			const [x, y] = projected;
+			nuclearSitesGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 2).attr('fill', '#ffff00');
+			nuclearSitesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 5)
+				.attr('fill', 'none')
+				.attr('stroke', '#ffff00')
+				.attr('stroke-width', 1)
+				.attr('stroke-dasharray', '3,3');
+			nuclearSitesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 10)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) => showTooltip(event, `☢ ${ns.desc}`, '#ffff00'))
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw military bases - in a group for toggling
+		const militaryBasesGroup = mapGroup.append('g').attr('class', 'layer-military-bases');
+		MILITARY_BASES.forEach((mb) => {
+			const projected = projectPoint(mb.lon, mb.lat);
+			if (!projected) return;
+			const [x, y] = projected;
+			const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
+			militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+			militaryBasesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 10)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) => showTooltip(event, `★ ${mb.desc}`, '#ff00ff'))
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw hotspots - in a group for toggling
+		const hotspotsGroup = mapGroup.append('g').attr('class', 'layer-hotspots');
+		HOTSPOTS.forEach((h) => {
+			const projected = projectPoint(h.lon, h.lat);
+			if (!projected) return;
+			const [x, y] = projected;
+			const color = THREAT_COLORS[h.level];
+			hotspotsGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 6)
+				.attr('fill', color)
+				.attr('fill-opacity', 0.3)
+				.attr('class', 'pulse');
+			hotspotsGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+			hotspotsGroup
+				.append('text')
+				.attr('x', x + 8)
+				.attr('y', y + 3)
+				.attr('fill', color)
+				.attr('font-size', '8px')
+				.attr('font-family', 'monospace')
+				.text(h.name);
+			hotspotsGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 12)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) =>
+					showEnhancedTooltip(event, h.name, h.lat, h.lon, h.desc, color)
+				)
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw custom monitors with locations
+		drawMonitors();
+
+		// Apply current layer visibility
+		updateLayerVisibility($mapLayers);
+	}
+
 	// Initialize map
 	async function initMap(): Promise<void> {
 		const d3 = await import('d3');
@@ -226,289 +463,71 @@
 
 		svg = d3.select(svgEl);
 		svg.attr('viewBox', `0 0 ${WIDTH} ${HEIGHT}`);
+		svg.selectAll('*').remove();
+
+		const defs = svg.append('defs');
+		const oceanGradient = defs.append('radialGradient').attr('id', 'globe-ocean-gradient');
+		oceanGradient.append('stop').attr('offset', '0%').attr('stop-color', '#0f2d42');
+		oceanGradient.append('stop').attr('offset', '72%').attr('stop-color', '#091a28');
+		oceanGradient.append('stop').attr('offset', '100%').attr('stop-color', '#050f18');
 
 		mapGroup = svg.append('g').attr('id', 'mapGroup');
+		globeScale = DEFAULT_GLOBE_SCALE;
+		globeRotation = [...DEFAULT_ROTATION];
 
-		// Setup zoom - disable scroll wheel, allow touch pinch and buttons
-		zoom = d3
-			.zoom<SVGSVGElement, unknown>()
-			.scaleExtent([1, 6])
-			.filter((event) => {
-				// Block scroll wheel zoom (wheel events)
-				if (event.type === 'wheel') return false;
-				// Allow touch events (pinch zoom on mobile)
-				if (event.type.startsWith('touch')) return true;
-				// Allow mouse drag for panning
-				if (event.type === 'mousedown' || event.type === 'mousemove') return true;
-				// Block double-click zoom
-				if (event.type === 'dblclick') return false;
-				// Allow other events (programmatic zoom from buttons)
-				return true;
-			})
-			.on('zoom', (event) => {
-				mapGroup.attr('transform', event.transform.toString());
-			});
-
-		enableZoom();
-
-		// Setup projection
 		projection = d3
-			.geoEquirectangular()
-			.scale(130)
-			.center([0, 20])
-			.translate([WIDTH / 2, HEIGHT / 2 - 30]);
+			.geoOrthographic()
+			.scale(globeScale)
+			.translate([WIDTH / 2, HEIGHT / 2 + 8])
+			.rotate(globeRotation)
+			.clipAngle(90)
+			.precision(0.3);
 
 		path = d3.geoPath().projection(projection);
 
-		// Load world data
 		try {
-			const response = await fetch(
-				'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
-			);
-			const world = await response.json();
-			const countries = topojson.feature(
+			const worldResponse = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+			const world = await worldResponse.json();
+			worldFeatures = topojson.feature(
 				world,
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				world.objects.countries as any
 			) as unknown as GeoJSON.FeatureCollection;
+			countryNameById.clear();
 
-			// Draw countries
-			mapGroup
-				.selectAll('path.country')
-				.data(countries.features)
-				.enter()
-				.append('path')
-				.attr('class', 'country')
-				.attr('d', path as unknown as string)
-				.attr('fill', (d: GeoJSON.Feature) =>
-					SANCTIONED_COUNTRY_IDS.includes(+(d.id || 0)) ? '#2a1a1a' : '#0f3028'
-				)
-				.attr('stroke', (d: GeoJSON.Feature) =>
-					SANCTIONED_COUNTRY_IDS.includes(+(d.id || 0)) ? '#4a2020' : '#1a5040'
-				)
-				.attr('stroke-width', 0.5);
-
-			// Draw graticule
-			const graticule = d3.geoGraticule().step([30, 30]);
-			mapGroup
-				.append('path')
-				.datum(graticule)
-				.attr('d', path as unknown as string)
-				.attr('fill', 'none')
-				.attr('stroke', '#1a3830')
-				.attr('stroke-width', 0.3)
-				.attr('stroke-dasharray', '2,2');
-
-			// Draw ocean labels
-			OCEANS.forEach((o) => {
-				const [x, y] = projection([o.lon, o.lat]) || [0, 0];
-				if (x && y) {
-					mapGroup
-						.append('text')
-						.attr('x', x)
-						.attr('y', y)
-						.attr('fill', '#1a4a40')
-						.attr('font-size', '10px')
-						.attr('font-family', 'monospace')
-						.attr('text-anchor', 'middle')
-						.attr('opacity', 0.6)
-						.text(o.name);
+			const countryNameUrls = [
+				'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.tsv',
+				'https://cdn.jsdelivr.net/npm/world-atlas@2/country-names.tsv'
+			];
+			for (const url of countryNameUrls) {
+				try {
+					const namesResponse = await fetch(url);
+					if (!namesResponse.ok) continue;
+					const countryNames = d3.tsvParse(await namesResponse.text());
+					for (const row of countryNames) {
+						const idCandidate = (
+							row.id ??
+							row.iso_n3 ??
+							row.iso3 ??
+							row.country_id ??
+							row.numeric
+						)?.trim();
+						const nameCandidate = (row.name ?? row.country ?? row.label)?.trim();
+						if (!idCandidate || !nameCandidate) continue;
+						countryNameById.set(idCandidate, nameCandidate);
+						const numericId = Number(idCandidate);
+						if (Number.isFinite(numericId)) {
+							countryNameById.set(String(numericId), nameCandidate);
+						}
+					}
+					if (countryNameById.size > 0) break;
+				} catch {
+					// Ignore name source failures and keep trying fallback sources.
 				}
-			});
+			}
 
-			// Draw day/night terminator
-			const terminatorPoints = calculateTerminator();
-			mapGroup
-				.append('path')
-				.datum({ type: 'Polygon', coordinates: [terminatorPoints] } as GeoJSON.Polygon)
-				.attr('d', path as unknown as string)
-				.attr('fill', 'rgba(0,0,0,0.3)')
-				.attr('stroke', 'none');
-
-			// Draw conflict zones - in a group for toggling
-			const conflictZonesGroup = mapGroup.append('g').attr('class', 'layer-conflict-zones');
-			CONFLICT_ZONES.forEach((zone) => {
-				conflictZonesGroup
-					.append('path')
-					.datum({ type: 'Polygon', coordinates: [zone.coords] } as GeoJSON.Polygon)
-					.attr('d', path as unknown as string)
-					.attr('fill', zone.color)
-					.attr('fill-opacity', 0.15)
-					.attr('stroke', zone.color)
-					.attr('stroke-width', 0.5)
-					.attr('stroke-opacity', 0.4);
-			});
-
-			// Draw chokepoints - in a group for toggling
-			const chokepointsGroup = mapGroup.append('g').attr('class', 'layer-chokepoints');
-			CHOKEPOINTS.forEach((cp) => {
-				const [x, y] = projection([cp.lon, cp.lat]) || [0, 0];
-				if (x && y) {
-					chokepointsGroup
-						.append('rect')
-						.attr('x', x - 4)
-						.attr('y', y - 4)
-						.attr('width', 8)
-						.attr('height', 8)
-						.attr('fill', '#00aaff')
-						.attr('opacity', 0.8)
-						.attr('transform', `rotate(45,${x},${y})`);
-					chokepointsGroup
-						.append('text')
-						.attr('x', x + 8)
-						.attr('y', y + 3)
-						.attr('fill', '#00aaff')
-						.attr('font-size', '7px')
-						.attr('font-family', 'monospace')
-						.text(cp.name);
-					chokepointsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 10)
-						.attr('fill', 'transparent')
-						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `⬥ ${cp.desc}`, '#00aaff'))
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
-				}
-			});
-
-			// Draw cable landings - in a group for toggling
-			const cableLandingsGroup = mapGroup.append('g').attr('class', 'layer-cable-landings');
-			CABLE_LANDINGS.forEach((cl) => {
-				const [x, y] = projection([cl.lon, cl.lat]) || [0, 0];
-				if (x && y) {
-					cableLandingsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 3)
-						.attr('fill', 'none')
-						.attr('stroke', '#aa44ff')
-						.attr('stroke-width', 1.5);
-					cableLandingsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 10)
-						.attr('fill', 'transparent')
-						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `◎ ${cl.desc}`, '#aa44ff'))
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
-				}
-			});
-
-			// Draw nuclear sites - in a group for toggling
-			const nuclearSitesGroup = mapGroup.append('g').attr('class', 'layer-nuclear-sites');
-			NUCLEAR_SITES.forEach((ns) => {
-				const [x, y] = projection([ns.lon, ns.lat]) || [0, 0];
-				if (x && y) {
-					nuclearSitesGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 2)
-						.attr('fill', '#ffff00');
-					nuclearSitesGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 5)
-						.attr('fill', 'none')
-						.attr('stroke', '#ffff00')
-						.attr('stroke-width', 1)
-						.attr('stroke-dasharray', '3,3');
-					nuclearSitesGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 10)
-						.attr('fill', 'transparent')
-						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `☢ ${ns.desc}`, '#ffff00'))
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
-				}
-			});
-
-			// Draw military bases - in a group for toggling
-			const militaryBasesGroup = mapGroup.append('g').attr('class', 'layer-military-bases');
-			MILITARY_BASES.forEach((mb) => {
-				const [x, y] = projection([mb.lon, mb.lat]) || [0, 0];
-				if (x && y) {
-					const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-					militaryBasesGroup
-						.append('path')
-						.attr('d', starPath)
-						.attr('fill', '#ff00ff')
-						.attr('opacity', 0.8);
-					militaryBasesGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 10)
-						.attr('fill', 'transparent')
-						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) => showTooltip(event, `★ ${mb.desc}`, '#ff00ff'))
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
-				}
-			});
-
-			// Draw hotspots - in a group for toggling
-			const hotspotsGroup = mapGroup.append('g').attr('class', 'layer-hotspots');
-			HOTSPOTS.forEach((h) => {
-				const [x, y] = projection([h.lon, h.lat]) || [0, 0];
-				if (x && y) {
-					const color = THREAT_COLORS[h.level];
-					// Pulsing circle
-					hotspotsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 6)
-						.attr('fill', color)
-						.attr('fill-opacity', 0.3)
-						.attr('class', 'pulse');
-					// Inner dot
-					hotspotsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 3)
-						.attr('fill', color);
-					// Label
-					hotspotsGroup
-						.append('text')
-						.attr('x', x + 8)
-						.attr('y', y + 3)
-						.attr('fill', color)
-						.attr('font-size', '8px')
-						.attr('font-family', 'monospace')
-						.text(h.name);
-					// Hit area
-					hotspotsGroup
-						.append('circle')
-						.attr('cx', x)
-						.attr('cy', y)
-						.attr('r', 12)
-						.attr('fill', 'transparent')
-						.attr('class', 'hotspot-hit')
-						.on('mouseenter', (event: MouseEvent) =>
-							showEnhancedTooltip(event, h.name, h.lat, h.lon, h.desc, color)
-						)
-						.on('mousemove', moveTooltip)
-						.on('mouseleave', hideTooltip);
-				}
-			});
-
-			// Draw custom monitors with locations
-			drawMonitors();
-
-			// Apply initial layer visibility
-			updateLayerVisibility($mapLayers);
+			setupGlobeInteractions();
+			renderMap();
 		} catch (err) {
 			console.error('Failed to load map data:', err);
 		}
@@ -544,182 +563,169 @@
 			.filter((m) => m.enabled && m.location)
 			.forEach((m) => {
 				if (!m.location) return;
-				const [x, y] = projection([m.location.lon, m.location.lat]) || [0, 0];
-				if (x && y) {
-					const color = m.color || '#00ffff';
-					const markerType = m.markerType || 'monitor';
-					const targetGroup = markerType === 'monitor' ? monitorsGroup : customMarkersGroup;
+				const projected = projectPoint(m.location.lon, m.location.lat);
+				if (!projected) return;
+				const [x, y] = projected;
+				const color = m.color || '#00ffff';
+				const markerType = m.markerType || 'monitor';
+				const targetGroup = markerType === 'monitor' ? monitorsGroup : customMarkersGroup;
 
-					// Draw based on marker type
-					if (markerType === 'monitor') {
-						// Standard monitor marker
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 5)
-							.attr('fill', color)
-							.attr('fill-opacity', 0.6)
-							.attr('stroke', color)
-							.attr('stroke-width', 2);
-						targetGroup
-							.append('text')
-							.attr('x', x + 8)
-							.attr('y', y + 3)
-							.attr('fill', color)
-							.attr('font-size', '8px')
-							.attr('font-family', 'monospace')
-							.text(m.name);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 10)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `📡 ${m.name}`, color, [
-									m.location?.name || '',
-									m.keywords.join(', ')
-								])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					} else if (markerType === 'hotspot') {
-						// Custom hotspot marker with pulsing effect
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 6)
-							.attr('fill', color)
-							.attr('fill-opacity', 0.3)
-							.attr('class', 'pulse');
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 3)
-							.attr('fill', color);
-						targetGroup
-							.append('text')
-							.attr('x', x + 8)
-							.attr('y', y + 3)
-							.attr('fill', color)
-							.attr('font-size', '8px')
-							.attr('font-family', 'monospace')
-							.text(m.name);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 12)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `● ${m.name}`, color, [m.description || ''])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					} else if (markerType === 'chokepoint') {
-						// Rotated diamond
-						targetGroup
-							.append('rect')
-							.attr('x', x - 4)
-							.attr('y', y - 4)
-							.attr('width', 8)
-							.attr('height', 8)
-							.attr('fill', color)
-							.attr('opacity', 0.8)
-							.attr('transform', `rotate(45,${x},${y})`);
-						targetGroup
-							.append('text')
-							.attr('x', x + 8)
-							.attr('y', y + 3)
-							.attr('fill', color)
-							.attr('font-size', '7px')
-							.attr('font-family', 'monospace')
-							.text(m.name);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 10)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `⬥ ${m.name}`, color, [m.description || ''])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					} else if (markerType === 'cable') {
-						// Circle with stroke
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 3)
-							.attr('fill', 'none')
-							.attr('stroke', color)
-							.attr('stroke-width', 1.5);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 10)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `◎ ${m.name}`, color, [m.description || ''])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					} else if (markerType === 'nuclear') {
-						// Circle with dashed ring
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 2)
-							.attr('fill', color);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 5)
-							.attr('fill', 'none')
-							.attr('stroke', color)
-							.attr('stroke-width', 1)
-							.attr('stroke-dasharray', '3,3');
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 10)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `☢ ${m.name}`, color, [m.description || ''])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					} else if (markerType === 'military') {
-						// 5-pointed star
-						const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-						targetGroup.append('path').attr('d', starPath).attr('fill', color).attr('opacity', 0.8);
-						targetGroup
-							.append('circle')
-							.attr('cx', x)
-							.attr('cy', y)
-							.attr('r', 10)
-							.attr('fill', 'transparent')
-							.attr('class', 'hotspot-hit')
-							.on('mouseenter', (event: MouseEvent) =>
-								showTooltip(event, `★ ${m.name}`, color, [m.description || ''])
-							)
-							.on('mousemove', moveTooltip)
-							.on('mouseleave', hideTooltip);
-					}
+				// Draw based on marker type
+				if (markerType === 'monitor') {
+					// Standard monitor marker
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 5)
+						.attr('fill', color)
+						.attr('fill-opacity', 0.6)
+						.attr('stroke', color)
+						.attr('stroke-width', 2);
+					targetGroup
+						.append('text')
+						.attr('x', x + 8)
+						.attr('y', y + 3)
+						.attr('fill', color)
+						.attr('font-size', '8px')
+						.attr('font-family', 'monospace')
+						.text(m.name);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 10)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `📡 ${m.name}`, color, [m.location?.name || '', m.keywords.join(', ')])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
+				} else if (markerType === 'hotspot') {
+					// Custom hotspot marker with pulsing effect
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 6)
+						.attr('fill', color)
+						.attr('fill-opacity', 0.3)
+						.attr('class', 'pulse');
+					targetGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 3).attr('fill', color);
+					targetGroup
+						.append('text')
+						.attr('x', x + 8)
+						.attr('y', y + 3)
+						.attr('fill', color)
+						.attr('font-size', '8px')
+						.attr('font-family', 'monospace')
+						.text(m.name);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 12)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `● ${m.name}`, color, [m.description || ''])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
+				} else if (markerType === 'chokepoint') {
+					// Rotated diamond
+					targetGroup
+						.append('rect')
+						.attr('x', x - 4)
+						.attr('y', y - 4)
+						.attr('width', 8)
+						.attr('height', 8)
+						.attr('fill', color)
+						.attr('opacity', 0.8)
+						.attr('transform', `rotate(45,${x},${y})`);
+					targetGroup
+						.append('text')
+						.attr('x', x + 8)
+						.attr('y', y + 3)
+						.attr('fill', color)
+						.attr('font-size', '7px')
+						.attr('font-family', 'monospace')
+						.text(m.name);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 10)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `⬥ ${m.name}`, color, [m.description || ''])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
+				} else if (markerType === 'cable') {
+					// Circle with stroke
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 3)
+						.attr('fill', 'none')
+						.attr('stroke', color)
+						.attr('stroke-width', 1.5);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 10)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `◎ ${m.name}`, color, [m.description || ''])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
+				} else if (markerType === 'nuclear') {
+					// Circle with dashed ring
+					targetGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 2).attr('fill', color);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 5)
+						.attr('fill', 'none')
+						.attr('stroke', color)
+						.attr('stroke-width', 1)
+						.attr('stroke-dasharray', '3,3');
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 10)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `☢ ${m.name}`, color, [m.description || ''])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
+				} else if (markerType === 'military') {
+					// 5-pointed star
+					const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
+					targetGroup.append('path').attr('d', starPath).attr('fill', color).attr('opacity', 0.8);
+					targetGroup
+						.append('circle')
+						.attr('cx', x)
+						.attr('cy', y)
+						.attr('r', 10)
+						.attr('fill', 'transparent')
+						.attr('class', 'hotspot-hit')
+						.on('mouseenter', (event: MouseEvent) =>
+							showTooltip(event, `★ ${m.name}`, color, [m.description || ''])
+						)
+						.on('mousemove', moveTooltip)
+						.on('mouseleave', hideTooltip);
 				}
 			});
 
@@ -729,21 +735,26 @@
 
 	// Zoom controls
 	function zoomIn(): void {
-		if (!svg || !zoom) return;
-		svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+		if (!projection) return;
+		globeScale = clampGlobeScale(globeScale * ZOOM_STEP);
+		projection.scale(globeScale);
+		renderMap();
 	}
 
 	function zoomOut(): void {
-		if (!svg || !zoom) return;
-		svg
-			.transition()
-			.duration(300)
-			.call(zoom.scaleBy, 1 / 1.5);
+		if (!projection) return;
+		globeScale = clampGlobeScale(globeScale / ZOOM_STEP);
+		projection.scale(globeScale);
+		renderMap();
 	}
 
 	function resetZoom(): void {
-		if (!svg || !zoom || !d3Module) return;
-		svg.transition().duration(300).call(zoom.transform, d3Module.zoomIdentity);
+		if (!projection) return;
+		globeScale = DEFAULT_GLOBE_SCALE;
+		globeRotation = [...DEFAULT_ROTATION];
+		projection.scale(globeScale);
+		projection.rotate(globeRotation);
+		renderMap();
 	}
 
 	// Reactively update monitors when they change
@@ -780,6 +791,103 @@
 		{ key: 'customMarkers', labelKey: 'map.layer.customMarkers', icon: '📍', color: '#00ff88' }
 	];
 
+	const layerKeys = layerConfig.map((layer) => layer.key);
+	const visibleLayerCount = $derived(layerKeys.filter((key) => $mapLayers[key]).length);
+	const hiddenLayerCount = $derived(layerKeys.length - visibleLayerCount);
+	const activeMonitorCount = $derived(
+		monitors.filter((monitor) => monitor.enabled && monitor.location).length
+	);
+	const severeHotspotCount = HOTSPOTS.filter(
+		(hotspot) => hotspot.level === 'critical' || hotspot.level === 'high'
+	).length;
+
+	type LayerPresetId = 'all' | 'risk' | 'infrastructure' | 'operations';
+	interface LayerPreset {
+		id: LayerPresetId;
+		label: string;
+		state: MapLayersState;
+	}
+
+	const layerPresets: LayerPreset[] = [
+		{
+			id: 'all',
+			label: 'ALL',
+			state: {
+				hotspots: true,
+				conflictZones: true,
+				chokepoints: true,
+				cableLandings: true,
+				nuclearSites: true,
+				militaryBases: true,
+				monitors: true,
+				customMarkers: true
+			}
+		},
+		{
+			id: 'risk',
+			label: 'RISK',
+			state: {
+				hotspots: true,
+				conflictZones: true,
+				chokepoints: true,
+				cableLandings: false,
+				nuclearSites: true,
+				militaryBases: true,
+				monitors: false,
+				customMarkers: false
+			}
+		},
+		{
+			id: 'infrastructure',
+			label: 'INFRA',
+			state: {
+				hotspots: false,
+				conflictZones: false,
+				chokepoints: true,
+				cableLandings: true,
+				nuclearSites: true,
+				militaryBases: false,
+				monitors: true,
+				customMarkers: true
+			}
+		},
+		{
+			id: 'operations',
+			label: 'OPS',
+			state: {
+				hotspots: true,
+				conflictZones: false,
+				chokepoints: true,
+				cableLandings: false,
+				nuclearSites: false,
+				militaryBases: true,
+				monitors: true,
+				customMarkers: true
+			}
+		}
+	];
+
+	function applyLayerState(state: MapLayersState): void {
+		for (const key of layerKeys) {
+			mapLayers.setLayer(key, state[key]);
+		}
+	}
+
+	function applyLayerPreset(presetId: LayerPresetId): void {
+		const preset = layerPresets.find((item) => item.id === presetId);
+		if (!preset) return;
+		applyLayerState(preset.state);
+	}
+
+	const activeLayerPreset = $derived.by(() => {
+		for (const preset of layerPresets) {
+			if (layerKeys.every((key) => $mapLayers[key] === preset.state[key])) {
+				return preset.id;
+			}
+		}
+		return 'custom';
+	});
+
 	onMount(() => {
 		initMap();
 	});
@@ -800,36 +908,68 @@
 			</div>
 		{/if}
 
-		<!-- Layer toggle panel -->
-		<div class="layer-panel" class:open={layerPanelOpen}>
-			<button
-				class="layer-toggle-btn"
-				onclick={() => (layerPanelOpen = !layerPanelOpen)}
-				title={t($language, 'map.toggleLayers')}
-			>
-				<span class="layer-icon">☰</span>
-				{#if !layerPanelOpen}
-					<span class="layer-label">{t($language, 'map.layers')}</span>
-				{/if}
-			</button>
-			{#if layerPanelOpen}
-				<div class="layer-list">
-					{#each layerConfig as layer}
-						<label class="layer-item">
-							<input
-								type="checkbox"
-								checked={$mapLayers[layer.key]}
-								onchange={() => mapLayers.toggleLayer(layer.key)}
-							/>
-							<span class="layer-item-icon" style="color: {layer.color}">{layer.icon}</span>
-							<span class="layer-item-label">{t($language, layer.labelKey)}</span>
-						</label>
+		<div class="map-command-deck" class:open={layerPanelOpen}>
+			<div class="deck-head">
+				<button
+					class="deck-toggle-btn"
+					onclick={() => (layerPanelOpen = !layerPanelOpen)}
+					title={t($language, 'map.toggleLayers')}
+				>
+					<span class="deck-live-dot"></span>
+					<span class="deck-text">
+						<span class="deck-title">{t($language, 'map.layers')}</span>
+						<span class="deck-subtitle">Signal Matrix</span>
+					</span>
+					<span class="deck-count">{visibleLayerCount}/{layerKeys.length}</span>
+				</button>
+				<div class="deck-presets" role="group" aria-label="Map layer presets">
+					{#each layerPresets as preset}
+						<button
+							class="preset-btn"
+							class:active={activeLayerPreset === preset.id}
+							onclick={() => applyLayerPreset(preset.id)}
+						>
+							{preset.label}
+						</button>
 					{/each}
-					<div class="layer-actions">
-						<button class="layer-action-btn" onclick={() => mapLayers.showAll()}>
+				</div>
+			</div>
+			{#if layerPanelOpen}
+				<div class="deck-body">
+					<div class="deck-stats">
+						<div class="stat-card">
+							<span>Visible</span>
+							<strong>{visibleLayerCount}</strong>
+						</div>
+						<div class="stat-card">
+							<span>Hidden</span>
+							<strong>{hiddenLayerCount}</strong>
+						</div>
+						<div class="stat-card">
+							<span>Monitors</span>
+							<strong>{$mapLayers.monitors ? activeMonitorCount : 0}</strong>
+						</div>
+					</div>
+					<div class="layer-matrix">
+						{#each layerConfig as layer}
+							<button
+								type="button"
+								class="layer-chip"
+								class:active={$mapLayers[layer.key]}
+								onclick={() => mapLayers.toggleLayer(layer.key)}
+								aria-pressed={$mapLayers[layer.key]}
+							>
+								<span class="layer-chip-icon" style="color: {layer.color}">{layer.icon}</span>
+								<span class="layer-chip-label">{t($language, layer.labelKey)}</span>
+								<span class="layer-chip-state">{$mapLayers[layer.key] ? 'ON' : 'OFF'}</span>
+							</button>
+						{/each}
+					</div>
+					<div class="deck-actions">
+						<button class="deck-action-btn" onclick={() => mapLayers.showAll()}>
 							{t($language, 'map.showAll')}
 						</button>
-						<button class="layer-action-btn" onclick={() => mapLayers.hideAll()}>
+						<button class="deck-action-btn" onclick={() => mapLayers.hideAll()}>
 							{t($language, 'map.hideAll')}
 						</button>
 					</div>
@@ -842,15 +982,29 @@
 			<button class="zoom-btn" onclick={zoomOut} title={t($language, 'map.zoomOut')}>−</button>
 			<button class="zoom-btn" onclick={resetZoom} title={t($language, 'map.reset')}>⟲</button>
 		</div>
-		<div class="map-legend">
-			<div class="legend-item">
-				<span class="legend-dot high"></span> {t($language, 'legend.high')}
+		<div class="map-hud">
+			<div class="hud-row">
+				<span>Threat Nodes</span>
+				<strong>{$mapLayers.hotspots ? HOTSPOTS.length : 0}</strong>
 			</div>
-			<div class="legend-item">
-				<span class="legend-dot elevated"></span> {t($language, 'legend.elevated')}
+			<div class="hud-row">
+				<span>Critical Nodes</span>
+				<strong>{$mapLayers.hotspots ? severeHotspotCount : 0}</strong>
 			</div>
-			<div class="legend-item">
-				<span class="legend-dot low"></span> {t($language, 'legend.low')}
+			<div class="hud-row">
+				<span>Conflict Zones</span>
+				<strong>{$mapLayers.conflictZones ? CONFLICT_ZONES.length : 0}</strong>
+			</div>
+			<div class="hud-legend">
+				<div class="legend-item">
+					<span class="legend-dot high"></span> {t($language, 'legend.high')}
+				</div>
+				<div class="legend-item">
+					<span class="legend-dot elevated"></span> {t($language, 'legend.elevated')}
+				</div>
+				<div class="legend-item">
+					<span class="legend-dot low"></span> {t($language, 'legend.low')}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -861,189 +1015,416 @@
 		position: relative;
 		width: 100%;
 		aspect-ratio: 2 / 1;
-		background: #0a0f0d;
-		border-radius: 4px;
+		background:
+			radial-gradient(circle at 18% 18%, rgba(24, 180, 155, 0.18), transparent 45%),
+			radial-gradient(circle at 82% 12%, rgba(255, 126, 24, 0.18), transparent 42%),
+			linear-gradient(130deg, #060c11 5%, #08151d 48%, #0a1016 100%);
+		border: 1px solid rgba(69, 101, 124, 0.45);
+		border-radius: 8px;
 		overflow: hidden;
+		isolation: isolate;
+	}
+
+	.map-container::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background:
+			repeating-linear-gradient(
+				90deg,
+				transparent 0,
+				transparent 33px,
+				rgba(128, 205, 255, 0.03) 34px
+			),
+			repeating-linear-gradient(
+				0deg,
+				transparent 0,
+				transparent 33px,
+				rgba(128, 205, 255, 0.028) 34px
+			);
+		opacity: 0.6;
+		pointer-events: none;
+		z-index: 1;
+	}
+
+	.map-container::after {
+		content: '';
+		position: absolute;
+		left: -25%;
+		right: -25%;
+		top: -20%;
+		height: 130%;
+		background: linear-gradient(
+			to bottom,
+			transparent 0%,
+			rgba(82, 205, 244, 0.04) 45%,
+			transparent 100%
+		);
+		animation: sweep 7s linear infinite;
+		pointer-events: none;
+		z-index: 2;
 	}
 
 	.map-svg {
+		position: relative;
+		z-index: 3;
 		width: 100%;
 		height: 100%;
 	}
 
+	:global(.globe-sphere) {
+		fill: url(#globe-ocean-gradient);
+		stroke: rgba(108, 160, 192, 0.8);
+		stroke-width: 1;
+	}
+
+	:global(.globe-graticule) {
+		fill: none;
+		stroke: rgba(123, 183, 220, 0.2);
+		stroke-width: 0.45;
+	}
+
+	:global(.globe-atmosphere) {
+		fill: none;
+		stroke: rgba(180, 223, 255, 0.28);
+		stroke-width: 1.3;
+		filter: drop-shadow(0 0 10px rgba(95, 204, 255, 0.2));
+	}
+
 	.map-tooltip {
 		position: absolute;
-		background: rgba(10, 10, 10, 0.95);
-		border: 1px solid #333;
-		border-radius: 4px;
-		padding: 0.5rem;
+		background: rgba(5, 11, 17, 0.96);
+		border: 1px solid rgba(96, 131, 156, 0.45);
+		border-radius: 8px;
+		padding: 0.55rem;
 		font-size: 0.65rem;
-		color: #ddd;
+		color: #d5eaf7;
 		max-width: 250px;
 		pointer-events: none;
 		z-index: 100;
+		box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+		backdrop-filter: blur(8px);
 	}
 
 	.tooltip-line {
-		opacity: 0.7;
+		opacity: 0.82;
 	}
 
-	/* Layer panel styles */
-	.layer-panel {
+	.map-command-deck {
 		position: absolute;
-		top: 0.5rem;
-		left: 0.5rem;
-		z-index: 10;
-	}
-
-	.layer-toggle-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 0.4rem 0.6rem;
-		background: rgba(20, 20, 20, 0.9);
-		border: 1px solid #333;
-		border-radius: 4px;
-		color: #aaa;
-		font-size: 0.65rem;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.layer-toggle-btn:hover {
-		background: rgba(40, 40, 40, 0.9);
-		color: #fff;
-	}
-
-	.layer-icon {
-		font-size: 0.8rem;
-	}
-
-	.layer-label {
-		font-size: 0.6rem;
-	}
-
-	.layer-panel.open .layer-toggle-btn {
-		border-bottom-left-radius: 0;
-		border-bottom-right-radius: 0;
-		border-bottom-color: transparent;
-	}
-
-	.layer-list {
-		background: rgba(20, 20, 20, 0.95);
-		border: 1px solid #333;
-		border-top: none;
-		border-radius: 0 4px 4px 4px;
-		padding: 0.5rem;
+		top: 0.75rem;
+		left: 0.75rem;
+		z-index: 15;
+		width: min(420px, calc(100% - 1.5rem));
 		display: flex;
 		flex-direction: column;
-		gap: 0.3rem;
-		min-width: 140px;
+		gap: 0.45rem;
 	}
 
-	.layer-item {
+	.deck-head {
+		display: flex;
+		gap: 0.45rem;
+		align-items: stretch;
+	}
+
+	.deck-toggle-btn {
 		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		cursor: pointer;
-		padding: 0.2rem 0;
-		font-size: 0.6rem;
-		color: #ccc;
-		transition: color 0.15s ease;
-	}
-
-	.layer-item:hover {
-		color: #fff;
-	}
-
-	.layer-item input[type='checkbox'] {
-		width: 12px;
-		height: 12px;
-		accent-color: var(--accent, #6366f1);
-		cursor: pointer;
-	}
-
-	.layer-item-icon {
-		font-size: 0.75rem;
-		width: 16px;
-		text-align: center;
-	}
-
-	.layer-item-label {
+		gap: 0.55rem;
+		padding: 0.5rem 0.65rem;
 		flex: 1;
+		background: rgba(6, 13, 20, 0.88);
+		border: 1px solid rgba(97, 136, 165, 0.5);
+		border-radius: 10px;
+		color: #c6d9e7;
+		font-size: 0.63rem;
+		font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, monospace;
+		letter-spacing: 0.04em;
+		cursor: pointer;
+		transition: all 0.18s ease;
+		text-transform: uppercase;
 	}
 
-	.layer-actions {
+	.deck-toggle-btn:hover {
+		border-color: rgba(129, 194, 232, 0.78);
+		box-shadow: 0 0 0 1px rgba(129, 194, 232, 0.2) inset;
+	}
+
+	.deck-live-dot {
+		width: 0.48rem;
+		height: 0.48rem;
+		border-radius: 50%;
+		background: #52fda9;
+		box-shadow:
+			0 0 0 3px rgba(82, 253, 169, 0.18),
+			0 0 12px rgba(82, 253, 169, 0.8);
+		animation: ping 2.2s ease infinite;
+		flex-shrink: 0;
+	}
+
+	.deck-text {
 		display: flex;
-		gap: 0.3rem;
-		margin-top: 0.3rem;
-		padding-top: 0.3rem;
-		border-top: 1px solid #333;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.1rem;
+		min-width: 0;
 	}
 
-	.layer-action-btn {
+	.deck-title {
+		font-size: 0.62rem;
+		line-height: 1;
+		font-weight: 600;
+		color: #d8ecff;
+	}
+
+	.deck-subtitle {
+		font-size: 0.51rem;
+		color: rgba(172, 203, 227, 0.72);
+		line-height: 1;
+	}
+
+	.deck-count {
+		margin-left: auto;
+		font-size: 0.64rem;
+		padding: 0.18rem 0.44rem;
+		border-radius: 999px;
+		border: 1px solid rgba(115, 176, 212, 0.5);
+		background: rgba(17, 44, 64, 0.65);
+		font-weight: 600;
+		color: #afe5ff;
+	}
+
+	.deck-presets {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.3rem;
+		width: 8.8rem;
+	}
+
+	.preset-btn {
+		border: 1px solid rgba(110, 143, 163, 0.4);
+		background: rgba(4, 11, 17, 0.76);
+		color: #9ec2db;
+		font-size: 0.53rem;
+		padding: 0.38rem 0.35rem;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, monospace;
+		letter-spacing: 0.04em;
+	}
+
+	.preset-btn:hover {
+		color: #e4f5ff;
+		border-color: rgba(145, 190, 215, 0.68);
+	}
+
+	.preset-btn.active {
+		background: linear-gradient(135deg, rgba(28, 152, 193, 0.32), rgba(255, 142, 53, 0.3));
+		color: #fff4dd;
+		border-color: rgba(245, 165, 94, 0.86);
+		box-shadow: 0 8px 18px rgba(255, 128, 38, 0.2);
+	}
+
+	.deck-body {
+		background: rgba(4, 10, 16, 0.82);
+		border: 1px solid rgba(88, 123, 147, 0.52);
+		border-radius: 12px;
+		padding: 0.55rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		backdrop-filter: blur(10px);
+		box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+	}
+
+	.deck-stats {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.35rem;
+	}
+
+	.stat-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		padding: 0.35rem 0.42rem;
+		border-radius: 8px;
+		background: rgba(12, 28, 40, 0.68);
+		border: 1px solid rgba(84, 118, 144, 0.45);
+		color: #9ec0d6;
+	}
+
+	.stat-card span {
+		font-size: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.stat-card strong {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #e6f5ff;
+	}
+
+	.layer-matrix {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.35rem;
+	}
+
+	.layer-chip {
+		border: 1px solid rgba(82, 109, 132, 0.5);
+		background: rgba(8, 19, 29, 0.72);
+		border-radius: 10px;
+		padding: 0.42rem 0.45rem;
+		display: flex;
+		align-items: center;
+		gap: 0.38rem;
+		cursor: pointer;
+		transition: all 0.16s ease;
+		color: #b7d1e3;
+		text-align: left;
+	}
+
+	.layer-chip:hover {
+		border-color: rgba(138, 183, 210, 0.78);
+		transform: translateY(-1px);
+	}
+
+	.layer-chip.active {
+		background: linear-gradient(135deg, rgba(38, 153, 199, 0.32), rgba(33, 69, 88, 0.86));
+		border-color: rgba(127, 214, 255, 0.9);
+		box-shadow: 0 8px 16px rgba(55, 179, 235, 0.22);
+	}
+
+	.layer-chip-icon {
+		width: 1.1rem;
+		font-size: 0.76rem;
+		text-align: center;
+		flex-shrink: 0;
+	}
+
+	.layer-chip-label {
 		flex: 1;
-		padding: 0.25rem 0.4rem;
-		background: transparent;
-		border: 1px solid #444;
-		border-radius: 3px;
-		color: #888;
 		font-size: 0.55rem;
+		letter-spacing: 0.01em;
+	}
+
+	.layer-chip-state {
+		font-size: 0.5rem;
+		padding: 0.1rem 0.28rem;
+		border-radius: 999px;
+		border: 1px solid rgba(116, 159, 188, 0.42);
+		color: #84b5d7;
+	}
+
+	.layer-chip.active .layer-chip-state {
+		color: #ffd3a8;
+		border-color: rgba(255, 191, 131, 0.45);
+		background: rgba(255, 133, 35, 0.16);
+	}
+
+	.deck-actions {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.35rem;
+		margin-top: 0.1rem;
+	}
+
+	.deck-action-btn {
+		padding: 0.38rem 0.35rem;
+		border-radius: 8px;
+		font-size: 0.54rem;
+		letter-spacing: 0.03em;
+		border: 1px solid rgba(108, 148, 175, 0.5);
+		background: rgba(9, 23, 34, 0.64);
+		color: #b8d4e7;
 		cursor: pointer;
 		transition: all 0.15s ease;
 	}
 
-	.layer-action-btn:hover {
-		background: #333;
-		color: #fff;
+	.deck-action-btn:hover {
+		border-color: rgba(156, 201, 228, 0.9);
+		color: #ffffff;
 	}
 
 	.zoom-controls {
 		position: absolute;
-		bottom: 0.5rem;
-		right: 0.5rem;
+		right: 0.75rem;
+		bottom: 0.75rem;
+		z-index: 12;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.28rem;
 	}
 
 	.zoom-btn {
-		width: 2.75rem;
-		height: 2.75rem;
+		width: 2.35rem;
+		height: 2.35rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(20, 20, 20, 0.9);
-		border: 1px solid #333;
-		border-radius: 4px;
-		color: #aaa;
-		font-size: 1rem;
+		background: rgba(7, 16, 24, 0.86);
+		border: 1px solid rgba(108, 145, 171, 0.55);
+		border-radius: 9px;
+		color: #c7dff0;
+		font-size: 0.92rem;
 		cursor: pointer;
+		transition: all 0.15s ease;
+		backdrop-filter: blur(6px);
 	}
 
 	.zoom-btn:hover {
-		background: rgba(40, 40, 40, 0.9);
-		color: #fff;
+		color: #ffffff;
+		border-color: rgba(167, 207, 230, 0.9);
+		background: rgba(15, 36, 52, 0.9);
 	}
 
-	.map-legend {
+	.map-hud {
 		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
+		top: 0.75rem;
+		right: 0.75rem;
+		z-index: 12;
+		width: min(200px, calc(100% - 1.5rem));
+		padding: 0.5rem;
+		border-radius: 10px;
+		border: 1px solid rgba(91, 127, 153, 0.55);
+		background: rgba(4, 10, 16, 0.78);
+		backdrop-filter: blur(8px);
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
-		background: rgba(10, 10, 10, 0.8);
-		padding: 0.3rem 0.5rem;
-		border-radius: 4px;
-		font-size: 0.55rem;
+		gap: 0.26rem;
+	}
+
+	.hud-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.54rem;
+		color: #9ec0d7;
+	}
+
+	.hud-row strong {
+		color: #f3f7ff;
+		font-size: 0.66rem;
+	}
+
+	.hud-legend {
+		margin-top: 0.2rem;
+		padding-top: 0.35rem;
+		border-top: 1px solid rgba(91, 127, 153, 0.35);
+		display: flex;
+		flex-direction: column;
+		gap: 0.22rem;
 	}
 
 	.legend-item {
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
-		color: #888;
+		font-size: 0.52rem;
+		color: #92b5cd;
 	}
 
 	.legend-dot {
@@ -1085,10 +1466,63 @@
 		cursor: pointer;
 	}
 
-	/* Hide zoom controls on mobile where touch zoom is available */
+	@keyframes sweep {
+		0% {
+			transform: translateY(-40%);
+		}
+		100% {
+			transform: translateY(40%);
+		}
+	}
+
+	@keyframes ping {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.55;
+		}
+	}
+
 	@media (max-width: 768px) {
+		.map-command-deck {
+			top: 0.5rem;
+			left: 0.5rem;
+			width: calc(100% - 1rem);
+		}
+
+		.deck-head {
+			flex-direction: column;
+		}
+
+		.deck-presets {
+			width: 100%;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+
+		.deck-stats,
+		.layer-matrix,
+		.deck-actions {
+			grid-template-columns: 1fr;
+		}
+
+		.map-hud {
+			top: auto;
+			bottom: 0.5rem;
+			left: 0.5rem;
+			right: auto;
+			width: min(180px, calc(100% - 5.5rem));
+		}
+
 		.zoom-controls {
-			display: flex;
+			right: 0.5rem;
+			bottom: 0.5rem;
+		}
+
+		.zoom-btn {
+			width: 2.1rem;
+			height: 2.1rem;
 		}
 	}
 </style>

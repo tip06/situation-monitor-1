@@ -85,6 +85,9 @@ export {
 	type FedNewsState
 } from './fed';
 
+// Intelligence store
+export { intelligence, type IntelligenceState } from './intelligence';
+
 // Tab store
 export { activeTab, currentTabConfig, visiblePanels, isPanelInTab } from './tabs';
 
