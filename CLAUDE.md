@@ -106,12 +106,11 @@ Unique business logic for intelligence analysis:
 
 ## TODO
 
-- Improve map interface (1-2)
+- Improve map interface. use glint as inspiration (1-2)
 - check out world monitor for ideas (1-2)
 - alerts for economic indicators (2-3)
 - make a cool loading screen (2-3)
-- create rss feeds from sites or social media (1)
-- fix feeds (2). maybe introduce a separate rss filtering system. maybe work with google news.
+- create rss feeds from social media (1)
 
 ## General Guidance
 
