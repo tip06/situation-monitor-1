@@ -584,7 +584,7 @@
 					{/if}
 				</div>
 			{:else if $activeTab === 'economy'}
-				<!-- Economy Tab: Row 1 = crypto, markets, heatmap, commodities; Row 2 = finance (wide) -->
+				<!-- Economy Tab: Row 1 = crypto, markets, heatmap, commodities; Row 2 = finance + market radar -->
 				<div class="columns-layout">
 					{#if isPanelVisible('crypto')}
 						<div class="panel-slot">
@@ -609,9 +609,12 @@
 							<CommoditiesPanel />
 						</div>
 					{/if}
+				</div>
 
+				{#if isPanelVisible('finance') || isPanelVisible('market_radar')}
+					<div class="economy-secondary-row">
 					{#if isPanelVisible('finance')}
-						<div class="panel-slot panel-wide">
+							<div class="panel-slot">
 							<NewsPanel
 								category="finance"
 								panelId="finance"
@@ -619,7 +622,14 @@
 							/>
 						</div>
 					{/if}
-				</div>
+
+						{#if isPanelVisible('market_radar')}
+							<div class="panel-slot">
+								<MarketRadarPanel />
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{:else if $activeTab === 'social'}
 				<!-- Trends and Analysis Tab: 2-row layout -->
 				<div class="analysis-layout">
@@ -657,29 +667,27 @@
 					{/if}
 				</div>
 		{:else if $activeTab === 'intelligence'}
-			<!-- Intelligence Tab: 4-panel columns layout -->
-			<div class="columns-layout">
+			<!-- Intelligence Tab: row 1 full-width AI brief; row 2 stability + strategic risk -->
+			<div class="intelligence-layout">
 				{#if isPanelVisible('ai_brief')}
-					<div class="panel-slot panel-wide">
+					<div class="panel-slot">
 						<AIBriefPanel />
 					</div>
 				{/if}
 
-				{#if isPanelVisible('country_stability')}
-					<div class="panel-slot">
-						<CountryStabilityPanel />
-					</div>
-				{/if}
+				{#if isPanelVisible('country_stability') || isPanelVisible('strategic_risk')}
+					<div class="intelligence-second-row">
+						{#if isPanelVisible('country_stability')}
+							<div class="panel-slot">
+								<CountryStabilityPanel />
+							</div>
+						{/if}
 
-				{#if isPanelVisible('market_radar')}
-					<div class="panel-slot">
-						<MarketRadarPanel />
-					</div>
-				{/if}
-
-				{#if isPanelVisible('strategic_risk')}
-					<div class="panel-slot">
-						<StrategicRiskPanel />
+						{#if isPanelVisible('strategic_risk')}
+							<div class="panel-slot">
+								<StrategicRiskPanel />
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -757,11 +765,6 @@
 		width: 100%;
 	}
 
-	/* Wide panel spanning 2 columns */
-	.panel-wide {
-		grid-column: span 2;
-	}
-
 	/* Trends and Analysis tab layout */
 	.analysis-layout {
 		display: flex;
@@ -773,6 +776,22 @@
 	.analysis-row {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.economy-secondary-row,
+	.intelligence-second-row {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+		width: 100%;
+		margin-top: 0.5rem;
+	}
+
+	.intelligence-layout {
+		display: flex;
+		flex-direction: column;
 		gap: 0.5rem;
 		width: 100%;
 	}
@@ -800,11 +819,12 @@
 			grid-template-columns: 1fr;
 		}
 
-		.panel-wide {
-			grid-column: span 1;
+		.analysis-row {
+			grid-template-columns: 1fr;
 		}
 
-		.analysis-row {
+		.economy-secondary-row,
+		.intelligence-second-row {
 			grid-template-columns: 1fr;
 		}
 	}

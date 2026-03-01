@@ -37,7 +37,7 @@ export const TABS: TabConfig[] = [
 		id: 'economy',
 		nameKey: 'tabs.economy',
 		layout: 'columns',
-		panels: ['crypto', 'markets', 'heatmap', 'commodities', 'finance']
+		panels: ['crypto', 'markets', 'heatmap', 'commodities', 'finance', 'market_radar']
 	},
 	{
 		id: 'social',
@@ -55,7 +55,7 @@ export const TABS: TabConfig[] = [
 		id: 'intelligence',
 		nameKey: 'tabs.intelligence',
 		layout: 'columns',
-		panels: ['ai_brief', 'country_stability', 'market_radar', 'strategic_risk']
+		panels: ['ai_brief', 'country_stability', 'strategic_risk']
 	}
 ];
 

@@ -55,6 +55,7 @@
 	const ZOOM_STEP = 1.18;
 	const MAX_LAT_ROTATION = 55;
 	const OUTAGE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+	const FOCUS_MIN_SCALE = DEFAULT_GLOBE_SCALE * 1.3;
 
 	let globeRotation: [number, number, number] = [...DEFAULT_ROTATION];
 	let globeScale = DEFAULT_GLOBE_SCALE;
@@ -1136,6 +1137,34 @@
 		renderMap();
 	}
 
+	function focusLocation(lat: number, lon: number, zoom: 'context' | 'tight' = 'tight'): void {
+		if (!projection || !Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+		const clampedLat = Math.max(-MAX_LAT_ROTATION, Math.min(MAX_LAT_ROTATION, lat));
+		globeRotation = [-lon, -clampedLat, 0];
+		projection.rotate(globeRotation);
+
+		if (zoom === 'tight') {
+			globeScale = clampGlobeScale(Math.max(globeScale, FOCUS_MIN_SCALE));
+			projection.scale(globeScale);
+		}
+
+		renderMap();
+	}
+
+	interface MapFocusEventDetail {
+		lat: number;
+		lon: number;
+		zoom?: 'context' | 'tight';
+	}
+
+	function handleMapFocusEvent(event: Event): void {
+		const customEvent = event as CustomEvent<MapFocusEventDetail>;
+		const detail = customEvent.detail;
+		if (!detail) return;
+		focusLocation(detail.lat, detail.lon, detail.zoom ?? 'tight');
+	}
+
 	async function loadOutages(): Promise<void> {
 		outagesLoading = true;
 		outagesError = null;
@@ -1317,11 +1346,13 @@
 	onMount(() => {
 		initMap();
 		void loadOutages();
+		window.addEventListener('map:focus-location', handleMapFocusEvent as EventListener);
 		const outageInterval = window.setInterval(() => {
 			void loadOutages();
 		}, OUTAGE_REFRESH_INTERVAL_MS);
 		return () => {
 			window.clearInterval(outageInterval);
+			window.removeEventListener('map:focus-location', handleMapFocusEvent as EventListener);
 		};
 	});
 </script>
