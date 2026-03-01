@@ -9,6 +9,10 @@ const STORAGE_KEY = 'mapLayers';
 
 export interface MapLayersState {
 	hotspots: boolean;
+	outages: boolean;
+	aiDataCenters: boolean;
+	pipelines: boolean;
+	submarineCables: boolean;
 	conflictZones: boolean;
 	chokepoints: boolean;
 	cableLandings: boolean;
@@ -20,9 +24,13 @@ export interface MapLayersState {
 
 const DEFAULT_STATE: MapLayersState = {
 	hotspots: true,
+	outages: true,
+	aiDataCenters: false,
+	pipelines: false,
+	submarineCables: false,
 	conflictZones: true,
 	chokepoints: true,
-	cableLandings: true,
+	cableLandings: false,
 	nuclearSites: true,
 	militaryBases: true,
 	monitors: true,
@@ -125,6 +133,10 @@ export const mapLayers = createMapLayersStore();
 
 // Derived stores for individual layers
 export const showHotspots = derived(mapLayers, ($mapLayers) => $mapLayers.hotspots);
+export const showOutages = derived(mapLayers, ($mapLayers) => $mapLayers.outages);
+export const showAiDataCenters = derived(mapLayers, ($mapLayers) => $mapLayers.aiDataCenters);
+export const showPipelines = derived(mapLayers, ($mapLayers) => $mapLayers.pipelines);
+export const showSubmarineCables = derived(mapLayers, ($mapLayers) => $mapLayers.submarineCables);
 export const showConflictZones = derived(mapLayers, ($mapLayers) => $mapLayers.conflictZones);
 export const showChokepoints = derived(mapLayers, ($mapLayers) => $mapLayers.chokepoints);
 export const showCableLandings = derived(mapLayers, ($mapLayers) => $mapLayers.cableLandings);

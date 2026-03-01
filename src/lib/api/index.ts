@@ -22,6 +22,8 @@ export { fetchStabilitySnapshot } from './stability';
 export type { StabilitySnapshot } from './stability';
 export { fetchFearGreed } from './fear-greed';
 export type { FearGreedData } from './fear-greed';
+export { fetchOutagesSnapshot } from './outages';
+export type { OutagesSnapshot, InternetOutage } from './outages';
 export {
 	fetchManualAdditions,
 	createManualInsight,

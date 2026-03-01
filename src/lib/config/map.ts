@@ -1,4 +1,16 @@
 // Map configuration - hotspots, conflict zones, and strategic locations
+import {
+	SUBMARINE_CABLE_LANDINGS,
+	SUBMARINE_CABLE_ROUTES,
+	type SubmarineCableRoute
+} from './submarine-data';
+import { AI_DATA_CENTERS, type AIDataCenter } from './ai-datacenters';
+import {
+	PIPELINE_COLORS as PIPELINE_TYPE_COLORS,
+	PIPELINE_ROUTES,
+	type PipelineRoute
+} from './pipelines-data';
+import { WORLDMONITOR_MILITARY_BASES } from './military-bases-data';
 
 export interface Hotspot {
 	name: string;
@@ -27,6 +39,8 @@ export interface CableLanding {
 	lon: number;
 	desc: string;
 }
+
+export type { SubmarineCableRoute, AIDataCenter, PipelineRoute };
 
 export interface NuclearSite {
 	name: string;
@@ -68,116 +82,200 @@ export const SANCTIONED_COUNTRY_IDS = [
 
 export const HOTSPOTS: Hotspot[] = [
 	{
+		name: 'Sahel',
+		lat: 14,
+		lon: -1,
+		level: 'high',
+		desc: 'Region of instability, military coups, and Islamist insurgency. Russian influence growing. Russian influence expanding in former French sphere; jihadist groups gaining territory; migration pressure on Europe'
+	},
+	{
+		name: 'Port-au-Prince',
+		lat: 18.5,
+		lon: -72.3,
+		level: 'high',
+		desc: 'Gang violence, government collapse, international security mission. Humanitarian catastrophe at US doorstep; migration surge potential; test of African-led peacekeeping'
+	},
+	{
+		name: 'Horn of Africa',
+		lat: 10,
+		lon: 49,
+		level: 'high',
+		desc: 'Resurgent piracy, Al-Shabaab activity, Ethiopia-Somaliland port dispute. Bab el-Mandeb chokepoint security; 12% of global trade at risk; Red Sea shipping rerouting'
+	},
+	{
 		name: 'DC',
 		lat: 38.9,
-		lon: -77.0,
+		lon: -77,
 		level: 'low',
-		desc: 'Washington DC — US political center, White House, Pentagon, Capitol'
+		desc: 'US government and military headquarters. Intelligence community center.'
+	},
+	{
+		name: 'Silicon Valley',
+		lat: 37.4,
+		lon: -122.1,
+		level: 'low',
+		desc: 'Global tech center. AI development hub. Major economic indicator.'
+	},
+	{
+		name: 'Wall Street',
+		lat: 40.7,
+		lon: -74,
+		level: 'low',
+		desc: 'Global financial center. Market movements. Fed policy.'
+	},
+	{
+		name: 'Houston',
+		lat: 29.76,
+		lon: -95.37,
+		level: 'low',
+		desc: 'Energy sector HQ. NASA mission control. Space industry.'
 	},
 	{
 		name: 'Moscow',
 		lat: 55.75,
 		lon: 37.6,
-		level: 'elevated',
-		desc: 'Moscow — Kremlin, Russian military command, sanctions hub'
+		level: 'high',
+		desc: 'Russian Federation command center. Military operations hub. Nuclear power at war; energy leverage over Europe; global order revisionism'
 	},
 	{
 		name: 'Beijing',
 		lat: 39.9,
 		lon: 116.4,
 		level: 'elevated',
-		desc: 'Beijing — CCP headquarters, US-China tensions, tech rivalry'
+		desc: 'Chinese Communist Party headquarters. PLA command center. Largest economy by PPP; primary US strategic competitor; Taiwan contingency risk'
 	},
 	{
 		name: 'Kyiv',
 		lat: 50.45,
 		lon: 30.5,
-		level: 'high',
-		desc: 'Kyiv — Active conflict zone, Russian invasion ongoing'
+		level: 'critical',
+		desc: 'Active conflict zone. NATO support operations. Largest European war since WWII; NATO Article 5 test; global food/energy security'
 	},
 	{
 		name: 'Taipei',
 		lat: 25.03,
 		lon: 121.5,
 		level: 'elevated',
-		desc: 'Taipei — Taiwan Strait tensions, TSMC, China threat'
+		desc: 'Taiwan Strait tensions. Semiconductor supply chain. TSMC produces 90% of advanced chips; conflict would devastate global tech supply chains'
 	},
 	{
 		name: 'Tehran',
 		lat: 35.7,
 		lon: 51.4,
-		level: 'critical',
-		desc: 'Tehran — ACTIVE UPRISING: 200+ cities, 26 provinces. Revolution protests, regime instability, nuclear program'
+		level: 'high',
+		desc: 'Iranian nuclear program. Regional proxy operations. Near-nuclear threshold state; controls Strait of Hormuz; Axis of Resistance coordinator'
 	},
 	{
 		name: 'Tel Aviv',
-		lat: 32.07,
-		lon: 34.78,
-		level: 'high',
-		desc: 'Tel Aviv — Israel-Gaza conflict, active military operations'
+		lat: 32.1,
+		lon: 34.8,
+		level: 'critical',
+		desc: 'Military operations. Regional security. Intelligence activities. Regional escalation risk to multi-front war; US treaty ally; Iran confrontation flashpoint'
+	},
+	{
+		name: 'Pyongyang',
+		lat: 39,
+		lon: 125.75,
+		level: 'elevated',
+		desc: 'Nuclear weapons program. Missile testing. Cyber operations. Nuclear-armed hermit state; ICBM can reach US mainland; cyber threat actor; Russia military supplier'
 	},
 	{
 		name: 'London',
 		lat: 51.5,
 		lon: -0.12,
 		level: 'low',
-		desc: 'London — Financial center, Five Eyes, NATO ally'
+		desc: 'UK intelligence headquarters. Five Eyes member.'
 	},
 	{
 		name: 'Brussels',
 		lat: 50.85,
 		lon: 4.35,
 		level: 'low',
-		desc: 'Brussels — EU/NATO headquarters, European policy'
-	},
-	{
-		name: 'Pyongyang',
-		lat: 39.03,
-		lon: 125.75,
-		level: 'elevated',
-		desc: 'Pyongyang — North Korea nuclear threat, missile tests'
-	},
-	{
-		name: 'Riyadh',
-		lat: 24.7,
-		lon: 46.7,
-		level: 'elevated',
-		desc: 'Riyadh — Saudi oil, OPEC+, Yemen conflict, regional power'
-	},
-	{
-		name: 'Delhi',
-		lat: 28.6,
-		lon: 77.2,
-		level: 'low',
-		desc: 'Delhi — India rising power, China border tensions'
-	},
-	{
-		name: 'Singapore',
-		lat: 1.35,
-		lon: 103.82,
-		level: 'low',
-		desc: 'Singapore — Shipping chokepoint, Asian finance hub'
-	},
-	{
-		name: 'Tokyo',
-		lat: 35.68,
-		lon: 139.76,
-		level: 'low',
-		desc: 'Tokyo — US ally, regional security, economic power'
+		desc: 'NATO alliance headquarters. European Union center.'
 	},
 	{
 		name: 'Caracas',
 		lat: 10.5,
 		lon: -66.9,
+		level: 'low',
+		desc: 'Political crisis. Economic sanctions. Regional instability.'
+	},
+	{
+		name: 'Mexico City',
+		lat: 23.6,
+		lon: -102.5,
 		level: 'high',
-		desc: 'Caracas — Venezuela crisis, Maduro regime, US sanctions, humanitarian emergency'
+		desc: 'Cartel warfare, fentanyl trafficking, military deployments, state fragility in multiple regions. Largest US land border; fentanyl crisis killing 100k+ Americans/year; regional destabilization; migration driver'
 	},
 	{
 		name: 'Nuuk',
 		lat: 64.18,
-		lon: -51.72,
-		level: 'elevated',
-		desc: 'Nuuk — Greenland, US acquisition interest, Arctic strategy, Denmark tensions'
+		lon: -51.7,
+		level: 'low',
+		desc: 'Arctic strategic territory. US military presence, sovereignty questions.'
+	},
+	{
+		name: 'Riyadh',
+		lat: 24.7,
+		lon: 46.7,
+		level: 'low',
+		desc: 'Saudi Arabia power center. OPEC+ decisions. Regional influence.'
+	},
+	{
+		name: 'Cairo',
+		lat: 30,
+		lon: 31.2,
+		level: 'low',
+		desc: 'Egyptian command. Gaza border control. Suez Canal security.'
+	},
+	{
+		name: 'Baghdad',
+		lat: 33.3,
+		lon: 44.4,
+		level: 'low',
+		desc: 'Iraqi government. Iran-backed militias. US military presence.'
+	},
+	{
+		name: 'Damascus',
+		lat: 33.5,
+		lon: 36.3,
+		level: 'low',
+		desc: 'Syrian civil war aftermath. Multiple foreign interventions.'
+	},
+	{
+		name: 'Doha',
+		lat: 25.3,
+		lon: 51.5,
+		level: 'low',
+		desc: 'Qatar diplomatic hub. US CENTCOM base. Al Jazeera HQ.'
+	},
+	{
+		name: 'Ankara',
+		lat: 39.9,
+		lon: 32.9,
+		level: 'low',
+		desc: 'NATO member. Kurdish conflict. Syria/Libya operations.'
+	},
+	{
+		name: 'Beirut',
+		lat: 33.9,
+		lon: 35.5,
+		level: 'low',
+		desc: 'Lebanon crisis. Hezbollah stronghold. Israel border tensions.'
+	},
+	{
+		name: 'Sana\'a',
+		lat: 15.4,
+		lon: 44.2,
+		level: 'high',
+		desc: 'Yemen conflict. Houthi Red Sea attacks. Shipping disruption. Disrupting 12% of global trade via Suez; insurance costs spiking; Iran proxy demonstration'
+	},
+	{
+		name: 'Abu Dhabi',
+		lat: 24.5,
+		lon: 54.4,
+		level: 'low',
+		desc: 'UAE strategic hub. Regional military operations.'
 	}
 ];
 
@@ -290,7 +388,7 @@ export const CHOKEPOINTS: Chokepoint[] = [
 	}
 ];
 
-export const CABLE_LANDINGS: CableLanding[] = [
+const CORE_CABLE_LANDINGS: CableLanding[] = [
 	{ name: 'NYC', lat: 40.7, lon: -74.0, desc: 'New York — Transatlantic hub, 10+ cables' },
 	{ name: 'Cornwall', lat: 50.1, lon: -5.5, desc: 'Cornwall UK — Europe-Americas gateway' },
 	{ name: 'Marseille', lat: 43.3, lon: 5.4, desc: 'Marseille — Mediterranean hub, SEA-ME-WE' },
@@ -302,6 +400,27 @@ export const CABLE_LANDINGS: CableLanding[] = [
 	{ name: 'LA', lat: 33.7, lon: -118.2, desc: 'Los Angeles — Pacific gateway' },
 	{ name: 'Miami', lat: 25.8, lon: -80.2, desc: 'Miami — Americas/Caribbean hub' }
 ];
+
+const seenCableLandings = new Set<string>();
+export const CABLE_LANDINGS: CableLanding[] = [
+	...CORE_CABLE_LANDINGS,
+	...SUBMARINE_CABLE_LANDINGS.map((landing) => ({
+		name: landing.name,
+		lat: landing.lat,
+		lon: landing.lon,
+		desc: landing.desc
+	}))
+].filter((landing) => {
+	const key = `${landing.name.toLowerCase()}|${landing.lat.toFixed(4)}|${landing.lon.toFixed(4)}`;
+	if (seenCableLandings.has(key)) return false;
+	seenCableLandings.add(key);
+	return true;
+});
+
+export const SUBMARINE_CABLES: SubmarineCableRoute[] = SUBMARINE_CABLE_ROUTES;
+export const AI_DATACENTERS: AIDataCenter[] = AI_DATA_CENTERS;
+export const PIPELINES: PipelineRoute[] = PIPELINE_ROUTES;
+export const PIPELINE_COLORS = PIPELINE_TYPE_COLORS;
 
 export const NUCLEAR_SITES: NuclearSite[] = [
 	{ name: 'Natanz', lat: 33.7, lon: 51.7, desc: 'Natanz — Iran uranium enrichment' },
@@ -318,42 +437,151 @@ export const NUCLEAR_SITES: NuclearSite[] = [
 	{ name: 'Fukushima', lat: 37.4, lon: 141.0, desc: 'Fukushima — Decommissioning site' }
 ];
 
-export const MILITARY_BASES: MilitaryBase[] = [
-	{ name: 'Ramstein', lat: 49.4, lon: 7.6, desc: 'Ramstein — US Air Force, NATO hub Germany' },
+const BRAZIL_MILITARY_BASES: MilitaryBase[] = [
 	{
-		name: 'Diego Garcia',
-		lat: -7.3,
-		lon: 72.4,
-		desc: 'Diego Garcia — US/UK Indian Ocean base'
+		name: 'Base Aerea de Brasilia',
+		lat: -15.869,
+		lon: -47.92,
+		desc: 'Brazilian Air Force strategic air base in Brasilia'
 	},
 	{
-		name: 'Okinawa',
-		lat: 26.5,
-		lon: 127.9,
-		desc: 'Okinawa — US Forces Japan, Pacific presence'
+		name: 'Base Aerea de Anapolis',
+		lat: -16.229,
+		lon: -48.964,
+		desc: 'FAB air defense base with high-readiness fighter operations'
 	},
-	{ name: 'Guam', lat: 13.5, lon: 144.8, desc: 'Guam — US Pacific Command, bomber base' },
 	{
-		name: 'Djibouti',
-		lat: 11.5,
-		lon: 43.1,
-		desc: 'Djibouti — US/China/France bases, Horn of Africa'
+		name: 'Base Aerea de Santa Cruz',
+		lat: -22.932,
+		lon: -43.719,
+		desc: 'Major FAB installation in Rio de Janeiro'
 	},
-	{ name: 'Qatar', lat: 25.1, lon: 51.3, desc: 'Al Udeid — US CENTCOM forward HQ' },
 	{
-		name: 'Kaliningrad',
-		lat: 54.7,
-		lon: 20.5,
-		desc: 'Kaliningrad — Russian Baltic exclave, missiles'
+		name: 'Base Aerea do Galeao',
+		lat: -22.809,
+		lon: -43.25,
+		desc: 'Air force and logistics complex in Rio de Janeiro'
 	},
-	{ name: 'Sevastopol', lat: 44.6, lon: 33.5, desc: 'Sevastopol — Russian Black Sea Fleet' },
 	{
-		name: 'Hainan',
-		lat: 18.2,
-		lon: 109.5,
-		desc: 'Hainan — Chinese submarine base, South China Sea'
+		name: 'Base Aerea de Natal',
+		lat: -5.911,
+		lon: -35.249,
+		desc: 'Northeast air operations and mobility base'
+	},
+	{
+		name: 'Base Aerea de Recife',
+		lat: -8.126,
+		lon: -34.923,
+		desc: 'FAB base supporting northeastern coastal air coverage'
+	},
+	{
+		name: 'Base Aerea de Salvador',
+		lat: -12.91,
+		lon: -38.334,
+		desc: 'Northeast coastal defense and transport operations base'
+	},
+	{
+		name: 'Base Aerea de Fortaleza',
+		lat: -3.776,
+		lon: -38.532,
+		desc: 'Air base supporting Atlantic approaches in northeast Brazil'
+	},
+	{
+		name: 'Base Aerea de Belem',
+		lat: -1.384,
+		lon: -48.478,
+		desc: 'Gateway air base to the Amazon and northern coast'
+	},
+	{
+		name: 'Base Aerea de Manaus',
+		lat: -3.038,
+		lon: -60.05,
+		desc: 'Core Amazon-region air operations hub'
+	},
+	{
+		name: 'Base Aerea de Boa Vista',
+		lat: 2.841,
+		lon: -60.692,
+		desc: 'Northern frontier air base near Venezuela-Guyana corridor'
+	},
+	{
+		name: 'Base Aerea de Porto Velho',
+		lat: -8.709,
+		lon: -63.902,
+		desc: 'Western Amazon air surveillance and mobility base'
+	},
+	{
+		name: 'Base Aerea de Campo Grande',
+		lat: -20.468,
+		lon: -54.672,
+		desc: 'Central-west air base for inland operations'
+	},
+	{
+		name: 'Base Aerea de Canoas',
+		lat: -29.945,
+		lon: -51.144,
+		desc: 'Southern air defense base in Rio Grande do Sul'
+	},
+	{
+		name: 'Base Aerea de Florianopolis',
+		lat: -27.67,
+		lon: -48.552,
+		desc: 'Southern coastal monitoring and support base'
+	},
+	{
+		name: 'Base Aerea de Santa Maria',
+		lat: -29.711,
+		lon: -53.688,
+		desc: 'Southern tactical air operations and training base'
+	},
+	{
+		name: 'Base Aerea de Sao Paulo (Campo de Marte)',
+		lat: -23.509,
+		lon: -46.637,
+		desc: 'Urban military aviation and command support facility'
+	},
+	{
+		name: 'Base Naval do Rio de Janeiro',
+		lat: -22.902,
+		lon: -43.175,
+		desc: 'Primary Brazilian Navy base complex in Rio'
+	},
+	{
+		name: 'Base Naval de Aratu',
+		lat: -12.782,
+		lon: -38.499,
+		desc: 'Brazilian Navy Atlantic fleet support base near Salvador'
+	},
+	{
+		name: 'Base Naval de Ladario',
+		lat: -19.005,
+		lon: -57.603,
+		desc: 'Riverine naval operations base in Pantanal region'
+	},
+	{
+		name: 'Base de Submarinos de Itaguai',
+		lat: -22.863,
+		lon: -43.78,
+		desc: 'Brazilian submarine base and PROSUB complex'
+	},
+	{
+		name: 'Centro de Lancamento de Alcantara',
+		lat: -2.373,
+		lon: -44.396,
+		desc: 'Strategic aerospace launch center with military relevance'
 	}
 ];
+
+const seenMilitaryBases = new Set<string>();
+export const MILITARY_BASES: MilitaryBase[] = [
+	...WORLDMONITOR_MILITARY_BASES,
+	...BRAZIL_MILITARY_BASES
+].filter((base) => {
+	const key = `${base.name.toLowerCase()}|${base.lat.toFixed(3)}|${base.lon.toFixed(3)}`;
+	if (seenMilitaryBases.has(key)) return false;
+	seenMilitaryBases.add(key);
+	return true;
+});
 
 export const OCEANS: Ocean[] = [
 	{ name: 'ATLANTIC', lat: 25, lon: -40 },

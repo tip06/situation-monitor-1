@@ -3,19 +3,25 @@
 	import { Panel } from '$lib/components/common';
 	import {
 		HOTSPOTS,
+		AI_DATACENTERS,
+		PIPELINES,
+		PIPELINE_COLORS,
 		CONFLICT_ZONES,
 		CHOKEPOINTS,
+		SUBMARINE_CABLES,
 		CABLE_LANDINGS,
 		NUCLEAR_SITES,
 		MILITARY_BASES,
 		SANCTIONED_COUNTRY_IDS,
 		THREAT_COLORS,
-		WEATHER_CODES
+		WEATHER_CODES,
+		type MilitaryBase
 	} from '$lib/config/map';
 	import { CACHE_TTLS } from '$lib/config/api';
 	import { mapLayers, type MapLayersState } from '$lib/stores/mapLayers';
 	import { language } from '$lib/stores';
 	import { t, type MessageKey } from '$lib/i18n';
+	import { fetchOutagesSnapshot, type InternetOutage } from '$lib/api';
 	import type { CustomMonitor } from '$lib/types';
 
 	interface Props {
@@ -44,15 +50,25 @@
 	const HEIGHT = 400;
 	const DEFAULT_ROTATION: [number, number, number] = [-16, -18, 0];
 	const DEFAULT_GLOBE_SCALE = 239.5;
-	const MIN_GLOBE_SCALE = 138;
-	const MAX_GLOBE_SCALE = 245;
+	const MIN_GLOBE_SCALE = 120;
+	const MAX_GLOBE_SCALE = 420;
 	const ZOOM_STEP = 1.18;
 	const MAX_LAT_ROTATION = 55;
+	const OUTAGE_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 	let globeRotation: [number, number, number] = [...DEFAULT_ROTATION];
 	let globeScale = DEFAULT_GLOBE_SCALE;
 	let worldFeatures: GeoJSON.FeatureCollection | null = null;
 	const countryNameById = new Map<string, string>();
+	let internetOutages = $state<InternetOutage[]>([]);
+	let outagesLoading = $state(false);
+	let outagesError = $state<string | null>(null);
+	let outagesGeneratedAt = $state<number | null>(null);
+	let visibleOutageCount = $state(0);
+	let visibleSevereOutageCount = $state(0);
+	let visibleAiDataCenterCount = $state(0);
+	let visiblePipelineCount = $state(0);
+	let visibleMilitaryBaseCount = $state(0);
 
 	// Tooltip state
 	let tooltipContent = $state<{
@@ -147,8 +163,121 @@
 		return [x, y];
 	}
 
+	type MilitaryBasePoint = MilitaryBase;
+	interface MilitaryBaseScreenPoint {
+		base: MilitaryBasePoint;
+		x: number;
+		y: number;
+	}
+
+	interface MilitaryBaseCluster {
+		bases: MilitaryBasePoint[];
+		x: number;
+		y: number;
+	}
+
+	function getMilitaryBaseClusterRadius(scale: number): number {
+		// Mirror World Monitor's progressive disclosure:
+		// zoomed in => individual points, zoomed out => cluster markers.
+		if (scale >= 290) return 0;
+		if (scale >= 245) return 14;
+		if (scale >= 200) return 24;
+		return 40;
+	}
+
+	function clusterMilitaryBases(
+		points: MilitaryBaseScreenPoint[],
+		pixelRadius: number
+	): MilitaryBaseCluster[] {
+		if (pixelRadius <= 0) {
+			return points.map((point) => ({ bases: [point.base], x: point.x, y: point.y }));
+		}
+
+		const clusters: MilitaryBaseCluster[] = [];
+		const assigned = new Set<number>();
+
+		for (let i = 0; i < points.length; i += 1) {
+			if (assigned.has(i)) continue;
+			const seed = points[i];
+			if (!seed) continue;
+
+			const memberPoints: MilitaryBaseScreenPoint[] = [seed];
+			assigned.add(i);
+
+			for (let j = i + 1; j < points.length; j += 1) {
+				if (assigned.has(j)) continue;
+				const candidate = points[j];
+				if (!candidate) continue;
+				const dx = seed.x - candidate.x;
+				const dy = seed.y - candidate.y;
+				const distance = Math.sqrt(dx * dx + dy * dy);
+				if (distance <= pixelRadius) {
+					memberPoints.push(candidate);
+					assigned.add(j);
+				}
+			}
+
+			const centerX = memberPoints.reduce((sum, point) => sum + point.x, 0) / memberPoints.length;
+			const centerY = memberPoints.reduce((sum, point) => sum + point.y, 0) / memberPoints.length;
+
+			clusters.push({
+				bases: memberPoints.map((point) => point.base),
+				x: centerX,
+				y: centerY
+			});
+		}
+
+		return clusters;
+	}
+
 	function clampGlobeScale(nextScale: number): number {
 		return Math.max(MIN_GLOBE_SCALE, Math.min(MAX_GLOBE_SCALE, nextScale));
+	}
+
+	function getOutageSeverityColor(severity: InternetOutage['severity']): string {
+		if (severity === 'total') return '#ff4b3e';
+		if (severity === 'major') return '#ff9a2f';
+		return '#ffd166';
+	}
+
+	function toTitleCase(value: string): string {
+		return value
+			.toLowerCase()
+			.split(' ')
+			.filter(Boolean)
+			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+			.join(' ');
+	}
+
+	function humanizeToken(value: string): string {
+		if (!value) return '';
+		return toTitleCase(value.replace(/_/g, ' '));
+	}
+
+	function formatOutageTimestamp(timestamp: number): string {
+		if (!timestamp) return 'Unknown';
+		try {
+			return new Date(timestamp).toLocaleString();
+		} catch {
+			return 'Unknown';
+		}
+	}
+
+	function formatCount(value: number): string {
+		return Number.isFinite(value) ? value.toLocaleString() : 'n/a';
+	}
+
+	function buildOutageTooltipLines(outage: InternetOutage): string[] {
+		const lines: string[] = [];
+		if (outage.outageType) lines.push(`Type: ${humanizeToken(outage.outageType)}`);
+		if (outage.cause) lines.push(`Cause: ${humanizeToken(outage.cause)}`);
+		if (outage.detectedAt) lines.push(`Detected: ${formatOutageTimestamp(outage.detectedAt)}`);
+		if (outage.endedAt) lines.push(`Recovered: ${formatOutageTimestamp(outage.endedAt)}`);
+		if (outage.description) {
+			const summary = outage.description.trim();
+			lines.push(summary.length > 120 ? `${summary.slice(0, 117)}...` : summary);
+		}
+		return lines;
 	}
 
 	// Show tooltip using state (safe rendering)
@@ -233,6 +362,11 @@
 		if (!mapGroup || !path || !worldFeatures || !d3Module) return;
 
 		mapGroup.selectAll('*').remove();
+		let nextVisibleOutageCount = 0;
+		let nextVisibleSevereOutageCount = 0;
+		let nextVisibleAiDataCenterCount = 0;
+		let nextVisiblePipelineCount = 0;
+		let nextVisibleMilitaryBaseCount = 0;
 
 		mapGroup
 			.append('path')
@@ -333,6 +467,136 @@
 				.on('mouseleave', hideTooltip);
 		});
 
+		// Draw submarine cables - in a group for toggling
+		const submarineCablesGroup = mapGroup.append('g').attr('class', 'layer-submarine-cables');
+		SUBMARINE_CABLES.forEach((cable) => {
+			if (!Array.isArray(cable.points) || cable.points.length < 2) return;
+			if (!cable.points.some(([lon, lat]) => isPointVisible(lon, lat))) return;
+
+			const ownersPreview =
+				cable.owners.length > 110 ? `${cable.owners.slice(0, 107)}...` : cable.owners;
+			const cableGeometry = {
+				type: 'LineString',
+				coordinates: cable.points
+			} as GeoJSON.LineString;
+
+			submarineCablesGroup
+				.append('path')
+				.datum(cableGeometry)
+				.attr('d', path as unknown as string)
+				.attr('fill', 'none')
+				.attr('stroke', '#4bb6ff')
+				.attr('stroke-width', 0.85)
+				.attr('stroke-opacity', 0.38);
+			submarineCablesGroup
+				.append('path')
+				.datum(cableGeometry)
+				.attr('d', path as unknown as string)
+				.attr('fill', 'none')
+				.attr('stroke', 'transparent')
+				.attr('stroke-width', 5.5)
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) =>
+					showTooltip(event, cable.name, '#6dc7ff', [
+						`Length: ${cable.length}`,
+						`RFS: ${cable.rfs}`,
+						`Owners: ${ownersPreview}`
+					])
+				)
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw AI data centers - in a group for toggling
+		const aiDataCentersGroup = mapGroup.append('g').attr('class', 'layer-ai-data-centers');
+		AI_DATACENTERS.forEach((dc) => {
+			const projected = projectPoint(dc.lon, dc.lat);
+			if (!projected) return;
+			nextVisibleAiDataCenterCount += 1;
+			const [x, y] = projected;
+			const isPlanned = dc.status === 'planned';
+			const color = isPlanned ? '#7f67ff' : '#944bff';
+			const ownerPreview = dc.owner.length > 100 ? `${dc.owner.slice(0, 97)}...` : dc.owner;
+
+			aiDataCentersGroup
+				.append('rect')
+				.attr('x', x - 4.2)
+				.attr('y', y - 4.2)
+				.attr('width', 8.4)
+				.attr('height', 8.4)
+				.attr('fill', color)
+				.attr('fill-opacity', isPlanned ? 0.26 : 0.52)
+				.attr('stroke', '#d8c8ff')
+				.attr('stroke-opacity', 0.68)
+				.attr('stroke-width', 0.5);
+			aiDataCentersGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 10)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) =>
+					showTooltip(event, dc.name, color, [
+						`Status: ${isPlanned ? 'Planned' : 'Existing'}`,
+						`Owner: ${ownerPreview}`,
+						`Chips: ${formatCount(dc.chipCount)}`,
+						...(typeof dc.powerMW === 'number' && Number.isFinite(dc.powerMW)
+							? [`Power: ${dc.powerMW.toLocaleString()} MW`]
+							: [])
+					])
+				)
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
+		// Draw pipelines - in a group for toggling
+		const pipelinesGroup = mapGroup.append('g').attr('class', 'layer-pipelines');
+		PIPELINES.forEach((pipeline) => {
+			if (!Array.isArray(pipeline.points) || pipeline.points.length < 2) return;
+			if (!pipeline.points.some(([lon, lat]) => isPointVisible(lon, lat))) return;
+			nextVisiblePipelineCount += 1;
+
+			const pipelineColor = PIPELINE_COLORS[pipeline.type] || '#ff9a2f';
+			const lineGeometry = {
+				type: 'LineString',
+				coordinates: pipeline.points
+			} as GeoJSON.LineString;
+			const tooltipLines = [
+				`Type: ${humanizeToken(pipeline.type)}`,
+				`Status: ${humanizeToken(pipeline.status)}`,
+				...(pipeline.capacity ? [`Capacity: ${pipeline.capacity}`] : []),
+				...(pipeline.length ? [`Length: ${pipeline.length}`] : []),
+				...(pipeline.operator ? [`Operator: ${pipeline.operator}`] : []),
+				...(pipeline.countries?.length ? [`Countries: ${pipeline.countries.join(', ')}`] : [])
+			];
+
+			pipelinesGroup
+				.append('path')
+				.datum(lineGeometry)
+				.attr('d', path as unknown as string)
+				.attr('fill', 'none')
+				.attr('stroke', pipelineColor)
+				.attr('stroke-width', 1.25)
+				.attr('stroke-linecap', 'round')
+				.attr('stroke-linejoin', 'round')
+				.attr('stroke-dasharray', pipeline.status === 'construction' ? '4,2' : null)
+				.attr('stroke-opacity', 0.48);
+			pipelinesGroup
+				.append('path')
+				.datum(lineGeometry)
+				.attr('d', path as unknown as string)
+				.attr('fill', 'none')
+				.attr('stroke', 'transparent')
+				.attr('stroke-width', 6)
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) =>
+					showTooltip(event, pipeline.name, pipelineColor, tooltipLines)
+				)
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
 		// Draw cable landings - in a group for toggling
 		const cableLandingsGroup = mapGroup.append('g').attr('class', 'layer-cable-landings');
 		CABLE_LANDINGS.forEach((cl) => {
@@ -389,20 +653,79 @@
 
 		// Draw military bases - in a group for toggling
 		const militaryBasesGroup = mapGroup.append('g').attr('class', 'layer-military-bases');
-		MILITARY_BASES.forEach((mb) => {
-			const projected = projectPoint(mb.lon, mb.lat);
+		const visibleMilitaryBases: MilitaryBaseScreenPoint[] = [];
+		MILITARY_BASES.forEach((base) => {
+			const projected = projectPoint(base.lon, base.lat);
 			if (!projected) return;
-			const [x, y] = projected;
-			const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-			militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+			visibleMilitaryBases.push({ base, x: projected[0], y: projected[1] });
+		});
+		nextVisibleMilitaryBaseCount = visibleMilitaryBases.length;
+
+		const militaryClusterRadius = getMilitaryBaseClusterRadius(globeScale);
+		const militaryClusters = clusterMilitaryBases(visibleMilitaryBases, militaryClusterRadius);
+
+		militaryClusters.forEach((cluster) => {
+			if (cluster.bases.length <= 1) {
+				const base = cluster.bases[0];
+				if (!base) return;
+				const x = cluster.x;
+				const y = cluster.y;
+				const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
+				militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+				militaryBasesGroup
+					.append('circle')
+					.attr('cx', x)
+					.attr('cy', y)
+					.attr('r', 10)
+					.attr('fill', 'transparent')
+					.attr('class', 'hotspot-hit')
+					.on('mouseenter', (event: MouseEvent) => showTooltip(event, `★ ${base.desc}`, '#ff00ff'))
+					.on('mousemove', moveTooltip)
+					.on('mouseleave', hideTooltip);
+				return;
+			}
+
+			const clusterColor = '#ff4fc5';
+			const r = Math.max(9, Math.min(17, 7 + Math.log2(cluster.bases.length + 1) * 3));
+			const namesPreview = cluster.bases
+				.slice(0, 4)
+				.map((base) => base.name)
+				.join(', ');
+			const remaining = cluster.bases.length - 4;
+			const lines = [
+				`${cluster.bases.length} military bases`,
+				...(namesPreview ? [namesPreview] : []),
+				...(remaining > 0 ? [`+${remaining} more`] : [])
+			];
+
 			militaryBasesGroup
 				.append('circle')
-				.attr('cx', x)
-				.attr('cy', y)
-				.attr('r', 10)
+				.attr('cx', cluster.x)
+				.attr('cy', cluster.y)
+				.attr('r', r)
+				.attr('fill', 'rgba(63, 16, 47, 0.85)')
+				.attr('stroke', clusterColor)
+				.attr('stroke-width', 1.1);
+			militaryBasesGroup
+				.append('text')
+				.attr('x', cluster.x)
+				.attr('y', cluster.y + 2.5)
+				.attr('fill', '#ffd6f1')
+				.attr('font-size', '8px')
+				.attr('font-weight', 700)
+				.attr('text-anchor', 'middle')
+				.attr('font-family', 'monospace')
+				.text(String(cluster.bases.length));
+			militaryBasesGroup
+				.append('circle')
+				.attr('cx', cluster.x)
+				.attr('cy', cluster.y)
+				.attr('r', Math.max(12, r + 3))
 				.attr('fill', 'transparent')
 				.attr('class', 'hotspot-hit')
-				.on('mouseenter', (event: MouseEvent) => showTooltip(event, `★ ${mb.desc}`, '#ff00ff'))
+				.on('mouseenter', (event: MouseEvent) =>
+					showTooltip(event, '★ Military Base Cluster', clusterColor, lines)
+				)
 				.on('mousemove', moveTooltip)
 				.on('mouseleave', hideTooltip);
 		});
@@ -445,8 +768,58 @@
 				.on('mouseleave', hideTooltip);
 		});
 
+		// Draw internet outages - in a group for toggling
+		const outagesGroup = mapGroup.append('g').attr('class', 'layer-outages');
+		internetOutages.forEach((outage) => {
+			const projected = projectPoint(outage.lon, outage.lat);
+			if (!projected) return;
+			nextVisibleOutageCount += 1;
+			if (outage.severity === 'major' || outage.severity === 'total') {
+				nextVisibleSevereOutageCount += 1;
+			}
+
+			const [x, y] = projected;
+			const color = getOutageSeverityColor(outage.severity);
+			const tooltipTitle = outage.country || 'Internet outage';
+			const tooltipLines = buildOutageTooltipLines(outage);
+
+			outagesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 7)
+				.attr('fill', color)
+				.attr('fill-opacity', 0.24)
+				.attr('class', 'pulse outage-pulse');
+			outagesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 3.4)
+				.attr('fill', color)
+				.attr('stroke', '#0f2029')
+				.attr('stroke-width', 1.1);
+			outagesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 11)
+				.attr('fill', 'transparent')
+				.attr('class', 'hotspot-hit')
+				.on('mouseenter', (event: MouseEvent) =>
+					showTooltip(event, tooltipTitle, color, tooltipLines)
+				)
+				.on('mousemove', moveTooltip)
+				.on('mouseleave', hideTooltip);
+		});
+
 		// Draw custom monitors with locations
 		drawMonitors();
+		visibleOutageCount = nextVisibleOutageCount;
+		visibleSevereOutageCount = nextVisibleSevereOutageCount;
+		visibleAiDataCenterCount = nextVisibleAiDataCenterCount;
+		visiblePipelineCount = nextVisiblePipelineCount;
+		visibleMilitaryBaseCount = nextVisibleMilitaryBaseCount;
 
 		// Apply current layer visibility
 		updateLayerVisibility($mapLayers);
@@ -538,6 +911,12 @@
 		if (!mapGroup) return;
 
 		mapGroup.select('.layer-hotspots').style('display', layers.hotspots ? null : 'none');
+		mapGroup.select('.layer-outages').style('display', layers.outages ? null : 'none');
+		mapGroup.select('.layer-ai-data-centers').style('display', layers.aiDataCenters ? null : 'none');
+		mapGroup.select('.layer-pipelines').style('display', layers.pipelines ? null : 'none');
+		mapGroup
+			.select('.layer-submarine-cables')
+			.style('display', layers.submarineCables ? null : 'none');
 		mapGroup.select('.layer-conflict-zones').style('display', layers.conflictZones ? null : 'none');
 		mapGroup.select('.layer-chokepoints').style('display', layers.chokepoints ? null : 'none');
 		mapGroup.select('.layer-cable-landings').style('display', layers.cableLandings ? null : 'none');
@@ -757,12 +1136,34 @@
 		renderMap();
 	}
 
+	async function loadOutages(): Promise<void> {
+		outagesLoading = true;
+		outagesError = null;
+		try {
+			const snapshot = await fetchOutagesSnapshot();
+			internetOutages = Array.isArray(snapshot?.outages) ? snapshot.outages : [];
+			outagesGeneratedAt =
+				typeof snapshot?.generatedAt === 'number' ? snapshot.generatedAt : Date.now();
+		} catch (err) {
+			outagesError = err instanceof Error ? err.message : 'Failed to load outages';
+		} finally {
+			outagesLoading = false;
+		}
+	}
+
 	// Reactively update monitors when they change
 	$effect(() => {
 		// Track monitors changes
 		const _monitorsRef = monitors;
 		if (_monitorsRef && mapGroup && projection) {
 			drawMonitors();
+		}
+	});
+
+	$effect(() => {
+		const _outageRef = internetOutages;
+		if (_outageRef && mapGroup && projection) {
+			renderMap();
 		}
 	});
 
@@ -782,6 +1183,15 @@
 		color: string;
 	}[] = [
 		{ key: 'hotspots', labelKey: 'map.layer.hotspots', icon: '●', color: '#ff4444' },
+		{ key: 'outages', labelKey: 'map.layer.outages', icon: '◉', color: '#ff9a2f' },
+		{ key: 'aiDataCenters', labelKey: 'map.layer.aiDataCenters', icon: '■', color: '#944bff' },
+		{ key: 'pipelines', labelKey: 'map.layer.pipelines', icon: '═', color: '#ff6b35' },
+		{
+			key: 'submarineCables',
+			labelKey: 'map.layer.submarineCables',
+			icon: '≈',
+			color: '#4bb6ff'
+		},
 		{ key: 'conflictZones', labelKey: 'map.layer.conflictZones', icon: '▢', color: '#ff6666' },
 		{ key: 'chokepoints', labelKey: 'map.layer.chokepoints', icon: '◆', color: '#00aaff' },
 		{ key: 'cableLandings', labelKey: 'map.layer.cableLandings', icon: '◎', color: '#aa44ff' },
@@ -814,6 +1224,10 @@
 			label: 'ALL',
 			state: {
 				hotspots: true,
+				outages: true,
+				aiDataCenters: true,
+				pipelines: true,
+				submarineCables: true,
 				conflictZones: true,
 				chokepoints: true,
 				cableLandings: true,
@@ -828,6 +1242,10 @@
 			label: 'RISK',
 			state: {
 				hotspots: true,
+				outages: true,
+				aiDataCenters: false,
+				pipelines: true,
+				submarineCables: true,
 				conflictZones: true,
 				chokepoints: true,
 				cableLandings: false,
@@ -842,6 +1260,10 @@
 			label: 'INFRA',
 			state: {
 				hotspots: false,
+				outages: true,
+				aiDataCenters: true,
+				pipelines: true,
+				submarineCables: true,
 				conflictZones: false,
 				chokepoints: true,
 				cableLandings: true,
@@ -856,6 +1278,10 @@
 			label: 'OPS',
 			state: {
 				hotspots: true,
+				outages: true,
+				aiDataCenters: false,
+				pipelines: true,
+				submarineCables: true,
 				conflictZones: false,
 				chokepoints: true,
 				cableLandings: false,
@@ -890,6 +1316,13 @@
 
 	onMount(() => {
 		initMap();
+		void loadOutages();
+		const outageInterval = window.setInterval(() => {
+			void loadOutages();
+		}, OUTAGE_REFRESH_INTERVAL_MS);
+		return () => {
+			window.clearInterval(outageInterval);
+		};
 	});
 </script>
 
@@ -988,6 +1421,16 @@
 				<strong>{$mapLayers.hotspots ? HOTSPOTS.length : 0}</strong>
 			</div>
 			<div class="hud-row">
+				<span>Internet Outages</span>
+				<strong>
+					{$mapLayers.outages ? (outagesLoading ? '…' : visibleOutageCount) : 0}
+				</strong>
+			</div>
+			<div class="hud-row">
+				<span>Severe Outages</span>
+				<strong>{$mapLayers.outages ? visibleSevereOutageCount : 0}</strong>
+			</div>
+			<div class="hud-row">
 				<span>Critical Nodes</span>
 				<strong>{$mapLayers.hotspots ? severeHotspotCount : 0}</strong>
 			</div>
@@ -995,6 +1438,41 @@
 				<span>Conflict Zones</span>
 				<strong>{$mapLayers.conflictZones ? CONFLICT_ZONES.length : 0}</strong>
 			</div>
+			<div class="hud-row">
+				<span>Military Bases</span>
+				<strong>
+					{$mapLayers.militaryBases
+						? `${visibleMilitaryBaseCount}/${MILITARY_BASES.length}`
+						: 0}
+				</strong>
+			</div>
+			<div class="hud-row">
+				<span>AI Data Centers</span>
+				<strong>{$mapLayers.aiDataCenters ? visibleAiDataCenterCount : 0}</strong>
+			</div>
+			<div class="hud-row">
+				<span>Pipelines</span>
+				<strong>{$mapLayers.pipelines ? visiblePipelineCount : 0}</strong>
+			</div>
+			<div class="hud-row">
+				<span>Submarine Cables</span>
+				<strong>{$mapLayers.submarineCables ? SUBMARINE_CABLES.length : 0}</strong>
+			</div>
+			<div class="hud-row">
+				<span>Cable Landings</span>
+				<strong>{$mapLayers.cableLandings ? CABLE_LANDINGS.length : 0}</strong>
+			</div>
+			{#if outagesError}
+				<div class="hud-row hud-row-error">
+					<span>Outages API</span>
+					<strong>Offline</strong>
+				</div>
+			{:else if outagesGeneratedAt}
+				<div class="hud-row">
+					<span>Outages Updated</span>
+					<strong>{new Date(outagesGeneratedAt).toLocaleTimeString()}</strong>
+				</div>
+			{/if}
 			<div class="hud-legend">
 				<div class="legend-item">
 					<span class="legend-dot high"></span> {t($language, 'legend.high')}
@@ -1410,6 +1888,10 @@
 		font-size: 0.66rem;
 	}
 
+	.hud-row.hud-row-error strong {
+		color: #ff8974;
+	}
+
 	.hud-legend {
 		margin-top: 0.2rem;
 		padding-top: 0.35rem;
@@ -1448,6 +1930,10 @@
 	/* Pulse animation for hotspots */
 	:global(.pulse) {
 		animation: pulse 2s ease-in-out infinite;
+	}
+
+	:global(.outage-pulse) {
+		animation-duration: 1.4s;
 	}
 
 	@keyframes pulse {

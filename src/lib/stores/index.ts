@@ -95,6 +95,10 @@ export { activeTab, currentTabConfig, visiblePanels, isPanelInTab } from './tabs
 export {
 	mapLayers,
 	showHotspots,
+	showOutages,
+	showAiDataCenters,
+	showPipelines,
+	showSubmarineCables,
 	showConflictZones,
 	showChokepoints,
 	showCableLandings,
