@@ -155,6 +155,14 @@ The worker uses a KV namespace (`SITUATION_STORE`) for caching:
 - make a cool loading screen (2-3)
 - create rss feeds from social media (1)
 
+## Frontend / Dashboard
+
+After implementing UI components in Svelte 5, verify correct rune syntax ($state, $derived, etc.) and check that tooltips/overlays aren't clipped by parent overflow:hidden.
+
+## API Integration
+
+When integrating with external APIs (Polymarket, Cloudflare, etc.), always check for CORS restrictions first and verify field names from actual API responses before implementing — don't assume field names from documentation.
+
 ## General Guidance
 
 - Always ask before deleting content.
