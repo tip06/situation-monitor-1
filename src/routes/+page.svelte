@@ -415,6 +415,7 @@
 		}
 
 		sources.init();
+		news.init();
 
 		// Load initial data: visible tab first, defer rest
 			async function initialLoad() {

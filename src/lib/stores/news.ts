@@ -3,6 +3,7 @@
  */
 
 import { writable, derived, get } from 'svelte/store';
+import { browser } from '$app/environment';
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config';
 import { deduplicateNews } from '$lib/utils';
@@ -69,6 +70,44 @@ function enrichNewsItem(item: NewsItem): NewsItem {
 	};
 }
 
+// --- localStorage persistence (stale-while-revalidate) ---
+
+const STORAGE_PREFIX = 'sm_news_';
+const MAX_PERSISTED_ITEMS = 50;
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface PersistedCategory {
+	items: NewsItem[];
+	lastUpdated: number;
+}
+
+function persistCategory(category: NewsCategory, items: NewsItem[], lastUpdated: number): void {
+	if (!browser) return;
+	try {
+		const data: PersistedCategory = {
+			items: items.slice(0, MAX_PERSISTED_ITEMS),
+			lastUpdated
+		};
+		localStorage.setItem(STORAGE_PREFIX + category, JSON.stringify(data));
+	} catch {
+		// Quota exceeded or other storage error — silently ignore
+	}
+}
+
+function loadPersistedCategory(category: NewsCategory): PersistedCategory | null {
+	if (!browser) return null;
+	try {
+		const raw = localStorage.getItem(STORAGE_PREFIX + category);
+		if (!raw) return null;
+		const data = JSON.parse(raw) as PersistedCategory;
+		// Discard if too old
+		if (Date.now() - data.lastUpdated > CACHE_MAX_AGE_MS) return null;
+		return data;
+	} catch {
+		return null;
+	}
+}
+
 // Create the store
 function createNewsStore() {
 	const { subscribe, set, update } = writable<NewsState>(createInitialState());
@@ -77,10 +116,24 @@ function createNewsStore() {
 		subscribe,
 
 		/**
-		 * Initialize store
+		 * Initialize store — hydrates from localStorage for instant display
 		 */
 		init() {
-			update((state) => ({ ...state, initialized: true }));
+			update((state) => {
+				const categories = { ...state.categories };
+				for (const cat of NEWS_CATEGORIES) {
+					const cached = loadPersistedCategory(cat);
+					if (cached && cached.items.length > 0) {
+						categories[cat] = {
+							items: cached.items.map(enrichNewsItem),
+							loading: false,
+							error: null,
+							lastUpdated: cached.lastUpdated
+						};
+					}
+				}
+				return { categories, initialized: true };
+			});
 		},
 
 		/**
@@ -125,6 +178,7 @@ function createNewsStore() {
 			const enrichedItems = items.map(enrichNewsItem);
 			// Deduplicate by title similarity (keeps most recent)
 			const deduplicatedItems = deduplicateNews(enrichedItems);
+			const now = Date.now();
 
 			update((state) => ({
 				...state,
@@ -134,10 +188,11 @@ function createNewsStore() {
 						items: deduplicatedItems,
 						loading: false,
 						error: null,
-						lastUpdated: Date.now()
+						lastUpdated: now
 					}
 				}
 			}));
+			persistCategory(category, deduplicatedItems, now);
 		},
 
 		/**
@@ -146,11 +201,13 @@ function createNewsStore() {
 		 * returns only a recent delta.
 		 */
 		mergeItems(category: NewsCategory, incoming: NewsItem[]) {
+			const now = Date.now();
 			update((state) => {
 				const existing = state.categories[category]?.items ?? [];
 				const merged = mergeNewsItems(existing, incoming);
 				const enriched = merged.map(enrichNewsItem);
 				const deduplicated = deduplicateNews(enriched);
+				persistCategory(category, deduplicated, now);
 				return {
 					...state,
 					categories: {
@@ -159,7 +216,7 @@ function createNewsStore() {
 							items: deduplicated,
 							loading: false,
 							error: null,
-							lastUpdated: Date.now()
+							lastUpdated: now
 						}
 					}
 				};
