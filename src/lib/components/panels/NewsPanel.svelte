@@ -38,6 +38,10 @@
 	let activeRegions = $state<Set<string>>(new Set());
 	let activeTopics = $state<Set<string>>(new Set());
 
+	// Pagination
+	const PAGE_SIZE = 25;
+	let displayLimit = $state(PAGE_SIZE);
+
 	// Get the appropriate derived store based on category
 	const categoryStores = {
 		politics: politicsNews,
@@ -99,7 +103,23 @@
 
 		return result;
 	});
+	const visibleItems = $derived(items.slice(0, displayLimit));
+	const hasMore = $derived(items.length > displayLimit);
+	const remainingCount = $derived(Math.min(PAGE_SIZE, items.length - displayLimit));
 	const count = $derived(items.length);
+
+	// Reset displayLimit when filters change
+	$effect(() => {
+		// Track filter dependencies
+		searchQuery;
+		activeRegions;
+		activeTopics;
+		displayLimit = PAGE_SIZE;
+	});
+
+	function showMore() {
+		displayLimit += PAGE_SIZE;
+	}
 
 	const hasActiveFilters = $derived(
 		searchQuery.trim() !== '' || activeRegions.size > 0 || activeTopics.size > 0
@@ -152,6 +172,13 @@
 		lastNavNonce = nav.nonce;
 
 		const targetId = nav.sourceId;
+
+		// Auto-expand displayLimit if target item is beyond visible slice
+		const targetIndex = items.findIndex((item) => item.id === targetId);
+		if (targetIndex >= 0 && targetIndex >= displayLimit) {
+			displayLimit = targetIndex + 1;
+		}
+
 		tick().then(() => {
 			if (!newsList) return;
 			const el = newsList.querySelector<HTMLElement>(`[data-news-id="${targetId}"]`);
@@ -258,11 +285,19 @@
 				<div class="empty-state">{t($language, 'news.noMatches')}</div>
 			{:else}
 				<div class="news-list" bind:this={newsList}>
-					{#each items as item (item.id)}
+					{#each visibleItems as item (item.id)}
 						<div data-news-id={item.id} class:nav-highlight={highlightedId === item.id}>
 							<NewsItem {item} />
 						</div>
 					{/each}
+					{#if hasMore}
+						<div class="show-more-row">
+							<span class="show-more-count">Showing {visibleItems.length} of {items.length}</span>
+							<button class="show-more-btn" onclick={showMore}>
+								Show {remainingCount} more
+							</button>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}
@@ -459,6 +494,38 @@
 		0%   { background: rgba(99, 102, 241, 0.25); }
 		60%  { background: rgba(99, 102, 241, 0.1); }
 		100% { background: transparent; }
+	}
+
+	.show-more-row {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0;
+		border-top: 1px solid var(--border);
+		margin-top: 0.25rem;
+	}
+
+	.show-more-count {
+		font-size: 0.5rem;
+		color: var(--text-muted);
+	}
+
+	.show-more-btn {
+		font-size: 0.55rem;
+		padding: 0.2rem 0.5rem;
+		border-radius: 3px;
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--text);
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.show-more-btn:hover {
+		border-color: var(--indigo);
+		background: rgba(79, 70, 229, 0.15);
+		color: white;
 	}
 
 	.empty-state {
