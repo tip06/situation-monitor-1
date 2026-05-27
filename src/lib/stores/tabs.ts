@@ -3,7 +3,14 @@
  */
 
 import { writable, derived } from 'svelte/store';
-import { DEFAULT_TAB, getTabConfig, getTabPanels, type TabId, type TabConfig } from '$lib/config';
+import {
+	DEFAULT_TAB,
+	TABS,
+	getTabConfig,
+	getTabPanels,
+	type TabConfig,
+	type TabId
+} from '$lib/config';
 import type { PanelId } from '$lib/config';
 
 const STORAGE_KEY = 'situation-monitor-active-tab';
@@ -16,7 +23,7 @@ function loadSavedTab(): TabId {
 
 	try {
 		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved && ['global', 'regional', 'economy', 'social', 'technology'].includes(saved)) {
+		if (saved && TABS.some((tab) => tab.id === saved)) {
 			return saved as TabId;
 		}
 	} catch {

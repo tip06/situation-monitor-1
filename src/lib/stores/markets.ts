@@ -204,10 +204,34 @@ function createMarketsStore() {
 			update((state) => ({
 				...state,
 				initialized: true,
-				indices: { items: data.indices, loading: false, error: null, lastUpdated: now },
-				sectors: { items: data.sectors, loading: false, error: null, lastUpdated: now },
-				commodities: { items: data.commodities, loading: false, error: null, lastUpdated: now },
-				crypto: { items: data.crypto, loading: false, error: null, lastUpdated: now }
+				indices: {
+					...state.indices,
+					items: data.indices,
+					loading: false,
+					error: null,
+					lastUpdated: now
+				},
+				sectors: {
+					...state.sectors,
+					items: data.sectors,
+					loading: false,
+					error: null,
+					lastUpdated: now
+				},
+				commodities: {
+					...state.commodities,
+					items: data.commodities,
+					loading: false,
+					error: null,
+					lastUpdated: now
+				},
+				crypto: {
+					...state.crypto,
+					items: data.crypto,
+					loading: false,
+					error: null,
+					lastUpdated: now
+				}
 			}));
 		},
 

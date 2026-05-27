@@ -50,6 +50,7 @@ describe('Settings Store', () => {
 		expect(state.enabled['map']).toBe(true);
 		expect(state.enabled['politics']).toBe(true);
 		expect(state.enabled['tech']).toBe(true);
+		expect(state.navigationLayout).toBe('horizontal');
 	});
 
 	it('should toggle panel visibility', async () => {
@@ -110,12 +111,32 @@ describe('Settings Store', () => {
 		expect(get(settings).initialized).toBe(true);
 	});
 
+	it('should persist navigation layout preference', async () => {
+		const { settings } = await import('./settings');
+
+		settings.setNavigationLayout('sidebar');
+
+		expect(get(settings).navigationLayout).toBe('sidebar');
+		expect(localStorageMock.setItem).toHaveBeenCalledWith('navigationLayoutPreference', 'sidebar');
+	});
+
+	it('should toggle navigation layout preference', async () => {
+		const { settings } = await import('./settings');
+
+		settings.toggleNavigationLayout();
+		expect(get(settings).navigationLayout).toBe('sidebar');
+
+		settings.toggleNavigationLayout();
+		expect(get(settings).navigationLayout).toBe('horizontal');
+	});
+
 	it('should reset to defaults', async () => {
 		const { settings } = await import('./settings');
 
 		// Make some changes
 		settings.togglePanel('tech');
 		settings.updateSize('map', { width: 1000 });
+		settings.setNavigationLayout('sidebar');
 
 		// Reset
 		settings.reset();
@@ -123,6 +144,7 @@ describe('Settings Store', () => {
 		const state = get(settings);
 		expect(state.enabled['tech']).toBe(true);
 		expect(state.sizes['map']).toBeUndefined();
+		expect(state.navigationLayout).toBe('horizontal');
 	});
 
 	it('should derive enabled panels correctly', async () => {

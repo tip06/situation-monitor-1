@@ -24,7 +24,6 @@
 	const isChangeAvailable = $derived(
 		typeof item.changePercent === 'number' && Number.isFinite(item.changePercent)
 	);
-	const isDataAvailable = $derived(isPriceAvailable && isChangeAvailable);
 	const changeClass = $derived(isChangeAvailable ? getChangeClass(item.changePercent) : '');
 	const priceDisplay = $derived(
 		!isPriceAvailable
@@ -50,7 +49,9 @@
 				{isPriceAvailable ? `${currencySymbol}${priceDisplay}` : priceDisplay}
 			</div>
 		{/if}
-		<div class="market-change {changeClass}" class:unavailable={!isChangeAvailable}>{changeText}</div>
+		<div class="market-change {changeClass}" class:unavailable={!isChangeAvailable}>
+			{changeText}
+		</div>
 	</div>
 </div>
 
