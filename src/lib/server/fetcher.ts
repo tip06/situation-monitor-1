@@ -17,6 +17,7 @@ import { FEEDS, type FeedSource, type HtmlSelectors } from '$lib/config/feeds';
 import { parseHtmlPage, isHtmlContent } from './html-parser';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
+import { sortNewsNewestFirst } from '$lib/utils/news-filter';
 import {
 	hashCode,
 	transformGdeltArticle,
@@ -27,17 +28,8 @@ import {
 	type GdeltResponse
 } from '$lib/shared/news-parser';
 import { INDICES, SECTORS, COMMODITIES, CRYPTO } from '$lib/config/markets';
-import {
-	CircuitBreaker,
-	CircuitBreakerRegistry
-} from '$lib/services/circuit-breaker';
-import {
-	upsertNewsItems,
-	setMarketData,
-	getMarketData,
-	getMeta,
-	setMeta
-} from './db';
+import { CircuitBreaker, CircuitBreakerRegistry } from '$lib/services/circuit-breaker';
+import { upsertNewsItems, setMarketData, getMarketData, getMeta, setMeta } from './db';
 import { env } from '$env/dynamic/private';
 import { getEnabledFeedsByCategory } from './sources';
 
@@ -71,7 +63,11 @@ function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number, accept?: string): Promise<Response> {
+async function fetchWithTimeout(
+	url: string,
+	timeoutMs: number,
+	accept?: string
+): Promise<Response> {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 	try {
@@ -87,10 +83,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number, accept?: string)
 /**
  * Promise pool - limits concurrency for a list of async tasks
  */
-async function promisePool<T>(
-	tasks: (() => Promise<T>)[],
-	concurrency: number
-): Promise<T[]> {
+async function promisePool<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
 	const results: T[] = [];
 	let index = 0;
 
@@ -123,15 +116,17 @@ function getFeedHealthKey(category: string, sourceName: string): string {
 
 function getFeedHealth(category: string, sourceName: string): FeedHealthInfo {
 	const meta = getMeta<FeedHealthInfo>(getFeedHealthKey(category, sourceName));
-	return meta?.value ?? {
-		lastAttempt: 0,
-		lastSuccess: 0,
-		consecutiveFailures: 0,
-		avgResponseTimeMs: 0,
-		lastError: null,
-		totalRequests: 0,
-		totalSuccesses: 0
-	};
+	return (
+		meta?.value ?? {
+			lastAttempt: 0,
+			lastSuccess: 0,
+			consecutiveFailures: 0,
+			avgResponseTimeMs: 0,
+			lastError: null,
+			totalRequests: 0,
+			totalSuccesses: 0
+		}
+	);
 }
 
 function updateFeedHealth(
@@ -187,7 +182,10 @@ function getDefaultMarketHealth(category: MarketCategoryKey): MarketCategoryHeal
 }
 
 function getMarketHealth(category: MarketCategoryKey): MarketCategoryHealth {
-	return getMeta<MarketCategoryHealth>(`marketHealth:${category}`)?.value ?? getDefaultMarketHealth(category);
+	return (
+		getMeta<MarketCategoryHealth>(`marketHealth:${category}`)?.value ??
+		getDefaultMarketHealth(category)
+	);
 }
 
 function setMarketHealth(
@@ -284,8 +282,9 @@ function extractTag(xml: string, tag: string): string | null {
 function extractLinkHref(xml: string): string | null {
 	// Match <link> tags with href attribute (Atom format, including self-closing)
 	// Prefer rel="alternate" if available, otherwise take the first one
-	const alternateMatch = xml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i)
-		|| xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']alternate["']/i);
+	const alternateMatch =
+		xml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i) ||
+		xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']alternate["']/i);
 	if (alternateMatch) return alternateMatch[1];
 
 	const anyMatch = xml.match(/<link[^>]*href=["']([^"']+)["']/i);
@@ -351,7 +350,9 @@ async function fetchRssFeedServer(
 			if (items.length > 0) {
 				console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items (HTML)`);
 			} else {
-				console.warn(`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`);
+				console.warn(
+					`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`
+				);
 			}
 			breaker.recordSuccess();
 			updateFeedHealth(category, sourceName, items.length > 0, Date.now() - start);
@@ -372,7 +373,9 @@ async function fetchRssFeedServer(
 			console.log(`[Fetcher] ${category}/${sourceName}: RSS yielded 0 items, trying HTML parser`);
 			const htmlItems = parseHtmlPage(text, url, sourceName, category, selectors);
 			if (htmlItems.length > 0) {
-				console.log(`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`);
+				console.log(
+					`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`
+				);
 				breaker.recordSuccess();
 				updateFeedHealth(category, sourceName, true, Date.now() - start);
 				return htmlItems;
@@ -444,7 +447,15 @@ export async function fetchCategoryNewsServer(
 
 	// Build RSS fetch tasks with concurrency pool
 	const rssTasks = categoryFeeds.map(
-		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category, FEED_TIMEOUT_MS, feed.sourceType, feed.selectors)
+		(feed) => () =>
+			fetchRssFeedServer(
+				feed.url,
+				feed.name,
+				category,
+				FEED_TIMEOUT_MS,
+				feed.sourceType,
+				feed.selectors
+			)
 	);
 	const rssResults = await promisePool(rssTasks, FEED_CONCURRENCY);
 	const rssItems = rssResults.flat();
@@ -473,7 +484,7 @@ export async function fetchCategoryNewsServer(
 	}
 
 	const filtered = filterByAge(allItems, NEWS_MAX_AGE_DAYS);
-	filtered.sort((a, b) => b.timestamp - a.timestamp);
+	sortNewsNewestFirst(filtered);
 
 	// Store in SQLite
 	if (filtered.length > 0) {

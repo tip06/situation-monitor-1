@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
-	import { getRelativeTime } from '$lib/utils';
+	import { getRelativeTime, sortNewsNewestFirst } from '$lib/utils';
 	import { intelNews, language } from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import type { NewsItem } from '$lib/types';
@@ -57,9 +57,7 @@
 	}
 
 	// Sort by timestamp (newest first) then transform
-	const allItems = $derived(
-		[...storeItems].sort((a, b) => b.timestamp - a.timestamp).map(transformToIntelItem)
-	);
+	const allItems = $derived(sortNewsNewestFirst([...storeItems]).map(transformToIntelItem));
 
 	// Extract available regions and topics from current items
 	const availableRegions = $derived(
@@ -158,7 +156,11 @@
 						bind:value={searchQuery}
 					/>
 					{#if hasActiveFilters}
-						<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
+						<button
+							class="clear-btn"
+							onclick={clearFilters}
+							title={t($language, 'common.clearFilters')}
+						>
 							&times;
 						</button>
 					{/if}
@@ -278,7 +280,9 @@
 		line-height: 1;
 		padding: 0.2rem 0.35rem;
 		cursor: pointer;
-		transition: color 0.15s, border-color 0.15s;
+		transition:
+			color 0.15s,
+			border-color 0.15s;
 	}
 
 	.clear-btn:hover {

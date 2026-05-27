@@ -15,7 +15,13 @@ export {
 	latLonToXY
 } from './format';
 
-export { filterNews, deduplicateNews, titleSimilarity } from './news-filter';
+export {
+	filterNews,
+	deduplicateNews,
+	getNewsSortTimestamp,
+	sortNewsNewestFirst,
+	titleSimilarity
+} from './news-filter';
 export type { FilterOptions } from './news-filter';
 export {
 	isRegionalHighSignal,

@@ -19,6 +19,7 @@
 	} from '$lib/stores';
 	import { language } from '$lib/stores';
 	import { t } from '$lib/i18n';
+	import { sortNewsNewestFirst } from '$lib/utils';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -59,8 +60,8 @@
 	};
 
 	const categoryStore = $derived(categoryStores[category]);
-	// Sort items by timestamp (newest first)
-	const allItems = $derived([...$categoryStore.items].sort((a, b) => b.timestamp - a.timestamp));
+	// Sort items by effective timestamp (newest first)
+	const allItems = $derived(sortNewsNewestFirst([...$categoryStore.items]));
 	const loading = $derived($categoryStore.loading);
 	const error = $derived($categoryStore.error);
 
@@ -70,9 +71,7 @@
 	);
 	const availableTopics = $derived(
 		[
-			...new Set(
-				allItems.flatMap((item) => item.topics ?? []).filter((t): t is string => !!t)
-			)
+			...new Set(allItems.flatMap((item) => item.topics ?? []).filter((t): t is string => !!t))
 		].sort()
 	);
 
@@ -96,9 +95,7 @@
 
 		// Topic filter (OR within selected topics)
 		if (activeTopics.size > 0) {
-			result = result.filter(
-				(item) => item.topics && item.topics.some((t) => activeTopics.has(t))
-			);
+			result = result.filter((item) => item.topics && item.topics.some((t) => activeTopics.has(t)));
 		}
 
 		return result;
@@ -185,7 +182,9 @@
 			if (!el) return;
 			el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 			highlightedId = targetId;
-			setTimeout(() => { highlightedId = null; }, 2000);
+			setTimeout(() => {
+				highlightedId = null;
+			}, 2000);
 		});
 	});
 </script>
@@ -242,7 +241,11 @@
 							bind:value={searchQuery}
 						/>
 						{#if hasActiveFilters}
-							<button class="clear-btn" onclick={clearFilters} title={t($language, 'common.clearFilters')}>
+							<button
+								class="clear-btn"
+								onclick={clearFilters}
+								title={t($language, 'common.clearFilters')}
+							>
 								&times;
 							</button>
 						{/if}
@@ -407,7 +410,9 @@
 		line-height: 1;
 		padding: 0.2rem 0.35rem;
 		cursor: pointer;
-		transition: color 0.15s, border-color 0.15s;
+		transition:
+			color 0.15s,
+			border-color 0.15s;
 	}
 
 	.clear-btn:hover {
@@ -491,9 +496,15 @@
 	}
 
 	@keyframes nav-pulse {
-		0%   { background: rgba(99, 102, 241, 0.25); }
-		60%  { background: rgba(99, 102, 241, 0.1); }
-		100% { background: transparent; }
+		0% {
+			background: rgba(99, 102, 241, 0.25);
+		}
+		60% {
+			background: rgba(99, 102, 241, 0.1);
+		}
+		100% {
+			background: transparent;
+		}
 	}
 
 	.show-more-row {

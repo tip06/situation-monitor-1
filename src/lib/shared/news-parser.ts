@@ -5,7 +5,7 @@
 
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
-import { deduplicateNews } from '$lib/utils/news-filter';
+import { deduplicateNews, sortNewsNewestFirst } from '$lib/utils/news-filter';
 
 /**
  * Simple hash function to generate unique IDs from URLs
@@ -89,7 +89,7 @@ export function filterByAge(items: NewsItem[], maxAgeDays: number): NewsItem[] {
  */
 export function mergeNewsItems(existing: NewsItem[], incoming: NewsItem[]): NewsItem[] {
 	const merged = deduplicateNews([...incoming, ...existing]);
-	return filterByAge(merged, 7).sort((a, b) => b.timestamp - a.timestamp);
+	return sortNewsNewestFirst(filterByAge(merged, 7));
 }
 
 /** GDELT query keywords for each category */
@@ -103,8 +103,7 @@ export const GDELT_QUERIES: Record<NewsCategory, string> = {
 	brazil: '(Brazil OR Brasilia OR "Sao Paulo" OR Lula OR Bolsonaro)',
 	latam: '("Latin America" OR Mexico OR Argentina OR Colombia OR Chile OR Peru)',
 	iran: '(Iran OR Tehran OR IRGC OR Khamenei OR "Iranian government" OR "Persian Gulf")',
-	venezuela:
-		'(Venezuela OR Maduro OR Caracas OR "Venezuelan government" OR "Venezuelan crisis")',
+	venezuela: '(Venezuela OR Maduro OR Caracas OR "Venezuelan government" OR "Venezuelan crisis")',
 	greenland:
 		'(Greenland OR Arctic OR "Danish territory" OR Nuuk OR "Arctic council" OR "polar region")',
 	fringe: '(conspiracy OR "deep state" OR "globalist agenda")'
