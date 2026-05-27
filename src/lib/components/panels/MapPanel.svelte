@@ -343,19 +343,17 @@
 
 	function setupGlobeInteractions(): void {
 		if (!d3Module || !svg || !projection) return;
-		const dragBehavior = d3Module
-			.drag<SVGSVGElement, unknown>()
-			.on('drag', (event) => {
-				if (!projection) return;
-				const nextLon = globeRotation[0] + event.dx * 0.42;
-				const nextLat = Math.max(
-					-MAX_LAT_ROTATION,
-					Math.min(MAX_LAT_ROTATION, globeRotation[1] - event.dy * 0.42)
-				);
-				globeRotation = [nextLon, nextLat, 0];
-				projection.rotate(globeRotation);
-				renderMap();
-			});
+		const dragBehavior = d3Module.drag<SVGSVGElement, unknown>().on('drag', (event) => {
+			if (!projection) return;
+			const nextLon = globeRotation[0] + event.dx * 0.42;
+			const nextLat = Math.max(
+				-MAX_LAT_ROTATION,
+				Math.min(MAX_LAT_ROTATION, globeRotation[1] - event.dy * 0.42)
+			);
+			globeRotation = [nextLon, nextLat, 0];
+			projection.rotate(globeRotation);
+			renderMap();
+		});
 		svg.call(dragBehavior as any);
 	}
 
@@ -630,7 +628,12 @@
 			const projected = projectPoint(ns.lon, ns.lat);
 			if (!projected) return;
 			const [x, y] = projected;
-			nuclearSitesGroup.append('circle').attr('cx', x).attr('cy', y).attr('r', 2).attr('fill', '#ffff00');
+			nuclearSitesGroup
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', 2)
+				.attr('fill', '#ffff00');
 			nuclearSitesGroup
 				.append('circle')
 				.attr('cx', x)
@@ -672,7 +675,11 @@
 				const x = cluster.x;
 				const y = cluster.y;
 				const starPath = `M${x},${y - 5} L${x + 1.5},${y - 1.5} L${x + 5},${y - 1.5} L${x + 2.5},${y + 1} L${x + 3.5},${y + 5} L${x},${y + 2.5} L${x - 3.5},${y + 5} L${x - 2.5},${y + 1} L${x - 5},${y - 1.5} L${x - 1.5},${y - 1.5} Z`;
-				militaryBasesGroup.append('path').attr('d', starPath).attr('fill', '#ff00ff').attr('opacity', 0.8);
+				militaryBasesGroup
+					.append('path')
+					.attr('d', starPath)
+					.attr('fill', '#ff00ff')
+					.attr('opacity', 0.8);
 				militaryBasesGroup
 					.append('circle')
 					.attr('cx', x)
@@ -860,7 +867,9 @@
 		path = d3.geoPath().projection(projection);
 
 		try {
-			const worldResponse = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+			const worldResponse = await fetch(
+				'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+			);
 			const world = await worldResponse.json();
 			worldFeatures = topojson.feature(
 				world,
@@ -913,7 +922,9 @@
 
 		mapGroup.select('.layer-hotspots').style('display', layers.hotspots ? null : 'none');
 		mapGroup.select('.layer-outages').style('display', layers.outages ? null : 'none');
-		mapGroup.select('.layer-ai-data-centers').style('display', layers.aiDataCenters ? null : 'none');
+		mapGroup
+			.select('.layer-ai-data-centers')
+			.style('display', layers.aiDataCenters ? null : 'none');
 		mapGroup.select('.layer-pipelines').style('display', layers.pipelines ? null : 'none');
 		mapGroup
 			.select('.layer-submarine-cables')
@@ -978,7 +989,10 @@
 						.attr('fill', 'transparent')
 						.attr('class', 'hotspot-hit')
 						.on('mouseenter', (event: MouseEvent) =>
-							showTooltip(event, `📡 ${m.name}`, color, [m.location?.name || '', m.keywords.join(', ')])
+							showTooltip(event, `📡 ${m.name}`, color, [
+								m.location?.name || '',
+								m.query || m.keywords.join(', ')
+							])
 						)
 						.on('mousemove', moveTooltip)
 						.on('mouseleave', hideTooltip);
@@ -1472,9 +1486,7 @@
 			<div class="hud-row">
 				<span>Military Bases</span>
 				<strong>
-					{$mapLayers.militaryBases
-						? `${visibleMilitaryBaseCount}/${MILITARY_BASES.length}`
-						: 0}
+					{$mapLayers.militaryBases ? `${visibleMilitaryBaseCount}/${MILITARY_BASES.length}` : 0}
 				</strong>
 			</div>
 			<div class="hud-row">
@@ -1506,13 +1518,16 @@
 			{/if}
 			<div class="hud-legend">
 				<div class="legend-item">
-					<span class="legend-dot high"></span> {t($language, 'legend.high')}
+					<span class="legend-dot high"></span>
+					{t($language, 'legend.high')}
 				</div>
 				<div class="legend-item">
-					<span class="legend-dot elevated"></span> {t($language, 'legend.elevated')}
+					<span class="legend-dot elevated"></span>
+					{t($language, 'legend.elevated')}
 				</div>
 				<div class="legend-item">
-					<span class="legend-dot low"></span> {t($language, 'legend.low')}
+					<span class="legend-dot low"></span>
+					{t($language, 'legend.low')}
 				</div>
 			</div>
 		</div>

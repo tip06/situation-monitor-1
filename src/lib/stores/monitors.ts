@@ -5,6 +5,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { CustomMonitor, NewsItem, MarkerType, ThreatLevel } from '$lib/types';
+import { evaluateBooleanQuery, keywordsToBooleanQuery } from '$lib/utils/boolean-query';
 
 const STORAGE_KEY = 'customMonitors';
 const MAX_MONITORS = 20;
@@ -182,20 +183,23 @@ function createMonitorsStore() {
 				if (!monitor.enabled) continue;
 
 				for (const item of newsItems) {
-					const textToSearch = `${item.title} ${item.description || ''}`.toLowerCase();
-					const matchedKeywords: string[] = [];
+					const textToSearch = `${item.title} ${item.description || ''}`;
+					const query = monitor.query?.trim() || keywordsToBooleanQuery(monitor.keywords);
 
-					for (const keyword of monitor.keywords) {
-						if (textToSearch.includes(keyword.toLowerCase())) {
-							matchedKeywords.push(keyword);
+					if (!query) continue;
+
+					try {
+						const result = evaluateBooleanQuery(textToSearch, query);
+						if (result.matches) {
+							matches.push({ monitor, item, matchedKeywords: result.matchedTerms });
 						}
-					}
-
-					if (matchedKeywords.length > 0) {
-						matches.push({ monitor, item, matchedKeywords });
+					} catch (error) {
+						console.warn(`Invalid monitor query for "${monitor.name}":`, error);
 					}
 				}
 			}
+
+			matches.sort((a, b) => b.item.timestamp - a.item.timestamp);
 
 			// Update match counts and store matches
 			update((s) => {
@@ -240,6 +244,7 @@ function createMonitorsStore() {
 				id: generateId(),
 				name: marker.name,
 				keywords: [], // No keywords for non-monitor markers
+				query: '',
 				enabled: true,
 				color: marker.color,
 				location: {
