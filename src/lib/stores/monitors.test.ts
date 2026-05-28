@@ -229,6 +229,42 @@ describe('Monitors Store', () => {
 		]);
 	});
 
+	it('should sort Krypt3ia items without pubDate behind dated items', async () => {
+		const { monitors } = await import('./monitors');
+
+		monitors.addMonitor({
+			name: 'Iran Monitor',
+			keywords: ['iran'],
+			enabled: true
+		});
+
+		const base = Date.now();
+		// Simulate the fetcher fallback: krypt3ia item has no pubDate and timestamp = Date.now()
+		const matches = monitors.scanForMatches([
+			{
+				id: 'krypt3ia-fallback',
+				title: 'Iran analysis from Krypt3ia',
+				source: 'Krypt3ia',
+				link: 'https://krypt3ia.example/article',
+				timestamp: base, // fallback-stamped as "now"
+				pubDate: undefined,
+				category: 'iran' as const
+			},
+			{
+				id: 'dated-wire',
+				title: 'Iran update from Wire',
+				source: 'Wire',
+				link: 'https://wire.example/iran',
+				timestamp: base - 30 * 60_000, // 30 minutes older
+				pubDate: new Date(base - 30 * 60_000).toUTCString(),
+				category: 'iran' as const
+			}
+		]);
+
+		// Krypt3ia with no pubDate should sort behind the dated item
+		expect(matches.map((m) => m.item.id)).toEqual(['dated-wire', 'krypt3ia-fallback']);
+	});
+
 	it('should not match disabled monitors', async () => {
 		const { monitors } = await import('./monitors');
 

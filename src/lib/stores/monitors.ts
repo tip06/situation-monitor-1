@@ -6,6 +6,7 @@ import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { CustomMonitor, NewsItem, MarkerType, ThreatLevel } from '$lib/types';
 import { evaluateBooleanQuery, keywordsToBooleanQuery } from '$lib/utils/boolean-query';
+import { getNewsSortTimestamp } from '$lib/utils/news-filter';
 
 const STORAGE_KEY = 'customMonitors';
 const MAX_MONITORS = 20;
@@ -199,7 +200,7 @@ function createMonitorsStore() {
 				}
 			}
 
-			matches.sort((a, b) => b.item.timestamp - a.item.timestamp);
+			matches.sort((a, b) => getNewsSortTimestamp(b.item) - getNewsSortTimestamp(a.item));
 
 			// Update match counts and store matches
 			update((s) => {

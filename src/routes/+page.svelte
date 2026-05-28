@@ -46,6 +46,7 @@
 	import { getTabPanels, type PanelId, type TabId } from '$lib/config';
 	import { detectAlerts } from '$lib/alerts/engine';
 	import { alertPopups } from '$lib/stores/alertPopups';
+	import { scheduleAnalysis } from '$lib/stores/analysisResults';
 
 	// Modal state
 	let monitorFormOpen = $state(false);
@@ -144,7 +145,7 @@
 		}
 		alertDetectionTimer = setTimeout(() => {
 			runAlertDetection();
-		}, 0);
+		}, 1000);
 	}
 
 	function cancelMonitorScan() {
@@ -267,6 +268,13 @@
 		intelligence.setInitialized();
 	}
 
+	const REFRESH_TIMEOUT_MS = 45_000;
+	function makeRefreshTimeout(): Promise<never> {
+		return new Promise<never>((_, reject) =>
+			setTimeout(() => reject(new Error('Refresh timed out')), REFRESH_TIMEOUT_MS)
+		);
+	}
+
 	// Refresh handlers
 	async function handleRefresh() {
 		refresh.startRefresh();
@@ -274,7 +282,10 @@
 		try {
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
-			await Promise.all([loadNews(visibleCategories, token), loadMarkets()]);
+			await Promise.race([
+				Promise.all([loadNews(visibleCategories, token), loadMarkets()]),
+				makeRefreshTimeout()
+			]);
 			if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
 				scheduleDeferredCategoryLoad(remainingCategories, token);
 			}
@@ -391,6 +402,10 @@
 		scheduleMonitorScan(`${monitorDefinitionScanKey}::${newsMonitorScanKey}`);
 	});
 
+	$effect(() => {
+		scheduleAnalysis($allNewsItems, $language);
+	});
+
 	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
 		const tab = $activeTab;
@@ -457,11 +472,14 @@
 			try {
 				const currentTab = $activeTab;
 				const visibleCategories = getVisibleNewsCategories(currentTab);
-				await Promise.all([
-					loadNews(visibleCategories, token),
-					loadMarkets(),
-					loadMiscData(),
-					loadIntelligence()
+				await Promise.race([
+					Promise.all([
+						loadNews(visibleCategories, token),
+						loadMarkets(),
+						loadMiscData(),
+						loadIntelligence()
+					]),
+					makeRefreshTimeout()
 				]);
 				loadedTabs = new Set([currentTab]);
 				initialLoadDone = true;
@@ -665,13 +683,13 @@
 					<div class="analysis-row">
 						{#if isPanelVisible('correlation')}
 							<div class="panel-slot">
-								<CorrelationPanel news={$allNewsItems} />
+								<CorrelationPanel />
 							</div>
 						{/if}
 
 						{#if isPanelVisible('narrative')}
 							<div class="panel-slot">
-								<NarrativePanel news={$allNewsItems} />
+								<NarrativePanel />
 							</div>
 						{/if}
 					</div>
