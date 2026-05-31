@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { NewsCategory } from '$lib/types';
-import { getNewsByCategory } from '$lib/server/db';
+import { getNewsByCategory, isNewsCategoryCacheStale } from '$lib/server/db';
 import { fetchCategoryNewsServer } from '$lib/server/fetcher';
 import { getEnabledFeedsByCategory } from '$lib/server/sources';
 
@@ -23,8 +23,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	// Try SQLite first
 	let items = getNewsByCategory(category, since);
 
-	// If no data in SQLite, trigger a server-side fetch
-	if (items.length === 0) {
+	// Fetch when SQLite is empty or the background checkpoint is stale.
+	if (items.length === 0 || isNewsCategoryCacheStale(category)) {
 		items = await fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category));
 	}
 

@@ -21,6 +21,8 @@ import {
 	hashCode,
 	transformGdeltArticle,
 	filterByAge,
+	limitNewsByCategorySources,
+	parseNewsTimestamp,
 	GDELT_QUERIES,
 	RSS_ONLY_CATEGORIES,
 	RSS_PLUS_GDELT_CATEGORIES,
@@ -227,17 +229,18 @@ function parseRssFeedXml(xml: string, sourceName: string, category: NewsCategory
 			extractTag(content, 'pubDate') ||
 			extractTag(content, 'published') ||
 			extractTag(content, 'updated');
-		let description =
+		const description =
 			extractTag(content, 'description') ||
 			extractTag(content, 'summary') ||
 			extractTag(content, 'content');
 
 		// Extract link: try href attribute first (Atom), then tag content (RSS 2.0)
-		let link = extractLinkHref(content) || extractTag(content, 'link');
+		const link = extractLinkHref(content) || extractTag(content, 'link');
 
 		if (!title || !link) continue;
 
-		const timestamp = pubDate ? new Date(pubDate).getTime() : Date.now();
+		const timestamp = parseNewsTimestamp(pubDate);
+		if (timestamp === null) continue;
 		const urlHash = hashCode(link);
 		const id = `rss-${category}-${sourceName.toLowerCase().replace(/\s+/g, '-')}-${urlHash}`;
 
@@ -253,7 +256,7 @@ function parseRssFeedXml(xml: string, sourceName: string, category: NewsCategory
 			title: stripHtml(title),
 			link,
 			pubDate: pubDate ?? undefined,
-			timestamp: isNaN(timestamp) ? Date.now() : timestamp,
+			timestamp,
 			description: cleanDesc,
 			source: sourceName,
 			category,
@@ -472,8 +475,10 @@ export async function fetchCategoryNewsServer(
 		allItems = [...rssItems, ...gdeltItems];
 	}
 
-	const filtered = filterByAge(allItems, NEWS_MAX_AGE_DAYS);
-	filtered.sort((a, b) => b.timestamp - a.timestamp);
+	const filtered = limitNewsByCategorySources(
+		filterByAge(allItems, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp),
+		category
+	);
 
 	// Store in SQLite
 	if (filtered.length > 0) {

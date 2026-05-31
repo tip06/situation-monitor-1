@@ -7,6 +7,13 @@ import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { deduplicateNews } from '$lib/utils/news-filter';
 
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const CATEGORY_SOURCE_LIMITS: Partial<Record<NewsCategory, Record<string, number>>> = {
+	tech: {
+		'ArXiv AI': 20
+	}
+};
+
 /**
  * Simple hash function to generate unique IDs from URLs
  */
@@ -76,12 +83,47 @@ export function transformGdeltArticle(
 }
 
 /**
+ * Parse a publication date while rejecting missing, malformed, or implausibly future values.
+ */
+export function parseNewsTimestamp(
+	dateInput: string | number | Date | null | undefined
+): number | null {
+	if (dateInput === null || dateInput === undefined || dateInput === '') return null;
+	const timestamp = new Date(dateInput).getTime();
+	if (!Number.isFinite(timestamp) || timestamp > Date.now() + MAX_FUTURE_SKEW_MS) return null;
+	return timestamp;
+}
+
+/**
  * Filter items to last N days
  */
 export function filterByAge(items: NewsItem[], maxAgeDays: number): NewsItem[] {
 	const now = Date.now();
 	const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
-	return items.filter((item) => now - item.timestamp <= maxAge);
+	return items.filter(
+		(item) =>
+			Number.isFinite(item.timestamp) &&
+			item.timestamp <= now + MAX_FUTURE_SKEW_MS &&
+			now - item.timestamp <= maxAge
+	);
+}
+
+/**
+ * Keep high-volume batch sources from crowding out the mixed category feed.
+ */
+export function limitNewsByCategorySources(items: NewsItem[], category: NewsCategory): NewsItem[] {
+	const limits = CATEGORY_SOURCE_LIMITS[category];
+	if (!limits) return items;
+
+	const counts = new Map<string, number>();
+	return items.filter((item) => {
+		const limit = limits[item.source];
+		if (limit === undefined) return true;
+		const count = counts.get(item.source) ?? 0;
+		if (count >= limit) return false;
+		counts.set(item.source, count + 1);
+		return true;
+	});
 }
 
 /**
@@ -89,7 +131,9 @@ export function filterByAge(items: NewsItem[], maxAgeDays: number): NewsItem[] {
  */
 export function mergeNewsItems(existing: NewsItem[], incoming: NewsItem[]): NewsItem[] {
 	const merged = deduplicateNews([...incoming, ...existing]);
-	return filterByAge(merged, 7).sort((a, b) => b.timestamp - a.timestamp);
+	const recent = filterByAge(merged, 7).sort((a, b) => b.timestamp - a.timestamp);
+	const category = recent[0]?.category;
+	return category ? limitNewsByCategorySources(recent, category) : recent;
 }
 
 /** GDELT query keywords for each category */
@@ -103,8 +147,7 @@ export const GDELT_QUERIES: Record<NewsCategory, string> = {
 	brazil: '(Brazil OR Brasilia OR "Sao Paulo" OR Lula OR Bolsonaro)',
 	latam: '("Latin America" OR Mexico OR Argentina OR Colombia OR Chile OR Peru)',
 	iran: '(Iran OR Tehran OR IRGC OR Khamenei OR "Iranian government" OR "Persian Gulf")',
-	venezuela:
-		'(Venezuela OR Maduro OR Caracas OR "Venezuelan government" OR "Venezuelan crisis")',
+	venezuela: '(Venezuela OR Maduro OR Caracas OR "Venezuelan government" OR "Venezuelan crisis")',
 	greenland:
 		'(Greenland OR Arctic OR "Danish territory" OR Nuuk OR "Arctic council" OR "polar region")',
 	fringe: '(conspiracy OR "deep state" OR "globalist agenda")'

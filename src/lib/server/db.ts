@@ -120,6 +120,11 @@ function runMigrations(db: Database.Database): void {
 // --- News operations ---
 
 import type { NewsItem, NewsCategory } from '$lib/types';
+import { filterByAge, limitNewsByCategorySources } from '$lib/shared/news-parser';
+
+const NEWS_READ_LIMIT = 1000;
+const NEWS_RESPONSE_LIMIT = 200;
+const NEWS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 
 const INSERT_NEWS = `
 	INSERT OR REPLACE INTO news (id, title, link, pub_date, timestamp, description, source, category, is_alert, alert_keyword, region, topics, created_at)
@@ -174,12 +179,20 @@ export function getNewsByCategory(category: NewsCategory, since?: number): NewsI
 		const rows = db
 			.prepare('SELECT * FROM news WHERE category = ? AND timestamp > ? ORDER BY timestamp DESC')
 			.all(category, since) as Record<string, unknown>[];
-		return rows.map(rowToNewsItem);
+		return limitNewsByCategorySources(filterByAge(rows.map(rowToNewsItem), 7), category);
 	}
 	const rows = db
-		.prepare('SELECT * FROM news WHERE category = ? ORDER BY timestamp DESC LIMIT 200')
-		.all(category) as Record<string, unknown>[];
-	return rows.map(rowToNewsItem);
+		.prepare('SELECT * FROM news WHERE category = ? ORDER BY timestamp DESC LIMIT ?')
+		.all(category, NEWS_READ_LIMIT) as Record<string, unknown>[];
+	return limitNewsByCategorySources(filterByAge(rows.map(rowToNewsItem), 7), category).slice(
+		0,
+		NEWS_RESPONSE_LIMIT
+	);
+}
+
+export function isNewsCategoryCacheStale(category: NewsCategory): boolean {
+	const checkpoint = getMeta<number>(`checkpoint:${category}`);
+	return !checkpoint || Date.now() - checkpoint.updatedAt > NEWS_CACHE_MAX_AGE_MS;
 }
 
 export function getNewsByCategoryBatch(

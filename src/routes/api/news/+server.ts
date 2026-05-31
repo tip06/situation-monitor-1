@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { NewsCategory } from '$lib/types';
-import { getNewsByCategoryBatch } from '$lib/server/db';
+import { getNewsByCategoryBatch, isNewsCategoryCacheStale } from '$lib/server/db';
 import { fetchCategoryNewsServer } from '$lib/server/fetcher';
 import { getEnabledFeedsByCategory } from '$lib/server/sources';
 
@@ -38,11 +38,10 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Get data from SQLite
 	const result = getNewsByCategoryBatch(categories, sinceByCategory);
 
-	// For any category with no data, trigger a server-side fetch
-	// (even if `since` was provided — an empty DB means we need a full pull)
+	// Fetch categories that are empty or older than the background refresh interval.
 	const fetchPromises: Promise<void>[] = [];
 	for (const category of categories) {
-		if (result[category].length === 0) {
+		if (result[category].length === 0 || isNewsCategoryCacheStale(category)) {
 			fetchPromises.push(
 				fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category)).then((items) => {
 					result[category] = items;

@@ -11,7 +11,7 @@ import { toIntlLocale } from '$lib/i18n/types';
 export function timeAgo(dateInput: string | number | Date, locale: Locale = 'en'): string {
 	const date = new Date(dateInput);
 	const now = new Date();
-	const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+	const seconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
 
 	if (seconds < 60) return locale === 'pt-BR' ? 'agora' : 'just now';
 	if (seconds < 3600) return Math.floor(seconds / 60) + 'm';

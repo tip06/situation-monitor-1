@@ -13,7 +13,7 @@ import type { NewsItem, NewsCategory } from '$lib/types';
 import type { HtmlSelectors } from '$lib/config/feeds';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
-import { hashCode } from '$lib/shared/news-parser';
+import { hashCode, parseNewsTimestamp } from '$lib/shared/news-parser';
 
 /**
  * Check if a text response looks like HTML rather than RSS/Atom XML
@@ -79,7 +79,8 @@ function enrichAndFilter(
 		const title = stripHtml(article.title);
 		if (!title) continue;
 
-		const timestamp = article.date ? new Date(article.date).getTime() : Date.now();
+		const timestamp = parseNewsTimestamp(article.date);
+		if (timestamp === null) continue;
 		const cleanDesc = article.description ? stripHtml(article.description).slice(0, 200) : undefined;
 		const detectText = `${title} ${cleanDesc ?? ''}`;
 
@@ -93,7 +94,7 @@ function enrichAndFilter(
 			title,
 			link: article.link,
 			pubDate: article.date ?? undefined,
-			timestamp: isNaN(timestamp) ? Date.now() : timestamp,
+			timestamp,
 			description: cleanDesc,
 			source: sourceName,
 			category,

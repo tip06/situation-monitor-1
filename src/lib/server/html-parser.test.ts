@@ -14,18 +14,6 @@ vi.mock('$lib/utils/regional-filter', () => ({
 	classifyRegionalItem: () => ({ accepted: true })
 }));
 
-vi.mock('$lib/shared/news-parser', () => ({
-	hashCode: (str: string) => {
-		let hash = 0;
-		for (let i = 0; i < str.length; i++) {
-			const char = str.charCodeAt(i);
-			hash = (hash << 5) - hash + char;
-			hash = hash & hash;
-		}
-		return Math.abs(hash).toString(36);
-	}
-}));
-
 import { parseHtmlPage, isHtmlContent } from './html-parser';
 
 describe('isHtmlContent', () => {
@@ -38,11 +26,15 @@ describe('isHtmlContent', () => {
 	});
 
 	it('returns false for RSS feed', () => {
-		expect(isHtmlContent('<?xml version="1.0"?><rss version="2.0"><channel></channel></rss>')).toBe(false);
+		expect(isHtmlContent('<?xml version="1.0"?><rss version="2.0"><channel></channel></rss>')).toBe(
+			false
+		);
 	});
 
 	it('returns false for Atom feed', () => {
-		expect(isHtmlContent('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>')).toBe(false);
+		expect(
+			isHtmlContent('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>')
+		).toBe(false);
 	});
 
 	it('returns false for empty string', () => {
@@ -89,6 +81,29 @@ describe('parseHtmlPage', () => {
 			expect(items[0].source).toBe('Test Source');
 			expect(items[0].category).toBe('politics');
 			expect(items[0].id).toMatch(/^html-politics-test-source-/);
+		});
+
+		it('discards articles without a trustworthy publication date', () => {
+			const html = `
+				<html><body>
+					<div class="item">
+						<h3><a href="/article/missing-date">Missing Date</a></h3>
+					</div>
+					<div class="item">
+						<h3><a href="/article/invalid-date">Invalid Date</a></h3>
+						<time datetime="not-a-date">Unknown</time>
+					</div>
+				</body></html>
+			`;
+
+			const items = parseHtmlPage(html, baseUrl, sourceName, category, {
+				article: '.item',
+				title: 'h3',
+				link: 'h3 a',
+				date: 'time'
+			});
+
+			expect(items).toEqual([]);
 		});
 	});
 
@@ -178,14 +193,17 @@ describe('parseHtmlPage', () => {
 				<html><body>
 					<div class="post">
 						<h3><a href="/p/1">Post One</a></h3>
+						<time datetime="2026-01-20">Jan 20</time>
 						<p>Post one content</p>
 					</div>
 					<div class="post">
 						<h3><a href="/p/2">Post Two</a></h3>
+						<time datetime="2026-01-21">Jan 21</time>
 						<p>Post two content</p>
 					</div>
 					<div class="post">
 						<h3><a href="/p/3">Post Three</a></h3>
+						<time datetime="2026-01-22">Jan 22</time>
 						<p>Post three content</p>
 					</div>
 				</body></html>
@@ -222,10 +240,12 @@ describe('parseHtmlPage', () => {
 				<html><body>
 					<article>
 						<h2><a href="/relative/path">Relative Link</a></h2>
+						<time datetime="2026-01-20">Jan 20</time>
 						<p>Description</p>
 					</article>
 					<article>
 						<h2><a href="sibling-path">Sibling Link</a></h2>
+						<time datetime="2026-01-21">Jan 21</time>
 						<p>Description</p>
 					</article>
 				</body></html>
@@ -243,6 +263,7 @@ describe('parseHtmlPage', () => {
 				<html><body>
 					<article>
 						<h2><a href="/alert">BREAKING: Major Event</a></h2>
+						<time datetime="2026-01-20">Jan 20</time>
 						<p>Details</p>
 					</article>
 				</body></html>
@@ -261,9 +282,11 @@ describe('parseHtmlPage', () => {
 				<html><body>
 					<article>
 						<h2><a href="/same-link">First Title</a></h2>
+						<time datetime="2026-01-20">Jan 20</time>
 					</article>
 					<article>
 						<h2><a href="/same-link">Duplicate Title</a></h2>
+						<time datetime="2026-01-20">Jan 20</time>
 					</article>
 				</body></html>
 			`;
@@ -278,7 +301,7 @@ describe('parseHtmlPage', () => {
 			const html = `
 				<html><head>
 					<script type="application/ld+json">
-					[{"@type": "NewsArticle", "headline": "From JSON-LD", "url": "https://example.com/jsonld"}]
+					[{"@type": "NewsArticle", "headline": "From JSON-LD", "url": "https://example.com/jsonld", "datePublished": "2026-01-20"}]
 					</script>
 				</head><body>
 					<article>
@@ -301,6 +324,7 @@ describe('parseHtmlPage', () => {
 				</head><body>
 					<article>
 						<h2><a href="/article-tag">From Article Tag</a></h2>
+						<time datetime="2026-01-20">Jan 20</time>
 						<p>Some content</p>
 					</article>
 				</body></html>
