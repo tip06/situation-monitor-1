@@ -1,27 +1,25 @@
 <script lang="ts">
 	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
 	import { Modal } from '$lib/components/modals';
-	import { analyzeCorrelations } from '$lib/analysis/correlation';
 	import {
 		type CompoundPatternAdditionCategory,
 		type CompoundPatternManualAdditions
 	} from '$lib/config/analysis';
 	import { createManualInsight, fetchManualAdditions } from '$lib/api';
-	import type { NewsItem } from '$lib/types';
 	import { language, alertNavigation } from '$lib/stores';
+	import { correlationResults } from '$lib/stores/analysisResults';
 	import { t } from '$lib/i18n';
 	import type { MessageKey } from '$lib/i18n/messages/en';
 	import { untrack } from 'svelte';
 
 	interface Props {
-		news?: NewsItem[];
 		loading?: boolean;
 		error?: string | null;
 	}
 
-	let { news = [], loading = false, error = null }: Props = $props();
+	let { loading = false, error = null }: Props = $props();
 
-	const analysis = $derived(analyzeCorrelations(news, $language));
+	const analysis = $correlationResults;
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -263,7 +261,7 @@
 {/if}
 
 <Panel id="correlation" title={t($language, 'correlation.title')} {loading} {error} draggable={!expandedCompoundId}>
-	{#if news.length === 0 && !loading && !error}
+	{#if !analysis && !loading && !error}
 		<div class="empty-state">{t($language, 'correlation.insufficient')}</div>
 	{:else if analysis}
 		<div class="correlation-content" class:compound-expanded={!!expandedCompoundId}>

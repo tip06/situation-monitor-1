@@ -17,6 +17,7 @@ import { FEEDS, type FeedSource, type HtmlSelectors } from '$lib/config/feeds';
 import { parseHtmlPage, isHtmlContent } from './html-parser';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { classifyRegionalItem } from '$lib/utils/regional-filter';
+import { sortNewsNewestFirst } from '$lib/utils/news-filter';
 import {
 	hashCode,
 	transformGdeltArticle,
@@ -29,17 +30,8 @@ import {
 	type GdeltResponse
 } from '$lib/shared/news-parser';
 import { INDICES, SECTORS, COMMODITIES, CRYPTO } from '$lib/config/markets';
-import {
-	CircuitBreaker,
-	CircuitBreakerRegistry
-} from '$lib/services/circuit-breaker';
-import {
-	upsertNewsItems,
-	setMarketData,
-	getMarketData,
-	getMeta,
-	setMeta
-} from './db';
+import { CircuitBreaker, CircuitBreakerRegistry } from '$lib/services/circuit-breaker';
+import { upsertNewsItems, setMarketData, getMarketData, getMeta, setMeta } from './db';
 import { env } from '$env/dynamic/private';
 import { getEnabledFeedsByCategory } from './sources';
 
@@ -48,9 +40,7 @@ import { getEnabledFeedsByCategory } from './sources';
 const FEED_TIMEOUT_MS = 8000;
 const FEED_CONCURRENCY = 5;
 const FINNHUB_TIMEOUT_MS = 10000;
-const FINNHUB_STAGGER_MS = 100;
 const NEWS_MAX_AGE_DAYS = 7;
-const BETWEEN_CATEGORIES_DELAY_MS = 500;
 const FEED_HEALTH_MAX_FAILURES = 5;
 const FEED_HEALTH_RETRY_AFTER_MS = 60 * 60 * 1000; // 1 hour
 
@@ -69,11 +59,11 @@ const finnhubBreaker = new CircuitBreaker('finnhub', {
 
 // --- Utilities ---
 
-function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithTimeout(url: string, timeoutMs: number, accept?: string): Promise<Response> {
+async function fetchWithTimeout(
+	url: string,
+	timeoutMs: number,
+	accept?: string
+): Promise<Response> {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 	try {
@@ -89,10 +79,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number, accept?: string)
 /**
  * Promise pool - limits concurrency for a list of async tasks
  */
-async function promisePool<T>(
-	tasks: (() => Promise<T>)[],
-	concurrency: number
-): Promise<T[]> {
+async function promisePool<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
 	const results: T[] = [];
 	let index = 0;
 
@@ -125,15 +112,17 @@ function getFeedHealthKey(category: string, sourceName: string): string {
 
 function getFeedHealth(category: string, sourceName: string): FeedHealthInfo {
 	const meta = getMeta<FeedHealthInfo>(getFeedHealthKey(category, sourceName));
-	return meta?.value ?? {
-		lastAttempt: 0,
-		lastSuccess: 0,
-		consecutiveFailures: 0,
-		avgResponseTimeMs: 0,
-		lastError: null,
-		totalRequests: 0,
-		totalSuccesses: 0
-	};
+	return (
+		meta?.value ?? {
+			lastAttempt: 0,
+			lastSuccess: 0,
+			consecutiveFailures: 0,
+			avgResponseTimeMs: 0,
+			lastError: null,
+			totalRequests: 0,
+			totalSuccesses: 0
+		}
+	);
 }
 
 function updateFeedHealth(
@@ -189,7 +178,10 @@ function getDefaultMarketHealth(category: MarketCategoryKey): MarketCategoryHeal
 }
 
 function getMarketHealth(category: MarketCategoryKey): MarketCategoryHealth {
-	return getMeta<MarketCategoryHealth>(`marketHealth:${category}`)?.value ?? getDefaultMarketHealth(category);
+	return (
+		getMeta<MarketCategoryHealth>(`marketHealth:${category}`)?.value ??
+		getDefaultMarketHealth(category)
+	);
 }
 
 function setMarketHealth(
@@ -287,8 +279,9 @@ function extractTag(xml: string, tag: string): string | null {
 function extractLinkHref(xml: string): string | null {
 	// Match <link> tags with href attribute (Atom format, including self-closing)
 	// Prefer rel="alternate" if available, otherwise take the first one
-	const alternateMatch = xml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i)
-		|| xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']alternate["']/i);
+	const alternateMatch =
+		xml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i) ||
+		xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']alternate["']/i);
 	if (alternateMatch) return alternateMatch[1];
 
 	const anyMatch = xml.match(/<link[^>]*href=["']([^"']+)["']/i);
@@ -354,7 +347,9 @@ async function fetchRssFeedServer(
 			if (items.length > 0) {
 				console.log(`[Fetcher] ${category}/${sourceName}: ${items.length} items (HTML)`);
 			} else {
-				console.warn(`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`);
+				console.warn(
+					`[Fetcher] ${category}/${sourceName}: 0 items from HTML (length: ${text.length})`
+				);
 			}
 			breaker.recordSuccess();
 			updateFeedHealth(category, sourceName, items.length > 0, Date.now() - start);
@@ -375,7 +370,9 @@ async function fetchRssFeedServer(
 			console.log(`[Fetcher] ${category}/${sourceName}: RSS yielded 0 items, trying HTML parser`);
 			const htmlItems = parseHtmlPage(text, url, sourceName, category, selectors);
 			if (htmlItems.length > 0) {
-				console.log(`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`);
+				console.log(
+					`[Fetcher] ${category}/${sourceName}: ${htmlItems.length} items (auto-detected HTML)`
+				);
 				breaker.recordSuccess();
 				updateFeedHealth(category, sourceName, true, Date.now() - start);
 				return htmlItems;
@@ -447,7 +444,15 @@ export async function fetchCategoryNewsServer(
 
 	// Build RSS fetch tasks with concurrency pool
 	const rssTasks = categoryFeeds.map(
-		(feed) => () => fetchRssFeedServer(feed.url, feed.name, category, FEED_TIMEOUT_MS, feed.sourceType, feed.selectors)
+		(feed) => () =>
+			fetchRssFeedServer(
+				feed.url,
+				feed.name,
+				category,
+				FEED_TIMEOUT_MS,
+				feed.sourceType,
+				feed.selectors
+			)
 	);
 	const rssResults = await promisePool(rssTasks, FEED_CONCURRENCY);
 	const rssItems = rssResults.flat();
@@ -476,7 +481,7 @@ export async function fetchCategoryNewsServer(
 	}
 
 	const filtered = limitNewsByCategorySources(
-		filterByAge(allItems, NEWS_MAX_AGE_DAYS).sort((a, b) => b.timestamp - a.timestamp),
+		sortNewsNewestFirst(filterByAge(allItems, NEWS_MAX_AGE_DAYS)),
 		category
 	);
 
@@ -583,38 +588,37 @@ async function fetchIndicesServer(): Promise<MarketFetchResult<MarketItem>> {
 		};
 	}
 
-	let freshCount = 0;
-	let fallbackCount = 0;
-	let lastError: string | null = null;
-	const results: MarketItem[] = [];
-	for (const index of INDICES) {
+	const tasks = INDICES.map((index) => async () => {
 		const cached = cachedBySymbol.get(index.symbol);
 		const etfSymbol = INDEX_ETF_MAP[index.symbol] || index.symbol;
 		const { quote, error } = await fetchFinnhubQuote(etfSymbol);
 		const hasFreshQuote =
 			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
-		if (hasFreshQuote && quote) {
-			freshCount++;
-		} else if (
-			cached &&
-			isFiniteNumber(cached.price) &&
-			isFiniteNumber(cached.change) &&
-			isFiniteNumber(cached.changePercent)
-		) {
-			fallbackCount++;
-		}
-		if (error) lastError = error;
+		return {
+			item: {
+				symbol: index.symbol,
+				name: index.name,
+				price: hasFreshQuote ? quote!.c : (cached?.price ?? NaN),
+				change: hasFreshQuote ? quote!.d : (cached?.change ?? NaN),
+				changePercent: hasFreshQuote ? quote!.dp : (cached?.changePercent ?? NaN),
+				type: 'index' as const
+			},
+			fresh: hasFreshQuote,
+			fallback:
+				!hasFreshQuote &&
+				cached != null &&
+				isFiniteNumber(cached.price) &&
+				isFiniteNumber(cached.change) &&
+				isFiniteNumber(cached.changePercent),
+			error
+		};
+	});
 
-		results.push({
-			symbol: index.symbol,
-			name: index.name,
-			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
-			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
-			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN),
-			type: 'index' as const
-		});
-		await delay(FINNHUB_STAGGER_MS);
-	}
+	const taskResults = await promisePool(tasks, 3);
+	const results = taskResults.map((r) => r.item);
+	const freshCount = taskResults.filter((r) => r.fresh).length;
+	const fallbackCount = taskResults.filter((r) => r.fallback).length;
+	const lastError = taskResults.map((r) => r.error).filter(Boolean).pop() ?? null;
 
 	const stale = fallbackCount > 0 || freshCount === 0;
 	const health = setMarketHealth('indices', {
@@ -653,36 +657,35 @@ async function fetchSectorsServer(): Promise<MarketFetchResult<SectorPerformance
 		};
 	}
 
-	let freshCount = 0;
-	let fallbackCount = 0;
-	let lastError: string | null = null;
-	const results: SectorPerformance[] = [];
-	for (const sector of SECTORS) {
+	const tasks = SECTORS.map((sector) => async () => {
 		const cached = cachedBySymbol.get(sector.symbol);
 		const { quote, error } = await fetchFinnhubQuote(sector.symbol);
 		const hasFreshQuote =
 			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
-		if (hasFreshQuote && quote) {
-			freshCount++;
-		} else if (
-			cached &&
-			isFiniteNumber(cached.price) &&
-			isFiniteNumber(cached.change) &&
-			isFiniteNumber(cached.changePercent)
-		) {
-			fallbackCount++;
-		}
-		if (error) lastError = error;
+		return {
+			item: {
+				symbol: sector.symbol,
+				name: sector.name,
+				price: hasFreshQuote ? quote!.c : (cached?.price ?? NaN),
+				change: hasFreshQuote ? quote!.d : (cached?.change ?? NaN),
+				changePercent: hasFreshQuote ? quote!.dp : (cached?.changePercent ?? NaN)
+			},
+			fresh: hasFreshQuote,
+			fallback:
+				!hasFreshQuote &&
+				cached != null &&
+				isFiniteNumber(cached.price) &&
+				isFiniteNumber(cached.change) &&
+				isFiniteNumber(cached.changePercent),
+			error
+		};
+	});
 
-		results.push({
-			symbol: sector.symbol,
-			name: sector.name,
-			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
-			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
-			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN)
-		});
-		await delay(FINNHUB_STAGGER_MS);
-	}
+	const taskResults = await promisePool(tasks, 3);
+	const results = taskResults.map((r) => r.item);
+	const freshCount = taskResults.filter((r) => r.fresh).length;
+	const fallbackCount = taskResults.filter((r) => r.fallback).length;
+	const lastError = taskResults.map((r) => r.error).filter(Boolean).pop() ?? null;
 
 	const stale = fallbackCount > 0 || freshCount === 0;
 	const health = setMarketHealth('sectors', {
@@ -722,38 +725,37 @@ async function fetchCommoditiesServer(): Promise<MarketFetchResult<MarketItem>> 
 		};
 	}
 
-	let freshCount = 0;
-	let fallbackCount = 0;
-	let lastError: string | null = null;
-	const results: MarketItem[] = [];
-	for (const commodity of COMMODITIES) {
+	const tasks = COMMODITIES.map((commodity) => async () => {
 		const cached = cachedBySymbol.get(commodity.symbol);
 		const finnhubSymbol = COMMODITY_SYMBOL_MAP[commodity.symbol] || commodity.symbol;
 		const { quote, error } = await fetchFinnhubQuote(finnhubSymbol);
 		const hasFreshQuote =
 			isFiniteNumber(quote?.c) && isFiniteNumber(quote?.d) && isFiniteNumber(quote?.dp);
-		if (hasFreshQuote && quote) {
-			freshCount++;
-		} else if (
-			cached &&
-			isFiniteNumber(cached.price) &&
-			isFiniteNumber(cached.change) &&
-			isFiniteNumber(cached.changePercent)
-		) {
-			fallbackCount++;
-		}
-		if (error) lastError = error;
+		return {
+			item: {
+				symbol: commodity.symbol,
+				name: commodity.name,
+				price: hasFreshQuote ? quote!.c : (cached?.price ?? NaN),
+				change: hasFreshQuote ? quote!.d : (cached?.change ?? NaN),
+				changePercent: hasFreshQuote ? quote!.dp : (cached?.changePercent ?? NaN),
+				type: 'commodity' as const
+			},
+			fresh: hasFreshQuote,
+			fallback:
+				!hasFreshQuote &&
+				cached != null &&
+				isFiniteNumber(cached.price) &&
+				isFiniteNumber(cached.change) &&
+				isFiniteNumber(cached.changePercent),
+			error
+		};
+	});
 
-		results.push({
-			symbol: commodity.symbol,
-			name: commodity.name,
-			price: hasFreshQuote ? quote.c : (cached?.price ?? NaN),
-			change: hasFreshQuote ? quote.d : (cached?.change ?? NaN),
-			changePercent: hasFreshQuote ? quote.dp : (cached?.changePercent ?? NaN),
-			type: 'commodity' as const
-		});
-		await delay(FINNHUB_STAGGER_MS);
-	}
+	const taskResults = await promisePool(tasks, 3);
+	const results = taskResults.map((r) => r.item);
+	const freshCount = taskResults.filter((r) => r.fresh).length;
+	const fallbackCount = taskResults.filter((r) => r.fallback).length;
+	const lastError = taskResults.map((r) => r.error).filter(Boolean).pop() ?? null;
 
 	const stale = fallbackCount > 0 || freshCount === 0;
 	const health = setMarketHealth('commodities', {
@@ -897,6 +899,8 @@ export async function fetchAllMarketsServer(): Promise<AllMarketsServerData> {
 
 // --- Full refresh ---
 
+const CATEGORY_CONCURRENCY = 4;
+
 export async function refreshAllNews(
 	categories?: NewsCategory[]
 ): Promise<{ duration: number; errors: string[] }> {
@@ -904,15 +908,16 @@ export async function refreshAllNews(
 	const errors: string[] = [];
 	const targetCategories = categories ?? (Object.keys(FEEDS) as NewsCategory[]);
 
-	for (const category of targetCategories) {
+	const tasks = targetCategories.map((category) => async () => {
 		try {
 			await fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category));
 		} catch (error) {
 			const msg = `${category}: ${error instanceof Error ? error.message : String(error)}`;
 			errors.push(msg);
 		}
-		await delay(BETWEEN_CATEGORIES_DELAY_MS);
-	}
+	});
+
+	await promisePool(tasks, CATEGORY_CONCURRENCY);
 
 	return { duration: Date.now() - start, errors };
 }

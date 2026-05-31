@@ -1,11 +1,18 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { TABS, type TabId } from '$lib/config';
 	import { activeTab, language } from '$lib/stores';
 	import { t } from '$lib/i18n';
 
+	interface Props {
+		orientation?: 'horizontal' | 'sidebar';
+	}
+
+	let { orientation = 'horizontal' }: Props = $props();
 	let tabClickSequence = 0;
 
-	function handleTabClick(tabId: TabId) {
+	async function handleTabClick(tabId: TabId) {
 		if (typeof performance !== 'undefined' && typeof requestAnimationFrame === 'function') {
 			const sequence = ++tabClickSequence;
 			const start = performance.now();
@@ -21,16 +28,28 @@
 		}
 
 		activeTab.setTab(tabId);
+		if ($page.url.pathname !== '/') {
+			await goto('/');
+		}
 	}
 </script>
 
-<nav class="tab-bar">
+<nav class="tab-bar" class:vertical={orientation === 'sidebar'} aria-label="Primary">
 	<div class="tab-container">
+		<a
+			class="tab"
+			class:active={$page.url.pathname === '/map'}
+			href="/map"
+			aria-current={$page.url.pathname === '/map' ? 'page' : undefined}
+		>
+			{t($language, 'tabs.map')}
+		</a>
 		{#each TABS as tab}
 			<button
 				class="tab"
-				class:active={$activeTab === tab.id}
+				class:active={$page.url.pathname === '/' && $activeTab === tab.id}
 				onclick={() => handleTabClick(tab.id)}
+				aria-current={$page.url.pathname === '/' && $activeTab === tab.id ? 'page' : undefined}
 			>
 				{t($language, tab.nameKey)}
 			</button>
@@ -54,7 +73,29 @@
 		flex-wrap: wrap;
 	}
 
+	.tab-bar.vertical {
+		width: 12rem;
+		min-height: 100%;
+		border-right: 1px solid var(--border);
+		border-bottom: 0;
+		margin-bottom: 0;
+		padding: 0.6rem;
+		flex-shrink: 0;
+	}
+
+	.tab-bar.vertical .tab-container {
+		flex-direction: column;
+		align-items: stretch;
+		justify-content: flex-start;
+		flex-wrap: nowrap;
+		position: sticky;
+		top: 3.25rem;
+	}
+
 	.tab {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		padding: 0.5rem 1.25rem;
 		font-size: 0.8rem;
 		font-weight: 600;
@@ -66,6 +107,7 @@
 		border-radius: 4px;
 		cursor: pointer;
 		transition: all 0.15s ease;
+		text-decoration: none;
 	}
 
 	.tab:hover {
@@ -85,6 +127,22 @@
 	}
 
 	@media (max-width: 640px) {
+		.tab-bar.vertical {
+			width: 100%;
+			min-height: auto;
+			border-right: 0;
+			border-bottom: 1px solid var(--border);
+			margin-bottom: 0.5rem;
+			padding: 0.5rem;
+		}
+
+		.tab-bar.vertical .tab-container {
+			flex-direction: row;
+			justify-content: center;
+			flex-wrap: wrap;
+			position: static;
+		}
+
 		.tab {
 			padding: 0.4rem 0.75rem;
 			font-size: 0.7rem;

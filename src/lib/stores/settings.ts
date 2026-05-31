@@ -14,13 +14,15 @@ import {
 } from '$lib/config';
 
 type ThemeMode = 'dark' | 'light';
+export type NavigationLayout = 'horizontal' | 'sidebar';
 
 const STORAGE_KEYS = {
 	panels: 'situationMonitorPanels',
 	order: 'panelOrder',
 	sizes: 'panelSizes',
 	fringeFeeds: 'enableFringeFeeds',
-	theme: 'uiThemePreference'
+	theme: 'uiThemePreference',
+	navigationLayout: 'navigationLayoutPreference'
 } as const;
 
 export interface PanelSettings {
@@ -29,6 +31,7 @@ export interface PanelSettings {
 	sizes: Record<PanelId, { width?: number; height?: number }>;
 	enableFringeFeeds: boolean;
 	theme: ThemeMode;
+	navigationLayout: NavigationLayout;
 }
 
 export interface SettingsState extends PanelSettings {
@@ -52,7 +55,8 @@ function getDefaultSettings(): PanelSettings {
 		order: allPanelIds,
 		sizes: {} as Record<PanelId, { width?: number; height?: number }>,
 		enableFringeFeeds: false,
-		theme: 'dark'
+		theme: 'dark',
+		navigationLayout: 'horizontal'
 	};
 }
 
@@ -65,13 +69,18 @@ function loadFromStorage(): Partial<PanelSettings> {
 		const sizes = localStorage.getItem(STORAGE_KEYS.sizes);
 		const fringeFeeds = localStorage.getItem(STORAGE_KEYS.fringeFeeds);
 		const theme = localStorage.getItem(STORAGE_KEYS.theme);
+		const navigationLayout = localStorage.getItem(STORAGE_KEYS.navigationLayout);
 
 		return {
 			enabled: panels ? JSON.parse(panels) : undefined,
 			order: order ? JSON.parse(order) : undefined,
 			sizes: sizes ? JSON.parse(sizes) : undefined,
 			enableFringeFeeds: fringeFeeds ? JSON.parse(fringeFeeds) : undefined,
-			theme: theme === 'light' || theme === 'dark' ? theme : undefined
+			theme: theme === 'light' || theme === 'dark' ? theme : undefined,
+			navigationLayout:
+				navigationLayout === 'horizontal' || navigationLayout === 'sidebar'
+					? navigationLayout
+					: undefined
 		};
 	} catch (e) {
 		console.warn('Failed to load settings from localStorage:', e);
@@ -82,8 +91,8 @@ function loadFromStorage(): Partial<PanelSettings> {
 function saveToStorage(key: keyof typeof STORAGE_KEYS, value: unknown): void {
 	if (!browser) return;
 	try {
-		if (key === 'theme') {
-			localStorage.setItem(STORAGE_KEYS.theme, String(value));
+		if (key === 'theme' || key === 'navigationLayout') {
+			localStorage.setItem(STORAGE_KEYS[key], String(value));
 			return;
 		}
 		localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(value));
@@ -103,6 +112,7 @@ function createSettingsStore() {
 		sizes: { ...defaults.sizes, ...saved.sizes },
 		enableFringeFeeds: saved.enableFringeFeeds ?? defaults.enableFringeFeeds,
 		theme: initialTheme,
+		navigationLayout: saved.navigationLayout ?? defaults.navigationLayout,
 		initialized: false
 	};
 
@@ -148,6 +158,22 @@ function createSettingsStore() {
 				saveToStorage('theme', nextTheme);
 				applyTheme(nextTheme);
 				return { ...state, theme: nextTheme };
+			});
+		},
+
+		setNavigationLayout(navigationLayout: NavigationLayout) {
+			update((state) => {
+				saveToStorage('navigationLayout', navigationLayout);
+				return { ...state, navigationLayout };
+			});
+		},
+
+		toggleNavigationLayout() {
+			update((state) => {
+				const navigationLayout: NavigationLayout =
+					state.navigationLayout === 'horizontal' ? 'sidebar' : 'horizontal';
+				saveToStorage('navigationLayout', navigationLayout);
+				return { ...state, navigationLayout };
 			});
 		},
 
@@ -238,6 +264,7 @@ function createSettingsStore() {
 				localStorage.removeItem(STORAGE_KEYS.sizes);
 				localStorage.removeItem(STORAGE_KEYS.fringeFeeds);
 				localStorage.removeItem(STORAGE_KEYS.theme);
+				localStorage.removeItem(STORAGE_KEYS.navigationLayout);
 			}
 			applyTheme(defaults.theme);
 			set({ ...defaults, initialized: true });

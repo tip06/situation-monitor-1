@@ -10,6 +10,30 @@ export interface FilterOptions {
 	maxSources?: number; // Default: 5 (prioritize variety from N sources)
 }
 
+const KRYPT3IA_SOURCE_PATTERN = /krypt3ia/i;
+
+/**
+ * Some feeds publish without usable item dates. Krypt3ia is one of them, and
+ * the fetch fallback stamps every item as "now", which otherwise pins the
+ * source to the top of every feed on refresh.
+ */
+export function getNewsSortTimestamp(item: NewsItem): number {
+	if (!KRYPT3IA_SOURCE_PATTERN.test(item.source)) {
+		return item.timestamp;
+	}
+
+	if (!item.pubDate) {
+		return 0;
+	}
+
+	const parsed = new Date(item.pubDate).getTime();
+	return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function sortNewsNewestFirst<T extends NewsItem>(items: T[]): T[] {
+	return items.sort((a, b) => getNewsSortTimestamp(b) - getNewsSortTimestamp(a));
+}
+
 /**
  * Calculate word-based Jaccard similarity between two strings
  * Filters out short words to focus on meaningful content
@@ -44,7 +68,7 @@ export function titleSimilarity(a: string, b: string): number {
  */
 export function deduplicateNews(items: NewsItem[], threshold: number = 0.6): NewsItem[] {
 	// Sort by timestamp first (newest first) so we keep the most recent
-	const sorted = [...items].sort((a, b) => b.timestamp - a.timestamp);
+	const sorted = sortNewsNewestFirst([...items]);
 
 	const deduplicated: NewsItem[] = [];
 	for (const item of sorted) {
@@ -76,7 +100,7 @@ export function filterNews(items: NewsItem[], options: FilterOptions = {}): News
 	let filtered = items.filter((item) => now - item.timestamp <= maxAge);
 
 	// 2. Sort by timestamp (newest first)
-	filtered.sort((a, b) => b.timestamp - a.timestamp);
+	sortNewsNewestFirst(filtered);
 
 	// 3. Deduplicate by title similarity
 	const deduplicated: NewsItem[] = [];
@@ -110,7 +134,7 @@ export function filterNews(items: NewsItem[], options: FilterOptions = {}): News
 	}
 
 	// Re-sort by timestamp since source prioritization may have changed order
-	result.sort((a, b) => b.timestamp - a.timestamp);
+	sortNewsNewestFirst(result);
 
 	return result;
 }

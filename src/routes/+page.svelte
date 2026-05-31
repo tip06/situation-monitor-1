@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
-	import { Header, TabBar } from '$lib/components/layout';
-	import { SettingsModal, MonitorFormModal, AddDataModal } from '$lib/components/modals';
-	import { AlertStack } from '$lib/components/common';
+	import { MonitorFormModal } from '$lib/components/modals';
 	import {
 		NewsPanel,
 		MarketsPanel,
@@ -13,7 +11,6 @@
 		CorrelationPanel,
 		NarrativePanel,
 		MonitorsPanel,
-		MapPanel,
 		PolymarketSection,
 		IntelPanel,
 		SituationPanel,
@@ -49,11 +46,10 @@
 	import { getTabPanels, type PanelId, type TabId } from '$lib/config';
 	import { detectAlerts } from '$lib/alerts/engine';
 	import { alertPopups } from '$lib/stores/alertPopups';
+	import { scheduleAnalysis } from '$lib/stores/analysisResults';
 
 	// Modal state
-	let settingsOpen = $state(false);
 	let monitorFormOpen = $state(false);
-	let addDataOpen = $state(false);
 	let editingMonitor = $state<CustomMonitor | null>(null);
 
 	// Misc panel data
@@ -109,6 +105,25 @@
 	const inFlightCategoryLoads = new Map<NewsCategory, Promise<void>>();
 	let longTaskObserver: PerformanceObserver | null = null;
 	let alertDetectionTimer: ReturnType<typeof setTimeout> | null = null;
+	let monitorScanTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastMonitorScanSignature = '';
+
+	const monitorDefinitionScanKey = $derived(
+		$monitors.monitors
+			.map(
+				(monitor) =>
+					`${monitor.id}:${monitor.enabled}:${monitor.query ?? ''}:${monitor.keywords.join(',')}`
+			)
+			.join('|')
+	);
+	const newsMonitorScanKey = $derived(
+		$allNewsItems
+			.map(
+				(item) =>
+					`${item.id}:${item.timestamp}:${item.title}:${item.description ?? ''}:${item.category}`
+			)
+			.join('|')
+	);
 
 	function cancelDeferredCategoryLoad() {
 		if (deferredCategoryLoadTimer) {
@@ -130,6 +145,23 @@
 		}
 		alertDetectionTimer = setTimeout(() => {
 			runAlertDetection();
+		}, 1000);
+	}
+
+	function cancelMonitorScan() {
+		if (monitorScanTimer) {
+			clearTimeout(monitorScanTimer);
+			monitorScanTimer = null;
+		}
+	}
+
+	function scheduleMonitorScan(signature: string) {
+		if (signature === lastMonitorScanSignature) return;
+		lastMonitorScanSignature = signature;
+		cancelMonitorScan();
+		monitorScanTimer = setTimeout(() => {
+			monitorScanTimer = null;
+			monitors.scanForMatches(get(allNewsItems));
 		}, 0);
 	}
 
@@ -236,6 +268,13 @@
 		intelligence.setInitialized();
 	}
 
+	const REFRESH_TIMEOUT_MS = 45_000;
+	function makeRefreshTimeout(): Promise<never> {
+		return new Promise<never>((_, reject) =>
+			setTimeout(() => reject(new Error('Refresh timed out')), REFRESH_TIMEOUT_MS)
+		);
+	}
+
 	// Refresh handlers
 	async function handleRefresh() {
 		refresh.startRefresh();
@@ -243,7 +282,10 @@
 		try {
 			const visibleCategories = getVisibleNewsCategories($activeTab);
 			const remainingCategories = getRemainingNewsCategories(visibleCategories);
-			await Promise.all([loadNews(visibleCategories, token), loadMarkets()]);
+			await Promise.race([
+				Promise.all([loadNews(visibleCategories, token), loadMarkets()]),
+				makeRefreshTimeout()
+			]);
 			if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
 				scheduleDeferredCategoryLoad(remainingCategories, token);
 			}
@@ -340,8 +382,7 @@
 		filterNews(
 			$allNewsItems.filter(
 				(n) =>
-					n.title.toLowerCase().includes('venezuela') ||
-					n.title.toLowerCase().includes('maduro')
+					n.title.toLowerCase().includes('venezuela') || n.title.toLowerCase().includes('maduro')
 			),
 			SITUATION_FILTER_OPTIONS
 		)
@@ -351,12 +392,19 @@
 		filterNews(
 			$allNewsItems.filter(
 				(n) =>
-					n.title.toLowerCase().includes('greenland') ||
-					n.title.toLowerCase().includes('arctic')
+					n.title.toLowerCase().includes('greenland') || n.title.toLowerCase().includes('arctic')
 			),
 			SITUATION_FILTER_OPTIONS
 		)
 	);
+
+	$effect(() => {
+		scheduleMonitorScan(`${monitorDefinitionScanKey}::${newsMonitorScanKey}`);
+	});
+
+	$effect(() => {
+		scheduleAnalysis($allNewsItems, $language);
+	});
 
 	// On tab switch: load data for tabs that haven't been loaded yet
 	$effect(() => {
@@ -418,41 +466,50 @@
 		news.init();
 
 		// Load initial data: visible tab first, defer rest
-			async function initialLoad() {
-				refresh.startRefresh();
-				const token = beginLoadCycle();
-				try {
-					const currentTab = $activeTab;
-					const visibleCategories = getVisibleNewsCategories(currentTab);
-					await Promise.all([loadNews(visibleCategories, token), loadMarkets(), loadMiscData(), loadIntelligence()]);
-					loadedTabs = new Set([currentTab]);
-					initialLoadDone = true;
-					scheduleAlertDetection();
-					refresh.endRefresh();
+		async function initialLoad() {
+			refresh.startRefresh();
+			const token = beginLoadCycle();
+			try {
+				const currentTab = $activeTab;
+				const visibleCategories = getVisibleNewsCategories(currentTab);
+				await Promise.race([
+					Promise.all([
+						loadNews(visibleCategories, token),
+						loadMarkets(),
+						loadMiscData(),
+						loadIntelligence()
+					]),
+					makeRefreshTimeout()
+				]);
+				loadedTabs = new Set([currentTab]);
+				initialLoadDone = true;
+				scheduleAlertDetection();
+				refresh.endRefresh();
 
-						// Defer remaining categories after 5s
-						const remainingCategories = getRemainingNewsCategories(visibleCategories);
-						if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
-							scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
-						}
-				} catch (error) {
-					initialLoadDone = true;
-					refresh.endRefresh([String(error)]);
+				// Defer remaining categories after 5s
+				const remainingCategories = getRemainingNewsCategories(visibleCategories);
+				if (ENABLE_BACKGROUND_PREFETCH && remainingCategories.length > 0) {
+					scheduleDeferredCategoryLoad(remainingCategories, token, 5000);
 				}
+			} catch (error) {
+				initialLoadDone = true;
+				refresh.endRefresh([String(error)]);
 			}
+		}
 		initialLoad();
 		refresh.setupAutoRefresh(handleRefresh);
 
-			return () => {
-				cancelTabLoadDebounce();
-				cancelDeferredCategoryLoad();
-				if (alertDetectionTimer) {
-					clearTimeout(alertDetectionTimer);
-					alertDetectionTimer = null;
-				}
-				longTaskObserver?.disconnect();
-				refresh.stopAutoRefresh();
-			};
+		return () => {
+			cancelTabLoadDebounce();
+			cancelDeferredCategoryLoad();
+			if (alertDetectionTimer) {
+				clearTimeout(alertDetectionTimer);
+				alertDetectionTimer = null;
+			}
+			cancelMonitorScan();
+			longTaskObserver?.disconnect();
+			refresh.stopAutoRefresh();
+		};
 	});
 </script>
 
@@ -461,23 +518,8 @@
 	<meta name="description" content={t($language, 'app.description')} />
 </svelte:head>
 
-<div class="app">
-	<Header
-		onSettingsClick={() => (settingsOpen = true)}
-		onAddDataClick={() => (addDataOpen = true)}
-	/>
-
+<div class="dashboard-page">
 	<main class="main-content">
-		<!-- Map Panel - Always visible at top -->
-		{#if isPanelVisible('map')}
-			<div class="map-container">
-				<MapPanel monitors={$monitors.monitors} />
-			</div>
-		{/if}
-
-		<!-- Tab Navigation -->
-		<TabBar />
-
 		<!-- Tab Content -->
 		<div class="tab-content">
 			{#if $activeTab === 'global'}
@@ -574,7 +616,11 @@
 				<div class="side-by-side">
 					{#if isPanelVisible('brazil')}
 						<div class="panel-slot side-panel">
-							<NewsPanel category="brazil" panelId="brazil" title={t($language, 'newsTitle.brazil')} />
+							<NewsPanel
+								category="brazil"
+								panelId="brazil"
+								title={t($language, 'newsTitle.brazil')}
+							/>
 						</div>
 					{/if}
 
@@ -614,15 +660,15 @@
 
 				{#if isPanelVisible('finance') || isPanelVisible('market_radar')}
 					<div class="economy-secondary-row">
-					{#if isPanelVisible('finance')}
+						{#if isPanelVisible('finance')}
 							<div class="panel-slot">
-							<NewsPanel
-								category="finance"
-								panelId="finance"
-								title={t($language, 'newsTitle.finance')}
-							/>
-						</div>
-					{/if}
+								<NewsPanel
+									category="finance"
+									panelId="finance"
+									title={t($language, 'newsTitle.finance')}
+								/>
+							</div>
+						{/if}
 
 						{#if isPanelVisible('market_radar')}
 							<div class="panel-slot">
@@ -637,13 +683,13 @@
 					<div class="analysis-row">
 						{#if isPanelVisible('correlation')}
 							<div class="panel-slot">
-								<CorrelationPanel news={$allNewsItems} />
+								<CorrelationPanel />
 							</div>
 						{/if}
 
 						{#if isPanelVisible('narrative')}
 							<div class="panel-slot">
-								<NarrativePanel news={$allNewsItems} />
+								<NarrativePanel />
 							</div>
 						{/if}
 					</div>
@@ -667,63 +713,48 @@
 						</div>
 					{/if}
 				</div>
-		{:else if $activeTab === 'intelligence'}
-			<!-- Intelligence Tab: row 1 full-width AI brief; row 2 stability + strategic risk -->
-			<div class="intelligence-layout">
-				{#if isPanelVisible('ai_brief')}
-					<div class="panel-slot">
-						<AIBriefPanel />
-					</div>
-				{/if}
+			{:else if $activeTab === 'intelligence'}
+				<!-- Intelligence Tab: row 1 full-width AI brief; row 2 stability + strategic risk -->
+				<div class="intelligence-layout">
+					{#if isPanelVisible('ai_brief')}
+						<div class="panel-slot">
+							<AIBriefPanel />
+						</div>
+					{/if}
 
-				{#if isPanelVisible('country_stability') || isPanelVisible('strategic_risk')}
-					<div class="intelligence-second-row">
-						{#if isPanelVisible('country_stability')}
-							<div class="panel-slot">
-								<CountryStabilityPanel />
-							</div>
-						{/if}
+					{#if isPanelVisible('country_stability') || isPanelVisible('strategic_risk')}
+						<div class="intelligence-second-row">
+							{#if isPanelVisible('country_stability')}
+								<div class="panel-slot">
+									<CountryStabilityPanel />
+								</div>
+							{/if}
 
-						{#if isPanelVisible('strategic_risk')}
-							<div class="panel-slot">
-								<StrategicRiskPanel />
-							</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
-		{/if}
+							{#if isPanelVisible('strategic_risk')}
+								<div class="panel-slot">
+									<StrategicRiskPanel />
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</main>
 
-	<AlertStack />
-
 	<!-- Modals -->
-	<SettingsModal open={settingsOpen} onClose={() => (settingsOpen = false)} />
 	<MonitorFormModal
 		open={monitorFormOpen}
 		onClose={() => (monitorFormOpen = false)}
 		editMonitor={editingMonitor}
 	/>
-	<AddDataModal open={addDataOpen} onClose={() => (addDataOpen = false)} />
 </div>
 
 <style>
-	.app {
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		background: var(--bg);
-	}
-
 	.main-content {
 		flex: 1;
 		padding: 0.5rem;
 		overflow-y: auto;
-	}
-
-	.map-container {
-		margin-bottom: 0.5rem;
 	}
 
 	/* Tab content container */

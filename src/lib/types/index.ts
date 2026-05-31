@@ -239,6 +239,7 @@ export interface CustomMonitor {
 	id: string;
 	name: string;
 	keywords: string[];
+	query?: string;
 	enabled: boolean;
 	color?: string;
 	location?: {

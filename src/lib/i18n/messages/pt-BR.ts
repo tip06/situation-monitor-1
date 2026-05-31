@@ -20,6 +20,7 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'tabs.social': 'Tendências e análise',
 	'tabs.technology': 'Tecnologia',
 	'tabs.intelligence': 'Inteligência',
+	'tabs.map': 'Mapa',
 	'panelName.map': 'Mapa global',
 	'panelName.politics': 'Mundo / Geopolítica',
 	'panelName.tech': 'Tecnologia / IA',
@@ -49,13 +50,15 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'panelName.strategic_risk': 'Visão Estratégica de Riscos',
 	'panelName.fringe': 'Fringe',
 	'preset.newsJunkie.name': 'Viciado em notícias',
-	'preset.newsJunkie.description': 'Acompanhe as últimas notícias de política, tecnologia e finanças',
+	'preset.newsJunkie.description':
+		'Acompanhe as últimas notícias de política, tecnologia e finanças',
 	'preset.trader.name': 'Trader',
 	'preset.trader.description': 'Dashboard focado em mercado com ações, cripto e commodities',
 	'preset.geopolitics.name': 'Observador geopolítico',
 	'preset.geopolitics.description': 'Visão global da situação e pontos críticos regionais',
 	'preset.intel.name': 'Analista de inteligência',
-	'preset.intel.description': 'Análise profunda, detecção de padrões e acompanhamento de narrativas',
+	'preset.intel.description':
+		'Análise profunda, detecção de padrões e acompanhamento de narrativas',
 	'preset.minimal.name': 'Minimalista',
 	'preset.minimal.description': 'Somente o essencial: mapa, notícias e mercados',
 	'preset.everything.name': 'Tudo',
@@ -93,6 +96,11 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'settings.themeSection': 'Tema',
 	'settings.themeLight': 'Claro',
 	'settings.themeDark': 'Escuro',
+	'settings.navigationSection': 'Layout do menu',
+	'settings.navigationHorizontal': 'Menu horizontal',
+	'settings.navigationSidebar': 'Barra lateral esquerda',
+	'settings.navigationHint':
+		'A barra lateral é usada em telas maiores e volta ao menu horizontal no celular.',
 	'settings.addSourceSection': 'Adicionar fonte',
 	'settings.sourceCategory': 'Categoria',
 	'settings.sourceName': 'Nome da fonte',
@@ -137,18 +145,19 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'monitor.edit': 'Editar monitor',
 	'monitor.create': 'Criar monitor',
 	'monitor.name': 'Nome',
-	'monitor.keywords': 'Palavras-chave (separadas por vírgula)',
-	'monitor.hint': 'Notícias que corresponderem a essas palavras-chave aparecerão no seu monitor',
+	'monitor.keywords': 'Consulta',
+	'monitor.hint':
+		'Use AND, OR, NOT, parênteses e frases entre aspas. Vírgulas ainda funcionam como OR.',
 	'monitor.enabled': 'Ativado',
 	'monitor.delete': 'Excluir',
 	'monitor.cancel': 'Cancelar',
 	'monitor.saveChanges': 'Salvar alterações',
 	'monitor.createBtn': 'Criar monitor',
 	'monitor.nameRequired': 'Nome é obrigatório',
-	'monitor.keywordRequired': 'Pelo menos uma palavra-chave é obrigatória',
+	'monitor.keywordRequired': 'Uma consulta é obrigatória',
 	'monitor.maxReached': 'Número máximo de monitores atingido (20)',
 	'monitor.placeholderName': 'ex.: Crise na Ucrânia',
-	'monitor.placeholderKeywords': 'ex.: ucrânia, zelensky, kyiv',
+	'monitor.placeholderKeywords': 'ex.: ucrânia AND (kyiv OR zelensky) NOT esportes',
 	'addData.title': 'Adicionar dados ao mapa',
 	'addData.name': 'Nome',
 	'addData.type': 'Tipo',
@@ -184,7 +193,8 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'newsTitle.tech': 'Tecnologia',
 	'newsTitle.ai': 'IA',
 	'situation.iran.title': 'Crise no Irã',
-	'situation.iran.subtitle': 'Protestos revolucionários, instabilidade do regime e programa nuclear',
+	'situation.iran.subtitle':
+		'Protestos revolucionários, instabilidade do regime e programa nuclear',
 	'situation.venezuela.title': 'Monitor da Venezuela',
 	'situation.venezuela.subtitle': 'Monitoramento da crise humanitária',
 	'situation.greenland.title': 'Monitor da Groenlândia',
@@ -516,18 +526,30 @@ export const PT_BR_MESSAGES: Partial<Record<MessageKey, string>> = {
 	'polymarket.volume': 'Vol',
 	'polymarket.volume24h': '24h',
 	'polymarket.yes': 'SIM',
-	'tooltip.correlation.compoundSignals': 'Correlações entre tópicos quando vários temas ativam ao mesmo tempo, indicando riscos sistêmicos ou em cascata',
-	'tooltip.correlation.emergingPatterns': 'Tópicos ativados por anomalias de z-score robusto contra baseline de 7 dias, com limiares mínimos de volume e diversidade de fontes',
-	'tooltip.correlation.momentumSignals': 'Tópicos com aumento de velocidade e aceleração na frequência de menções, mostrando mudanças de tração em tempo real',
-	'tooltip.correlation.crossSourceLinks': 'Tópicos com cobertura independente de 3+ fontes, indicando ampla consciência e credibilidade',
-	'tooltip.correlation.predictiveSignals': 'Previsões de resultados geradas por IA com base em credibilidade da fonte, confirmação entre fontes e significância estatística',
-	'tooltip.narrative.trending': 'Histórias dominantes na mídia mainstream agora, identificadas por padrões regex. Mostra momentum e sentimento de cada narrativa.',
-	'tooltip.narrative.emergingFringe': 'Narrativas originadas em fontes fringe ou alternativas, rastreadas por status de propagação: emergente, espalhando ou viral.',
-	'tooltip.narrative.crossovers': 'Narrativas fringe que foram absorvidas por veículos mainstream, indicando possível legitimação. Mostra percentual de crossover.',
-	'tooltip.narrative.watch': 'Narrativas de padrão fringe detectadas em fontes não classificadas ou mistas - lista de observação para tópicos fora das categorias atuais.',
-	'tooltip.narrative.disinfo': 'Padrões marcados como desinformação conhecida com base na classificação de severidade, independentemente da fonte.',
-	'tooltip.polymarket.topGeopolitical': 'Os 3 mercados geopolíticos com maior volume no Polymarket, exibidos como medidores de probabilidade.',
-	'tooltip.polymarket.categoryFeeds': 'Top 10 mercados por categoria ordenados por volume de negociação em 24h, mostrando sentimento de mercado em tempo real.',
+	'tooltip.correlation.compoundSignals':
+		'Correlações entre tópicos quando vários temas ativam ao mesmo tempo, indicando riscos sistêmicos ou em cascata',
+	'tooltip.correlation.emergingPatterns':
+		'Tópicos ativados por anomalias de z-score robusto contra baseline de 7 dias, com limiares mínimos de volume e diversidade de fontes',
+	'tooltip.correlation.momentumSignals':
+		'Tópicos com aumento de velocidade e aceleração na frequência de menções, mostrando mudanças de tração em tempo real',
+	'tooltip.correlation.crossSourceLinks':
+		'Tópicos com cobertura independente de 3+ fontes, indicando ampla consciência e credibilidade',
+	'tooltip.correlation.predictiveSignals':
+		'Previsões de resultados geradas por IA com base em credibilidade da fonte, confirmação entre fontes e significância estatística',
+	'tooltip.narrative.trending':
+		'Histórias dominantes na mídia mainstream agora, identificadas por padrões regex. Mostra momentum e sentimento de cada narrativa.',
+	'tooltip.narrative.emergingFringe':
+		'Narrativas originadas em fontes fringe ou alternativas, rastreadas por status de propagação: emergente, espalhando ou viral.',
+	'tooltip.narrative.crossovers':
+		'Narrativas fringe que foram absorvidas por veículos mainstream, indicando possível legitimação. Mostra percentual de crossover.',
+	'tooltip.narrative.watch':
+		'Narrativas de padrão fringe detectadas em fontes não classificadas ou mistas - lista de observação para tópicos fora das categorias atuais.',
+	'tooltip.narrative.disinfo':
+		'Padrões marcados como desinformação conhecida com base na classificação de severidade, independentemente da fonte.',
+	'tooltip.polymarket.topGeopolitical':
+		'Os 3 mercados geopolíticos com maior volume no Polymarket, exibidos como medidores de probabilidade.',
+	'tooltip.polymarket.categoryFeeds':
+		'Top 10 mercados por categoria ordenados por volume de negociação em 24h, mostrando sentimento de mercado em tempo real.',
 	'time.justNow': 'agora',
 	'time.justNowLong': 'Agora',
 	'status.active': '{count} ATIVOS'

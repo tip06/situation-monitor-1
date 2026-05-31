@@ -149,6 +149,122 @@ describe('Monitors Store', () => {
 		expect(matches[0].matchedKeywords).toContain('ukraine');
 	});
 
+	it('should scan with boolean monitor queries', async () => {
+		const { monitors } = await import('./monitors');
+
+		monitors.addMonitor({
+			name: 'Ukraine Filter',
+			keywords: ['ukraine', 'kyiv', 'zelensky', 'sports'],
+			query: 'ukraine AND (kyiv OR zelensky) NOT sports',
+			enabled: true
+		});
+
+		const newsItems = [
+			{
+				id: '1',
+				title: 'Ukraine says Zelensky met allies',
+				source: 'BBC',
+				link: 'https://bbc.com/1',
+				timestamp: Date.now(),
+				category: 'politics' as const
+			},
+			{
+				id: '2',
+				title: 'Ukraine sports officials visit Kyiv',
+				source: 'BBC',
+				link: 'https://bbc.com/2',
+				timestamp: Date.now(),
+				category: 'politics' as const
+			},
+			{
+				id: '3',
+				title: 'Zelensky interview airs',
+				source: 'BBC',
+				link: 'https://bbc.com/3',
+				timestamp: Date.now(),
+				category: 'politics' as const
+			}
+		];
+
+		const matches = monitors.scanForMatches(newsItems);
+
+		expect(matches.length).toBe(1);
+		expect(matches[0].item.id).toBe('1');
+		expect(matches[0].matchedKeywords).toEqual(['ukraine', 'zelensky']);
+	});
+
+	it('should sort monitor matches by item timestamp', async () => {
+		const { monitors } = await import('./monitors');
+
+		monitors.addMonitor({
+			name: 'Iran Monitor',
+			keywords: ['iran'],
+			enabled: true
+		});
+
+		const base = Date.now();
+		const matches = monitors.scanForMatches([
+			{
+				id: 'old-krypt3ia',
+				title: 'Iran analysis from Krypt3ia',
+				source: 'Krypt3ia',
+				link: 'https://krypt3ia.example/old',
+				timestamp: base - 60_000,
+				category: 'iran' as const
+			},
+			{
+				id: 'newer-wire',
+				title: 'Iran update from another source',
+				source: 'Wire',
+				link: 'https://wire.example/newer',
+				timestamp: base,
+				category: 'iran' as const
+			}
+		]);
+
+		expect(matches.map((match) => match.item.id)).toEqual(['newer-wire', 'old-krypt3ia']);
+		expect(get(monitors).matches.map((match) => match.item.id)).toEqual([
+			'newer-wire',
+			'old-krypt3ia'
+		]);
+	});
+
+	it('should sort Krypt3ia items without pubDate behind dated items', async () => {
+		const { monitors } = await import('./monitors');
+
+		monitors.addMonitor({
+			name: 'Iran Monitor',
+			keywords: ['iran'],
+			enabled: true
+		});
+
+		const base = Date.now();
+		// Simulate the fetcher fallback: krypt3ia item has no pubDate and timestamp = Date.now()
+		const matches = monitors.scanForMatches([
+			{
+				id: 'krypt3ia-fallback',
+				title: 'Iran analysis from Krypt3ia',
+				source: 'Krypt3ia',
+				link: 'https://krypt3ia.example/article',
+				timestamp: base, // fallback-stamped as "now"
+				pubDate: undefined,
+				category: 'iran' as const
+			},
+			{
+				id: 'dated-wire',
+				title: 'Iran update from Wire',
+				source: 'Wire',
+				link: 'https://wire.example/iran',
+				timestamp: base - 30 * 60_000, // 30 minutes older
+				pubDate: new Date(base - 30 * 60_000).toUTCString(),
+				category: 'iran' as const
+			}
+		]);
+
+		// Krypt3ia with no pubDate should sort behind the dated item
+		expect(matches.map((m) => m.item.id)).toEqual(['dated-wire', 'krypt3ia-fallback']);
+	});
+
 	it('should not match disabled monitors', async () => {
 		const { monitors } = await import('./monitors');
 

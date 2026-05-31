@@ -33,7 +33,12 @@
 	let sourceUrl = $state('');
 	let sourceType = $state<'rss' | 'html' | 'auto'>('rss');
 	let sourceError = $state('');
-	let testResult = $state<{ ok: boolean; message: string; suggestion?: string; googleNewsUrl?: string } | null>(null);
+	let testResult = $state<{
+		ok: boolean;
+		message: string;
+		suggestion?: string;
+		googleNewsUrl?: string;
+	} | null>(null);
 	let isTesting = $state(false);
 	let editingSourceId = $state<string | null>(null);
 	let editCategory = $state<NewsCategory>('brazil');
@@ -49,6 +54,10 @@
 
 	function setTheme(theme: 'light' | 'dark') {
 		settings.setTheme(theme);
+	}
+
+	function setNavigationLayout(navigationLayout: 'horizontal' | 'sidebar') {
+		settings.setNavigationLayout(navigationLayout);
 	}
 
 	function getSourceErrorMessage(error: SourceMutationError): string {
@@ -194,7 +203,7 @@
 			type="button"
 			class="settings-tab"
 			class:active={activeSettingsTab === 'general'}
-			onclick={() => activeSettingsTab = 'general'}
+			onclick={() => (activeSettingsTab = 'general')}
 		>
 			Settings
 		</button>
@@ -202,7 +211,7 @@
 			type="button"
 			class="settings-tab"
 			class:active={activeSettingsTab === 'feeds'}
-			onclick={() => activeSettingsTab = 'feeds'}
+			onclick={() => (activeSettingsTab = 'feeds')}
 		>
 			Feed Health
 		</button>
@@ -211,204 +220,275 @@
 	{#if activeSettingsTab === 'feeds'}
 		<FeedDiagnostics />
 	{:else}
-	<div class="settings-sections">
-		<section class="settings-section">
-			<h3 class="section-title">{t($language, 'settings.languageSection')}</h3>
-			<div class="segmented-control">
-				<button
-					type="button"
-					class="segmented-btn"
-					class:active={$language === 'en'}
-					onclick={() => setLocale('en')}
-				>
-					<span class="flag">🇺🇸</span> {t($language, 'settings.languageEnglish')}
-				</button>
-				<button
-					type="button"
-					class="segmented-btn"
-					class:active={$language === 'pt-BR'}
-					onclick={() => setLocale('pt-BR')}
-				>
-					<span class="flag">🇧🇷</span> {t($language, 'settings.languagePortuguese')}
-				</button>
-			</div>
-		</section>
+		<div class="settings-sections">
+			<section class="settings-section">
+				<h3 class="section-title">{t($language, 'settings.languageSection')}</h3>
+				<div class="segmented-control">
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$language === 'en'}
+						onclick={() => setLocale('en')}
+					>
+						<span class="flag">🇺🇸</span>
+						{t($language, 'settings.languageEnglish')}
+					</button>
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$language === 'pt-BR'}
+						onclick={() => setLocale('pt-BR')}
+					>
+						<span class="flag">🇧🇷</span>
+						{t($language, 'settings.languagePortuguese')}
+					</button>
+				</div>
+			</section>
 
-		<section class="settings-section">
-			<h3 class="section-title">{t($language, 'settings.themeSection')}</h3>
-			<div class="segmented-control">
-				<button
-					type="button"
-					class="segmented-btn"
-					class:active={$settings.theme === 'light'}
-					onclick={() => setTheme('light')}
-				>
-					{t($language, 'settings.themeLight')}
-				</button>
-				<button
-					type="button"
-					class="segmented-btn"
-					class:active={$settings.theme === 'dark'}
-					onclick={() => setTheme('dark')}
-				>
-					{t($language, 'settings.themeDark')}
-				</button>
-			</div>
-		</section>
+			<section class="settings-section">
+				<h3 class="section-title">{t($language, 'settings.themeSection')}</h3>
+				<div class="segmented-control">
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$settings.theme === 'light'}
+						onclick={() => setTheme('light')}
+					>
+						{t($language, 'settings.themeLight')}
+					</button>
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$settings.theme === 'dark'}
+						onclick={() => setTheme('dark')}
+					>
+						{t($language, 'settings.themeDark')}
+					</button>
+				</div>
+			</section>
 
-		<section class="settings-section">
-			<h3 class="section-title">{t($language, 'settings.addSourceSection')}</h3>
-			<div class="form-grid">
-				<label>
-					<span>{t($language, 'settings.sourceCategory')}</span>
-					<select bind:value={selectedCategory}>
-						{#each SOURCE_CATEGORIES as category}
-							{@const categoryLabel = `panelName.${category}` as const}
-							<option value={category}>{t($language, categoryLabel)}</option>
-						{/each}
-					</select>
-				</label>
-				<label>
-					<span>{t($language, 'settings.sourceType')}</span>
-					<div class="segmented-control compact">
-						<button type="button" class="segmented-btn" class:active={sourceType === 'rss'} onclick={() => sourceType = 'rss'}>
-							{t($language, 'settings.sourceTypeRss')}
-						</button>
-						<button type="button" class="segmented-btn" class:active={sourceType === 'html'} onclick={() => sourceType = 'html'}>
-							{t($language, 'settings.sourceTypeHtml')}
-						</button>
-						<button type="button" class="segmented-btn" class:active={sourceType === 'auto'} onclick={() => sourceType = 'auto'}>
-							{t($language, 'settings.sourceTypeAuto')}
-						</button>
-					</div>
-				</label>
-				<label>
-					<span>{t($language, 'settings.sourceName')}</span>
-					<input type="text" bind:value={sourceName} placeholder={t($language, 'settings.sourceName')} />
-				</label>
-				<label>
-					<span>{t($language, 'settings.sourceUrl')}</span>
-					<input
-						type="url"
-						bind:value={sourceUrl}
-						placeholder={sourceType === 'html' ? 'https://example.com/news' : 'https://example.com/feed.xml'}
-					/>
-				</label>
-			</div>
-			{#if sourceError}
-				<p class="error">{sourceError}</p>
-			{/if}
-			{#if testResult}
-				<p class={testResult.ok ? 'test-success' : 'test-error'}>
-					{testResult.message}
-				</p>
-				{#if testResult.suggestion === 'google-news' && testResult.googleNewsUrl}
-					<div class="google-news-suggestion">
-						<span>{t($language, 'settings.tryGoogleNews')}</span>
-						<button type="button" class="action-btn" onclick={applyGoogleNews}>
-							{t($language, 'settings.applyGoogleNews')}
-						</button>
-					</div>
-				{/if}
-			{/if}
-			<div class="btn-row">
-				<button class="primary-btn" onclick={addSource}>{t($language, 'settings.addSource')}</button>
-				<button class="primary-btn secondary" onclick={testSource} disabled={isTesting}>
-					{isTesting ? t($language, 'settings.testing') : t($language, 'settings.testSource')}
-				</button>
-			</div>
-		</section>
+			<section class="settings-section">
+				<h3 class="section-title">{t($language, 'settings.navigationSection')}</h3>
+				<div class="segmented-control">
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$settings.navigationLayout === 'horizontal'}
+						onclick={() => setNavigationLayout('horizontal')}
+					>
+						{t($language, 'settings.navigationHorizontal')}
+					</button>
+					<button
+						type="button"
+						class="segmented-btn"
+						class:active={$settings.navigationLayout === 'sidebar'}
+						onclick={() => setNavigationLayout('sidebar')}
+					>
+						{t($language, 'settings.navigationSidebar')}
+					</button>
+				</div>
+				<p class="section-hint">{t($language, 'settings.navigationHint')}</p>
+			</section>
 
-		<section class="settings-section">
-			<h3 class="section-title">{t($language, 'settings.manageSources')}</h3>
-			<div class="sources-list">
-				{#each SOURCE_CATEGORIES as category}
-					{@const categoryLabel = `panelName.${category}` as const}
-					{@const items = $sources.records.filter((record) => record.category === category)}
-					<div class="source-group">
-						<h4 class="source-group-title">{t($language, categoryLabel)}</h4>
-						{#if items.length === 0}
-							<p class="empty">{t($language, 'settings.noSourcesInCategory')}</p>
-						{:else}
-							{#each items as source}
-								<div class="source-row">
-									<div class="source-meta">
-										{#if source.isCustom && editingSourceId === source.id}
-											<div class="edit-grid">
-												<label>
-													<span>{t($language, 'settings.sourceCategory')}</span>
-													<select bind:value={editCategory}>
-														{#each SOURCE_CATEGORIES as cat}
-															{@const editCategoryLabel = `panelName.${cat}` as const}
-															<option value={cat}>{t($language, editCategoryLabel)}</option>
-														{/each}
-													</select>
-												</label>
-												<label>
-													<span>{t($language, 'settings.sourceType')}</span>
-													<div class="segmented-control compact">
-														<button type="button" class="segmented-btn" class:active={editSourceType === 'rss'} onclick={() => editSourceType = 'rss'}>RSS</button>
-														<button type="button" class="segmented-btn" class:active={editSourceType === 'html'} onclick={() => editSourceType = 'html'}>HTML</button>
-														<button type="button" class="segmented-btn" class:active={editSourceType === 'auto'} onclick={() => editSourceType = 'auto'}>Auto</button>
-													</div>
-												</label>
-												<label>
-													<span>{t($language, 'settings.sourceName')}</span>
-													<input type="text" bind:value={editName} />
-												</label>
-												<label>
-													<span>{t($language, 'settings.sourceUrl')}</span>
-													<input type="url" bind:value={editUrl} />
-												</label>
-											</div>
-											{#if editError}
-												<p class="error">{editError}</p>
-											{/if}
-										{:else}
-											<div class="source-name-row">
-												<span class="source-name">{source.name}</span>
-												{#if source.sourceType}
-													<span class="source-type-badge">{source.sourceType.toUpperCase()}</span>
-												{/if}
-											</div>
-											<span class="source-url">{source.url}</span>
-										{/if}
-									</div>
-									<div class="source-actions">
-										<input
-											type="checkbox"
-											checked={source.enabled}
-											onchange={() => toggleSource(source.id)}
-											aria-label={source.enabled
-												? t($language, 'settings.sourceEnabled')
-												: t($language, 'settings.sourceDisabled')}
-										/>
-										{#if source.isCustom}
-											{#if editingSourceId === source.id}
-												<button type="button" class="action-btn" onclick={saveEdit}>
-													{t($language, 'settings.saveSource')}
-												</button>
-												<button type="button" class="action-btn" onclick={cancelEdit}>
-													{t($language, 'settings.cancelEdit')}
-												</button>
-											{:else}
-												<button type="button" class="action-btn" onclick={() => beginEdit(source)}>
-													{t($language, 'settings.editSource')}
-												</button>
-											{/if}
-											<button type="button" class="action-btn danger" onclick={() => deleteSource(source.id)}>
-												{t($language, 'settings.deleteSource')}
-											</button>
-										{/if}
-									</div>
-								</div>
+			<section class="settings-section">
+				<h3 class="section-title">{t($language, 'settings.addSourceSection')}</h3>
+				<div class="form-grid">
+					<label>
+						<span>{t($language, 'settings.sourceCategory')}</span>
+						<select bind:value={selectedCategory}>
+							{#each SOURCE_CATEGORIES as category}
+								{@const categoryLabel = `panelName.${category}` as const}
+								<option value={category}>{t($language, categoryLabel)}</option>
 							{/each}
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</section>
-	</div>
+						</select>
+					</label>
+					<label>
+						<span>{t($language, 'settings.sourceType')}</span>
+						<div class="segmented-control compact">
+							<button
+								type="button"
+								class="segmented-btn"
+								class:active={sourceType === 'rss'}
+								onclick={() => (sourceType = 'rss')}
+							>
+								{t($language, 'settings.sourceTypeRss')}
+							</button>
+							<button
+								type="button"
+								class="segmented-btn"
+								class:active={sourceType === 'html'}
+								onclick={() => (sourceType = 'html')}
+							>
+								{t($language, 'settings.sourceTypeHtml')}
+							</button>
+							<button
+								type="button"
+								class="segmented-btn"
+								class:active={sourceType === 'auto'}
+								onclick={() => (sourceType = 'auto')}
+							>
+								{t($language, 'settings.sourceTypeAuto')}
+							</button>
+						</div>
+					</label>
+					<label>
+						<span>{t($language, 'settings.sourceName')}</span>
+						<input
+							type="text"
+							bind:value={sourceName}
+							placeholder={t($language, 'settings.sourceName')}
+						/>
+					</label>
+					<label>
+						<span>{t($language, 'settings.sourceUrl')}</span>
+						<input
+							type="url"
+							bind:value={sourceUrl}
+							placeholder={sourceType === 'html'
+								? 'https://example.com/news'
+								: 'https://example.com/feed.xml'}
+						/>
+					</label>
+				</div>
+				{#if sourceError}
+					<p class="error">{sourceError}</p>
+				{/if}
+				{#if testResult}
+					<p class={testResult.ok ? 'test-success' : 'test-error'}>
+						{testResult.message}
+					</p>
+					{#if testResult.suggestion === 'google-news' && testResult.googleNewsUrl}
+						<div class="google-news-suggestion">
+							<span>{t($language, 'settings.tryGoogleNews')}</span>
+							<button type="button" class="action-btn" onclick={applyGoogleNews}>
+								{t($language, 'settings.applyGoogleNews')}
+							</button>
+						</div>
+					{/if}
+				{/if}
+				<div class="btn-row">
+					<button class="primary-btn" onclick={addSource}
+						>{t($language, 'settings.addSource')}</button
+					>
+					<button class="primary-btn secondary" onclick={testSource} disabled={isTesting}>
+						{isTesting ? t($language, 'settings.testing') : t($language, 'settings.testSource')}
+					</button>
+				</div>
+			</section>
+
+			<section class="settings-section">
+				<h3 class="section-title">{t($language, 'settings.manageSources')}</h3>
+				<div class="sources-list">
+					{#each SOURCE_CATEGORIES as category}
+						{@const categoryLabel = `panelName.${category}` as const}
+						{@const items = $sources.records.filter((record) => record.category === category)}
+						<div class="source-group">
+							<h4 class="source-group-title">{t($language, categoryLabel)}</h4>
+							{#if items.length === 0}
+								<p class="empty">{t($language, 'settings.noSourcesInCategory')}</p>
+							{:else}
+								{#each items as source}
+									<div class="source-row">
+										<div class="source-meta">
+											{#if source.isCustom && editingSourceId === source.id}
+												<div class="edit-grid">
+													<label>
+														<span>{t($language, 'settings.sourceCategory')}</span>
+														<select bind:value={editCategory}>
+															{#each SOURCE_CATEGORIES as cat}
+																{@const editCategoryLabel = `panelName.${cat}` as const}
+																<option value={cat}>{t($language, editCategoryLabel)}</option>
+															{/each}
+														</select>
+													</label>
+													<label>
+														<span>{t($language, 'settings.sourceType')}</span>
+														<div class="segmented-control compact">
+															<button
+																type="button"
+																class="segmented-btn"
+																class:active={editSourceType === 'rss'}
+																onclick={() => (editSourceType = 'rss')}>RSS</button
+															>
+															<button
+																type="button"
+																class="segmented-btn"
+																class:active={editSourceType === 'html'}
+																onclick={() => (editSourceType = 'html')}>HTML</button
+															>
+															<button
+																type="button"
+																class="segmented-btn"
+																class:active={editSourceType === 'auto'}
+																onclick={() => (editSourceType = 'auto')}>Auto</button
+															>
+														</div>
+													</label>
+													<label>
+														<span>{t($language, 'settings.sourceName')}</span>
+														<input type="text" bind:value={editName} />
+													</label>
+													<label>
+														<span>{t($language, 'settings.sourceUrl')}</span>
+														<input type="url" bind:value={editUrl} />
+													</label>
+												</div>
+												{#if editError}
+													<p class="error">{editError}</p>
+												{/if}
+											{:else}
+												<div class="source-name-row">
+													<span class="source-name">{source.name}</span>
+													{#if source.sourceType}
+														<span class="source-type-badge">{source.sourceType.toUpperCase()}</span>
+													{/if}
+												</div>
+												<span class="source-url">{source.url}</span>
+											{/if}
+										</div>
+										<div class="source-actions">
+											<input
+												type="checkbox"
+												checked={source.enabled}
+												onchange={() => toggleSource(source.id)}
+												aria-label={source.enabled
+													? t($language, 'settings.sourceEnabled')
+													: t($language, 'settings.sourceDisabled')}
+											/>
+											{#if source.isCustom}
+												{#if editingSourceId === source.id}
+													<button type="button" class="action-btn" onclick={saveEdit}>
+														{t($language, 'settings.saveSource')}
+													</button>
+													<button type="button" class="action-btn" onclick={cancelEdit}>
+														{t($language, 'settings.cancelEdit')}
+													</button>
+												{:else}
+													<button
+														type="button"
+														class="action-btn"
+														onclick={() => beginEdit(source)}
+													>
+														{t($language, 'settings.editSource')}
+													</button>
+												{/if}
+												<button
+													type="button"
+													class="action-btn danger"
+													onclick={() => deleteSource(source.id)}
+												>
+													{t($language, 'settings.deleteSource')}
+												</button>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</section>
+		</div>
 	{/if}
 </Modal>
 
@@ -462,6 +542,12 @@
 		letter-spacing: 0.05em;
 		color: var(--text-secondary);
 		margin: 0;
+	}
+
+	.section-hint {
+		margin: 0;
+		font-size: 0.6rem;
+		color: var(--text-muted);
 	}
 
 	.segmented-control {

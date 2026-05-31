@@ -32,7 +32,14 @@
 	const count = $derived(matches.length);
 
 	function getMatchesForMonitor(monitorId: string): MonitorMatch[] {
-		return matches.filter((m) => m.monitor.id === monitorId).slice(0, 3);
+		return matches
+			.filter((m) => m.monitor.id === monitorId)
+			.sort((a, b) => b.item.timestamp - a.item.timestamp)
+			.slice(0, 3);
+	}
+
+	function getMonitorQuery(monitor: CustomMonitor): string {
+		return monitor.query?.trim() || monitor.keywords.join(', ');
 	}
 </script>
 
@@ -42,12 +49,16 @@
 			<div class="empty-state">
 				<p>{t($language, 'monitors.empty')}</p>
 				{#if onCreateMonitor}
-					<button class="create-btn" onclick={onCreateMonitor}>{t($language, 'monitors.create')}</button>
+					<button class="create-btn" onclick={onCreateMonitor}
+						>{t($language, 'monitors.create')}</button
+					>
 				{/if}
 			</div>
 		{:else}
 			<div class="monitors-header">
-				<span class="active-count">{t($language, 'monitors.active', { count: activeMonitors.length })}</span>
+				<span class="active-count"
+					>{t($language, 'monitors.active', { count: activeMonitors.length })}</span
+				>
 				{#if onCreateMonitor}
 					<button class="add-btn" onclick={onCreateMonitor}>+</button>
 				{/if}
@@ -100,14 +111,11 @@
 							</div>
 						</div>
 
-						<div class="monitor-keywords">
-							{#each monitor.keywords.slice(0, 5) as keyword}
-								<span class="keyword">{keyword}</span>
-							{/each}
-							{#if monitor.keywords.length > 5}
-								<span class="keyword more">+{monitor.keywords.length - 5}</span>
-							{/if}
-						</div>
+						{#if getMonitorQuery(monitor)}
+							<div class="monitor-keywords">
+								<span class="keyword query">{getMonitorQuery(monitor)}</span>
+							</div>
+						{/if}
 
 						{#if monitor.location}
 							<div class="monitor-location">
@@ -139,6 +147,12 @@
 						{/if}
 					</div>
 				{/each}
+				{#if onCreateMonitor && activeMonitors.length > 0}
+					<button class="add-monitor-card" onclick={onCreateMonitor}>
+						<span class="add-monitor-icon">+</span>
+						<span>{t($language, 'monitors.create')}</span>
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -199,6 +213,43 @@
 
 	.monitor-item.disabled {
 		opacity: 0.5;
+	}
+
+	.add-monitor-card {
+		width: 100%;
+		min-height: 3rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		padding: 0.65rem;
+		background: rgba(255, 255, 255, 0.025);
+		border: 1px dashed var(--border);
+		border-radius: 4px;
+		color: var(--text-secondary);
+		font-size: 0.6rem;
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
+	}
+
+	.add-monitor-card:hover {
+		background: rgba(255, 255, 255, 0.06);
+		border-color: var(--accent);
+		color: var(--text-primary);
+	}
+
+	.add-monitor-icon {
+		width: 1rem;
+		height: 1rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid currentColor;
+		border-radius: 50%;
+		line-height: 1;
 	}
 
 	.monitor-header {
@@ -273,8 +324,10 @@
 		color: var(--text-secondary);
 	}
 
-	.keyword.more {
-		color: var(--text-muted);
+	.keyword.query {
+		max-width: 100%;
+		overflow-wrap: anywhere;
+		line-height: 1.4;
 	}
 
 	.monitor-location {

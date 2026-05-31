@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { Panel } from '$lib/components/common';
-	import { allNewsItems, language } from '$lib/stores';
-	import { calculateMainCharacter, type MainCharacterResults } from '$lib/analysis';
+	import { language } from '$lib/stores';
+	import { mainCharResults } from '$lib/stores/analysisResults';
 	import { t } from '$lib/i18n';
 
-	// Calculate main character from all news (reactive via derived store)
-	const results: MainCharacterResults = $derived(calculateMainCharacter($allNewsItems));
+	const results = $mainCharResults;
 	const topChar = $derived(results.topCharacter);
 	const rankings = $derived(results.characters);
 </script>

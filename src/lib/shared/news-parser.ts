@@ -5,7 +5,7 @@
 
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
-import { deduplicateNews } from '$lib/utils/news-filter';
+import { deduplicateNews, sortNewsNewestFirst } from '$lib/utils/news-filter';
 
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const CATEGORY_SOURCE_LIMITS: Partial<Record<NewsCategory, Record<string, number>>> = {
@@ -131,7 +131,7 @@ export function limitNewsByCategorySources(items: NewsItem[], category: NewsCate
  */
 export function mergeNewsItems(existing: NewsItem[], incoming: NewsItem[]): NewsItem[] {
 	const merged = deduplicateNews([...incoming, ...existing]);
-	const recent = filterByAge(merged, 7).sort((a, b) => b.timestamp - a.timestamp);
+	const recent = sortNewsNewestFirst(filterByAge(merged, 7));
 	const category = recent[0]?.category;
 	return category ? limitNewsByCategorySources(recent, category) : recent;
 }

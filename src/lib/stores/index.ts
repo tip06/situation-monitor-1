@@ -9,6 +9,7 @@ export {
 	disabledPanels,
 	draggablePanels,
 	type PanelSettings,
+	type NavigationLayout,
 	type SettingsState
 } from './settings';
 

@@ -18,6 +18,7 @@ export const EN_MESSAGES = {
 	'tabs.social': 'Trends and Analysis',
 	'tabs.technology': 'Technology',
 	'tabs.intelligence': 'Intelligence',
+	'tabs.map': 'Map',
 	'panelName.map': 'Global Map',
 	'panelName.politics': 'World / Geopolitical',
 	'panelName.tech': 'Technology / AI',
@@ -47,7 +48,8 @@ export const EN_MESSAGES = {
 	'panelName.strategic_risk': 'Strategic Risk Overview',
 	'panelName.fringe': 'Fringe',
 	'preset.newsJunkie.name': 'News Junkie',
-	'preset.newsJunkie.description': 'Stay on top of breaking news across politics, tech, and finance',
+	'preset.newsJunkie.description':
+		'Stay on top of breaking news across politics, tech, and finance',
 	'preset.trader.name': 'Trader',
 	'preset.trader.description': 'Market-focused dashboard with stocks, crypto, and commodities',
 	'preset.geopolitics.name': 'Geopolitics Watcher',
@@ -91,6 +93,11 @@ export const EN_MESSAGES = {
 	'settings.themeSection': 'Theme',
 	'settings.themeLight': 'Light',
 	'settings.themeDark': 'Dark',
+	'settings.navigationSection': 'Menu Layout',
+	'settings.navigationHorizontal': 'Horizontal menu',
+	'settings.navigationSidebar': 'Left sidebar',
+	'settings.navigationHint':
+		'The sidebar is used on larger screens and falls back to the horizontal menu on mobile.',
 	'settings.addSourceSection': 'Add Source',
 	'settings.sourceCategory': 'Category',
 	'settings.sourceName': 'Source name',
@@ -135,18 +142,18 @@ export const EN_MESSAGES = {
 	'monitor.edit': 'Edit Monitor',
 	'monitor.create': 'Create Monitor',
 	'monitor.name': 'Name',
-	'monitor.keywords': 'Keywords (comma separated)',
-	'monitor.hint': 'News matching any of these keywords will appear in your monitor',
+	'monitor.keywords': 'Query',
+	'monitor.hint': 'Use AND, OR, NOT, parentheses, and quoted phrases. Commas still work as OR.',
 	'monitor.enabled': 'Enabled',
 	'monitor.delete': 'Delete',
 	'monitor.cancel': 'Cancel',
 	'monitor.saveChanges': 'Save Changes',
 	'monitor.createBtn': 'Create Monitor',
 	'monitor.nameRequired': 'Name is required',
-	'monitor.keywordRequired': 'At least one keyword is required',
+	'monitor.keywordRequired': 'A query is required',
 	'monitor.maxReached': 'Maximum number of monitors reached (20)',
 	'monitor.placeholderName': 'e.g., Ukraine Crisis',
-	'monitor.placeholderKeywords': 'e.g., ukraine, zelensky, kyiv',
+	'monitor.placeholderKeywords': 'e.g., ukraine AND (kyiv OR zelensky) NOT sports',
 	'addData.title': 'Add Map Data',
 	'addData.name': 'Name',
 	'addData.type': 'Type',
@@ -514,19 +521,30 @@ export const EN_MESSAGES = {
 	'polymarket.volume': 'Vol',
 	'polymarket.volume24h': '24h',
 	'polymarket.yes': 'YES',
-	'tooltip.correlation.compoundSignals': 'Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks',
-	'tooltip.correlation.emergingPatterns': 'Topics activated by robust z-score anomalies versus a 7-day baseline, with minimum volume and source-diversity thresholds',
-	'tooltip.correlation.momentumSignals': 'Topics with rising velocity and acceleration in mention frequency, showing real-time traction changes',
-	'tooltip.correlation.crossSourceLinks': 'Topics receiving independent coverage from 3+ news sources, indicating broad awareness and credibility',
-	'tooltip.correlation.predictiveSignals': 'AI-generated outcome predictions based on weighted scoring of source credibility, multi-source confirmation, and statistical significance',
-	'tooltip.narrative.trending': 'Dominant stories across mainstream media right now, matched via regex patterns. Shows momentum (rising/falling) and sentiment for each narrative.',
-	'tooltip.narrative.emergingFringe': 'Narratives originating from fringe or alternative sources, tracked by spread status: emerging, spreading, or viral based on mention volume.',
-	'tooltip.narrative.crossovers': 'Fringe narratives that have been picked up by mainstream outlets, indicating potential narrative laundering or legitimization. Shows crossover percentage.',
+	'tooltip.correlation.compoundSignals':
+		'Cross-topic correlations where multiple topics activate simultaneously, indicating systemic or cascading risks',
+	'tooltip.correlation.emergingPatterns':
+		'Topics activated by robust z-score anomalies versus a 7-day baseline, with minimum volume and source-diversity thresholds',
+	'tooltip.correlation.momentumSignals':
+		'Topics with rising velocity and acceleration in mention frequency, showing real-time traction changes',
+	'tooltip.correlation.crossSourceLinks':
+		'Topics receiving independent coverage from 3+ news sources, indicating broad awareness and credibility',
+	'tooltip.correlation.predictiveSignals':
+		'AI-generated outcome predictions based on weighted scoring of source credibility, multi-source confirmation, and statistical significance',
+	'tooltip.narrative.trending':
+		'Dominant stories across mainstream media right now, matched via regex patterns. Shows momentum (rising/falling) and sentiment for each narrative.',
+	'tooltip.narrative.emergingFringe':
+		'Narratives originating from fringe or alternative sources, tracked by spread status: emerging, spreading, or viral based on mention volume.',
+	'tooltip.narrative.crossovers':
+		'Fringe narratives that have been picked up by mainstream outlets, indicating potential narrative laundering or legitimization. Shows crossover percentage.',
 	'tooltip.narrative.watch':
 		"Fringe-pattern narratives detected from unclassified or mixed sources - a watchlist for topics that don't yet fit the emerging or crossover categories.",
-	'tooltip.narrative.disinfo': 'Patterns flagged as known disinformation based on severity classification, regardless of source type.',
-	'tooltip.polymarket.topGeopolitical': 'The 3 highest-volume geopolitical prediction markets on Polymarket, displayed as probability gauges.',
-	'tooltip.polymarket.categoryFeeds': 'Top 10 prediction markets per category ranked by 24-hour trading volume, showing real-time market sentiment across topics.',
+	'tooltip.narrative.disinfo':
+		'Patterns flagged as known disinformation based on severity classification, regardless of source type.',
+	'tooltip.polymarket.topGeopolitical':
+		'The 3 highest-volume geopolitical prediction markets on Polymarket, displayed as probability gauges.',
+	'tooltip.polymarket.categoryFeeds':
+		'Top 10 prediction markets per category ranked by 24-hour trading volume, showing real-time market sentiment across topics.',
 	'time.justNow': 'just now',
 	'time.justNowLong': 'Just now',
 	'status.active': '{count} ACTIVE'

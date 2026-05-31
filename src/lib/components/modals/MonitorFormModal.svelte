@@ -3,6 +3,11 @@
 	import { monitors, language } from '$lib/stores';
 	import { t } from '$lib/i18n';
 	import type { CustomMonitor } from '$lib/types';
+	import {
+		extractBooleanQueryTerms,
+		keywordsToBooleanQuery,
+		validateBooleanQuery
+	} from '$lib/utils/boolean-query';
 
 	interface Props {
 		open: boolean;
@@ -13,7 +18,7 @@
 	let { open = false, onClose, editMonitor = null }: Props = $props();
 
 	let name = $state('');
-	let keywords = $state('');
+	let query = $state('');
 	let enabled = $state(true);
 	let error = $state('');
 
@@ -22,11 +27,11 @@
 		if (open) {
 			if (editMonitor) {
 				name = editMonitor.name;
-				keywords = editMonitor.keywords.join(', ');
+				query = editMonitor.query || editMonitor.keywords.join(', ');
 				enabled = editMonitor.enabled;
 			} else {
 				name = '';
-				keywords = '';
+				query = '';
 				enabled = true;
 			}
 			error = '';
@@ -37,26 +42,33 @@
 		e.preventDefault();
 
 		const trimmedName = name.trim();
-		const keywordList = keywords
-			.split(',')
-			.map((k) => k.trim().toLowerCase())
-			.filter((k) => k.length > 0);
+		const trimmedQuery = query.trim();
 
 		if (!trimmedName) {
 			error = t($language, 'monitor.nameRequired');
 			return;
 		}
 
-		if (keywordList.length === 0) {
+		if (!trimmedQuery) {
 			error = t($language, 'monitor.keywordRequired');
 			return;
 		}
+
+		const queryError = validateBooleanQuery(trimmedQuery);
+		if (queryError) {
+			error = queryError;
+			return;
+		}
+
+		const keywordList = extractBooleanQueryTerms(trimmedQuery);
+		const storedQuery = keywordsToBooleanQuery(keywordList) === trimmedQuery ? '' : trimmedQuery;
 
 		if (editMonitor) {
 			// Update existing monitor
 			monitors.updateMonitor(editMonitor.id, {
 				name: trimmedName,
 				keywords: keywordList,
+				query: storedQuery,
 				enabled
 			});
 		} else {
@@ -64,6 +76,7 @@
 			const result = monitors.addMonitor({
 				name: trimmedName,
 				keywords: keywordList,
+				query: storedQuery,
 				enabled
 			});
 
@@ -110,7 +123,7 @@
 			<input
 				id="monitor-keywords"
 				type="text"
-				bind:value={keywords}
+				bind:value={query}
 				placeholder={t($language, 'monitor.placeholderKeywords')}
 			/>
 			<p class="form-hint">{t($language, 'monitor.hint')}</p>
@@ -129,7 +142,9 @@
 					{t($language, 'monitor.delete')}
 				</button>
 			{/if}
-			<button type="button" class="cancel-btn" onclick={onClose}>{t($language, 'monitor.cancel')}</button>
+			<button type="button" class="cancel-btn" onclick={onClose}
+				>{t($language, 'monitor.cancel')}</button
+			>
 			<button type="submit" class="submit-btn">
 				{editMonitor ? t($language, 'monitor.saveChanges') : t($language, 'monitor.createBtn')}
 			</button>

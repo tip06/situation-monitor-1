@@ -1,23 +1,23 @@
 <script lang="ts">
 	import { Panel, Badge, InfoTooltip } from '$lib/components/common';
 	import { Modal } from '$lib/components/modals';
-	import { analyzeNarratives, type TrendingNarrative } from '$lib/analysis/narrative';
+	import type { TrendingNarrative } from '$lib/analysis/narrative';
 	import type { NewsItem } from '$lib/types';
 	import { language, alertNavigation } from '$lib/stores';
+	import { narrativeResults } from '$lib/stores/analysisResults';
 	import { t } from '$lib/i18n';
 	import type { MessageKey } from '$lib/i18n/messages/en';
 	import { toIntlLocale } from '$lib/i18n/types';
 	import { untrack } from 'svelte';
 
 	interface Props {
-		news?: NewsItem[];
 		loading?: boolean;
 		error?: string | null;
 	}
 
-	let { news = [], loading = false, error = null }: Props = $props();
+	let { loading = false, error = null }: Props = $props();
 
-	const analysis = $derived(analyzeNarratives(news, $language));
+	const analysis = $narrativeResults;
 
 	// Modal state
 	let modalOpen = $state(false);
@@ -139,7 +139,7 @@
 </script>
 
 <Panel id="narrative" title={t($language, 'narrative.title')} {loading} {error}>
-	{#if news.length === 0 && !loading && !error}
+	{#if !analysis && !loading && !error}
 		<div class="empty-state">{t($language, 'narrative.insufficient')}</div>
 	{:else if analysis}
 		<div class="narrative-content">
@@ -275,9 +275,7 @@
 			{#if analysis.trendingNarratives.length === 0 && analysis.emergingFringe.length === 0 && analysis.fringeToMainstream.length === 0}
 				<div class="empty-state">
 					{t($language, 'narrative.noSignificantCurrent')}
-					{#if news.length < 50}
-						<br /><span class="hint">{t($language, 'narrative.tryRefreshing')}</span>
-					{/if}
+					<br /><span class="hint">{t($language, 'narrative.tryRefreshing')}</span>
 				</div>
 			{/if}
 		</div>
