@@ -988,42 +988,65 @@ async function handleAiBrief(request, env) {
 		}
 	}
 
-	// Cache key includes a hash of the headlines so different news produces different briefs
 	const cacheKey = 'ai:brief';
 	const cached = await getStoreValue(env, cacheKey);
-	if (cached && headlines.length === 0 && Date.now() - cached.generatedAt < 6 * 60 * 60 * 1000) {
+	if (cached && Date.now() - cached.generatedAt < 6 * 60 * 60 * 1000) {
 		return jsonResponse(cached);
 	}
 
 	const groqKey = env.GROQ_API_KEY;
-	if (!groqKey) return jsonResponse({ error: 'GROQ_API_KEY not configured' }, 503);
+	let brief = null;
+	if (groqKey) {
+		const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				model: 'llama-3.3-70b-versatile',
+				messages: [
+					{
+						role: 'system',
+						content: 'You are a senior intelligence analyst. Be direct, analytical, and concise. No fluff.'
+					},
+					{
+						role: 'user',
+						content: `Based on these recent news headlines, write a 3-paragraph global situation brief covering: (1) key geopolitical developments, (2) economic and market signals, (3) notable risks or escalation indicators. Headlines:\n${headlines.join('\n')}`
+					}
+				],
+				max_tokens: 600
+			})
+		});
 
-	const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-		method: 'POST',
-		headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			model: 'llama-3.3-70b-versatile',
-			messages: [
-				{
-					role: 'system',
-					content: 'You are a senior intelligence analyst. Be direct, analytical, and concise. No fluff.'
-				},
-				{
-					role: 'user',
-					content: `Based on these recent news headlines, write a 3-paragraph global situation brief covering: (1) key geopolitical developments, (2) economic and market signals, (3) notable risks or escalation indicators. Headlines:\n${headlines.join('\n')}`
-				}
-			],
-			max_tokens: 600
-		})
-	});
+		if (response.ok) {
+			const data = await response.json();
+			const text = data?.choices?.[0]?.message?.content;
+			if (typeof text === 'string' && text.trim()) {
+				brief = {
+					text,
+					generatedAt: Date.now(),
+					headlineCount: headlines.length
+				};
+			}
+		}
+	}
 
-	if (!response.ok) return jsonResponse({ error: 'Groq API error', status: response.status }, 502);
-	const data = await response.json();
-	const brief = {
-		text: data.choices[0].message.content,
-		generatedAt: Date.now(),
-		headlineCount: headlines.length
-	};
+	if (!brief && cached) {
+		return jsonResponse(cached);
+	}
+
+	if (!brief) {
+		const sample = [...new Set(headlines)].slice(0, 9);
+		const paragraphs = [
+			`Recent geopolitical reporting includes: ${sample.slice(0, 3).join('; ') || 'No current headlines available.'}`,
+			`Economic and market monitoring should account for: ${sample.slice(3, 6).join('; ') || 'No additional market headlines available.'}`,
+			`Risk monitoring priorities include: ${sample.slice(6, 9).join('; ') || 'No additional escalation headlines available.'}`
+		];
+		brief = {
+			text: paragraphs.join('\n\n'),
+			generatedAt: Date.now(),
+			headlineCount: headlines.length
+		};
+	}
+
 	await setStoreValue(env, 'ai:brief', brief);
 	return jsonResponse(brief);
 }

@@ -103,7 +103,7 @@ export const FEEDS: Record<NewsCategory, FeedSource[]> = {
 		},
 		{
 			name: 'The War Zone',
-			url: 'https://news.google.com/rss/search?q=site:thedrive.com&hl=en&gl=US&ceid=US:en'
+			url: 'https://www.thedrive.com/the-war-zone/feed'
 		},
 		{ name: 'RealClearDefense', url: 'https://www.realcleardefense.com/index.xml' },
 		{ name: 'CSIS', url: 'https://www.csis.org/rss.xml' },

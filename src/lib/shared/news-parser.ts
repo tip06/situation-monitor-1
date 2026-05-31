@@ -11,8 +11,21 @@ const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const CATEGORY_SOURCE_LIMITS: Partial<Record<NewsCategory, Record<string, number>>> = {
 	tech: {
 		'ArXiv AI': 20
+	},
+	intel: {
+		RealClearDefense: 10
 	}
 };
+
+function isTrustedNewsItem(item: NewsItem): boolean {
+	if (item.source !== 'The War Zone') return true;
+	try {
+		const hostname = new URL(item.link).hostname;
+		return hostname === 'twz.com' || hostname.endsWith('.twz.com');
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Simple hash function to generate unique IDs from URLs
@@ -104,7 +117,8 @@ export function filterByAge(items: NewsItem[], maxAgeDays: number): NewsItem[] {
 		(item) =>
 			Number.isFinite(item.timestamp) &&
 			item.timestamp <= now + MAX_FUTURE_SKEW_MS &&
-			now - item.timestamp <= maxAge
+			now - item.timestamp <= maxAge &&
+			isTrustedNewsItem(item)
 	);
 }
 
