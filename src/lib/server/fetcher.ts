@@ -436,7 +436,27 @@ async function fetchGdeltNewsServer(
 
 // --- Category fetching ---
 
-export async function fetchCategoryNewsServer(
+const categoryRefreshes = new Map<NewsCategory, Promise<NewsItem[]>>();
+
+export function isCategoryNewsRefreshInFlight(category: NewsCategory): boolean {
+	return categoryRefreshes.has(category);
+}
+
+export function fetchCategoryNewsServer(
+	category: NewsCategory,
+	feeds?: FeedSource[]
+): Promise<NewsItem[]> {
+	const existing = categoryRefreshes.get(category);
+	if (existing) return existing;
+
+	const refresh = fetchCategoryNewsServerImpl(category, feeds).finally(() => {
+		categoryRefreshes.delete(category);
+	});
+	categoryRefreshes.set(category, refresh);
+	return refresh;
+}
+
+async function fetchCategoryNewsServerImpl(
 	category: NewsCategory,
 	feeds?: FeedSource[]
 ): Promise<NewsItem[]> {
@@ -488,8 +508,10 @@ export async function fetchCategoryNewsServer(
 	// Store in SQLite
 	if (filtered.length > 0) {
 		upsertNewsItems(filtered);
-		setMeta(`checkpoint:${category}`, filtered[0].timestamp);
 	}
+	// Record the attempt even when a category currently has no items. This keeps
+	// empty feeds from triggering a full network fetch on every page request.
+	setMeta(`checkpoint:${category}`, filtered[0]?.timestamp ?? Date.now());
 
 	return filtered;
 }
@@ -858,7 +880,19 @@ export interface AllMarketsServerData {
 	updatedAt: number;
 }
 
-export async function fetchAllMarketsServer(): Promise<AllMarketsServerData> {
+let marketsRefresh: Promise<AllMarketsServerData> | null = null;
+
+export function fetchAllMarketsServer(): Promise<AllMarketsServerData> {
+	if (marketsRefresh) return marketsRefresh;
+
+	const refresh = fetchAllMarketsServerImpl().finally(() => {
+		if (marketsRefresh === refresh) marketsRefresh = null;
+	});
+	marketsRefresh = refresh;
+	return refresh;
+}
+
+async function fetchAllMarketsServerImpl(): Promise<AllMarketsServerData> {
 	if (USING_DEPRECATED_FINNHUB_KEY && !loggedFinnhubDeprecationWarning) {
 		console.warn(
 			'[Fetcher] Using deprecated VITE_FINNHUB_API_KEY on server. Please migrate to FINNHUB_API_KEY.'

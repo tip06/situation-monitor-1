@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { NewsCategory } from '$lib/types';
 import { getNewsByCategoryBatch, isNewsCategoryCacheStale } from '$lib/server/db';
-import { fetchCategoryNewsServer } from '$lib/server/fetcher';
+import { fetchCategoryNewsServer, isCategoryNewsRefreshInFlight } from '$lib/server/fetcher';
 import { getEnabledFeedsByCategory } from '$lib/server/sources';
 
 const VALID_CATEGORIES: Set<NewsCategory> = new Set([
@@ -38,27 +38,25 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Get data from SQLite
 	const result = getNewsByCategoryBatch(categories, sinceByCategory);
 
-	// Fetch categories that are empty or older than the background refresh interval.
-	const fetchPromises: Promise<void>[] = [];
+	// Return the SQLite snapshot immediately. Slow feeds refresh in the background;
+	// the client can poll while a refresh is in flight and merge the new items.
+	const refreshing: Partial<Record<NewsCategory, boolean>> = {};
 	for (const category of categories) {
-		if (result[category].length === 0 || isNewsCategoryCacheStale(category)) {
-			fetchPromises.push(
-				fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category)).then((items) => {
-					result[category] = items;
-				})
-			);
+		if (isNewsCategoryCacheStale(category)) {
+			void fetchCategoryNewsServer(category, getEnabledFeedsByCategory(category)).catch((error) => {
+				console.error(`[API] Background refresh failed for ${category}:`, error);
+			});
 		}
-	}
-	if (fetchPromises.length > 0) {
-		await Promise.all(fetchPromises);
+		refreshing[category] = isCategoryNewsRefreshInFlight(category);
 	}
 
-	// Build checkpoints
+	// Build checkpoints only when the response contains news. A timestamp for an
+	// empty result would cause a later background refresh to omit older articles.
 	const checkpoints: Partial<Record<NewsCategory, number>> = {};
 	for (const category of categories) {
 		const items = result[category];
-		checkpoints[category] = items.length > 0 ? items[0].timestamp : Date.now();
+		if (items.length > 0) checkpoints[category] = items[0].timestamp;
 	}
 
-	return json({ categories: result, checkpoints });
+	return json({ categories: result, checkpoints, refreshing });
 };

@@ -20,6 +20,9 @@ interface AllMarketsData {
 	sectors: SectorPerformance[];
 	commodities: MarketItem[];
 	marketHealth: MarketHealthMap;
+	updatedAt: number;
+	stale: boolean;
+	refreshing: boolean;
 }
 
 function createDefaultHealth(category: MarketCategoryKey) {
@@ -72,7 +75,10 @@ function createEmptyMarkets(): AllMarketsData {
 			sectors: createDefaultHealth('sectors'),
 			commodities: createDefaultHealth('commodities'),
 			crypto: createDefaultHealth('crypto')
-		}
+		},
+		updatedAt: 0,
+		stale: true,
+		refreshing: false
 	};
 }
 
@@ -84,12 +90,16 @@ export async function fetchAllMarkets(): Promise<AllMarketsData> {
 		const res = await fetch('/api/markets');
 		if (!res.ok) throw new Error(`Server error: ${res.status}`);
 		const data = await res.json();
+		const empty = createEmptyMarkets();
 		return {
-			indices: data.indices ?? [],
-			sectors: data.sectors ?? [],
-			commodities: data.commodities ?? [],
-			crypto: data.crypto ?? [],
-			marketHealth: data.marketHealth ?? createEmptyMarkets().marketHealth
+			indices: data.indices?.length ? data.indices : empty.indices,
+			sectors: data.sectors?.length ? data.sectors : empty.sectors,
+			commodities: data.commodities?.length ? data.commodities : empty.commodities,
+			crypto: data.crypto?.length ? data.crypto : empty.crypto,
+			marketHealth: data.marketHealth ?? empty.marketHealth,
+			updatedAt: data.updatedAt ?? 0,
+			stale: data.stale === true,
+			refreshing: data.refreshing === true
 		};
 	} catch (error) {
 		console.error('Failed to fetch markets from server:', error);

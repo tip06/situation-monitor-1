@@ -100,8 +100,14 @@
 	}
 
 	let activeLoadToken = 0;
+	let pageActive = false;
 	let deferredCategoryLoadTimer: ReturnType<typeof setTimeout> | null = null;
 	let tabLoadDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let marketRefreshPollTimer: ReturnType<typeof setTimeout> | null = null;
+	const categoryRefreshPollTimers = new Map<
+		NewsCategory,
+		{ timer: ReturnType<typeof setTimeout>; token: number }
+	>();
 	const inFlightCategoryLoads = new Map<NewsCategory, Promise<void>>();
 	let longTaskObserver: PerformanceObserver | null = null;
 	let alertDetectionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -183,6 +189,35 @@
 		}, delayMs);
 	}
 
+	function scheduleCategoryRefreshPoll(category: NewsCategory, token: number) {
+		if (!pageActive) return;
+		const existing = categoryRefreshPollTimers.get(category);
+		if (existing?.token === token) return;
+		if (existing) clearTimeout(existing.timer);
+
+		const timer = setTimeout(() => {
+			categoryRefreshPollTimers.delete(category);
+			if (pageActive && isCurrentLoadToken(token)) void loadNewsCategory(category, token);
+		}, 5000);
+		categoryRefreshPollTimers.set(category, { timer, token });
+	}
+
+	function clearCategoryRefreshPoll(category: NewsCategory) {
+		const pending = categoryRefreshPollTimers.get(category);
+		if (!pending) return;
+		clearTimeout(pending.timer);
+		categoryRefreshPollTimers.delete(category);
+	}
+
+	function scheduleMarketRefreshPoll() {
+		if (!pageActive) return;
+		if (marketRefreshPollTimer) return;
+		marketRefreshPollTimer = setTimeout(() => {
+			marketRefreshPollTimer = null;
+			void loadMarkets();
+		}, 5000);
+	}
+
 	// Data fetching
 	async function loadNewsCategory(category: NewsCategory, token: number): Promise<void> {
 		const existing = inFlightCategoryLoads.get(category);
@@ -204,6 +239,15 @@
 			onFreshCategory: (loadedCategory, items) => {
 				if (!isCurrentLoadToken(token)) return;
 				news.mergeItems(loadedCategory, items);
+			},
+			onRefreshPending: (loadedCategory, pending) => {
+				if (!isCurrentLoadToken(token)) return;
+				if (pending) {
+					news.setLoading(loadedCategory, true);
+					scheduleCategoryRefreshPoll(loadedCategory, token);
+				} else {
+					clearCategoryRefreshPoll(loadedCategory);
+				}
 			},
 			onCategoryError: (failedCategory, error) => {
 				if (!isCurrentLoadToken(token)) return;
@@ -234,6 +278,12 @@
 			markets.setSectors(data.sectors, data.marketHealth?.sectors);
 			markets.setCommodities(data.commodities, data.marketHealth?.commodities);
 			markets.setCrypto(data.crypto, data.marketHealth?.crypto);
+			if (data.refreshing) {
+				scheduleMarketRefreshPoll();
+			} else if (marketRefreshPollTimer) {
+				clearTimeout(marketRefreshPollTimer);
+				marketRefreshPollTimer = null;
+			}
 		} catch (error) {
 			console.error('Failed to load markets:', error);
 		}
@@ -447,6 +497,7 @@
 
 	// Initial load
 	onMount(() => {
+		pageActive = true;
 		if (typeof PerformanceObserver !== 'undefined') {
 			try {
 				longTaskObserver = new PerformanceObserver((entryList) => {
@@ -473,18 +524,17 @@
 				const currentTab = $activeTab;
 				const visibleCategories = getVisibleNewsCategories(currentTab);
 				await Promise.race([
-					Promise.all([
-						loadNews(visibleCategories, token),
-						loadMarkets(),
-						loadMiscData(),
-						loadIntelligence()
-					]),
+					Promise.all([loadNews(visibleCategories, token), loadMarkets()]),
 					makeRefreshTimeout()
 				]);
 				loadedTabs = new Set([currentTab]);
 				initialLoadDone = true;
 				scheduleAlertDetection();
 				refresh.endRefresh();
+
+				// Secondary data should not hold the visible news and market panels open.
+				void loadMiscData();
+				void loadIntelligence();
 
 				// Defer remaining categories after 5s
 				const remainingCategories = getRemainingNewsCategories(visibleCategories);
@@ -500,8 +550,18 @@
 		refresh.setupAutoRefresh(handleRefresh);
 
 		return () => {
+			pageActive = false;
+			activeLoadToken += 1;
 			cancelTabLoadDebounce();
 			cancelDeferredCategoryLoad();
+			for (const pending of categoryRefreshPollTimers.values()) {
+				clearTimeout(pending.timer);
+			}
+			categoryRefreshPollTimers.clear();
+			if (marketRefreshPollTimer) {
+				clearTimeout(marketRefreshPollTimer);
+				marketRefreshPollTimer = null;
+			}
 			if (alertDetectionTimer) {
 				clearTimeout(alertDetectionTimer);
 				alertDetectionTimer = null;

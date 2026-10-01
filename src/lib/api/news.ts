@@ -26,6 +26,7 @@ export interface RefreshAllNewsProgressiveOptions {
 		meta: { stale: boolean; source: 'memory' | 'storage' }
 	) => void;
 	onFreshCategory?: (category: NewsCategory, items: NewsItem[]) => void;
+	onRefreshPending?: (category: NewsCategory, pending: boolean) => void;
 	onCategoryError?: (category: NewsCategory, error: unknown) => void;
 	onCheckpointUpdate?: (category: NewsCategory, checkpoint: number) => void;
 }
@@ -46,6 +47,23 @@ function setStoredCheckpoints(checkpoints: NewsCheckpointMap): void {
 		localStorage.setItem(NEWS_CHECKPOINTS_STORAGE_KEY, JSON.stringify(checkpoints));
 	} catch {
 		// Ignore storage write errors
+	}
+}
+
+function hasPersistedCategoryItems(category: NewsCategory): boolean {
+	if (!browser) return false;
+	try {
+		const raw = localStorage.getItem(`sm_news_${category}`);
+		if (!raw) return false;
+		const cached = JSON.parse(raw) as { items?: NewsItem[]; lastUpdated?: number };
+		return (
+			Array.isArray(cached.items) &&
+			cached.items.length > 0 &&
+			typeof cached.lastUpdated === 'number' &&
+			Date.now() - cached.lastUpdated <= 24 * 60 * 60 * 1000
+		);
+	} catch {
+		return false;
 	}
 }
 
@@ -129,6 +147,12 @@ export async function refreshAllNewsProgressive(
 	// Get stored checkpoints for incremental fetch
 	const storedCheckpoints = getStoredCheckpoints();
 	const sinceByCategory = { ...storedCheckpoints, ...(options.sinceByCategory ?? {}) };
+	// A checkpoint without the matching local items cannot be merged safely.
+	// Ask the server for a full snapshot if browser news storage was cleared or
+	// unavailable (for example, after a quota error).
+	for (const category of targetCategories) {
+		if (!hasPersistedCategoryItems(category)) delete sinceByCategory[category];
+	}
 
 	// Batch fetch from server API
 	const params = new URLSearchParams();
@@ -149,6 +173,7 @@ export async function refreshAllNewsProgressive(
 		const data: {
 			categories: Record<string, NewsItem[]>;
 			checkpoints: Record<string, number>;
+			refreshing?: Record<string, boolean>;
 		} = await res.json();
 
 		const nextCheckpoints = { ...storedCheckpoints };
@@ -158,6 +183,7 @@ export async function refreshAllNewsProgressive(
 			const merged = mergeNewsItems(result[category], incoming);
 			result[category] = merged;
 			options.onFreshCategory?.(category, merged);
+			options.onRefreshPending?.(category, data.refreshing?.[category] === true);
 
 			const checkpoint = data.checkpoints?.[category];
 			if (typeof checkpoint === 'number' && Number.isFinite(checkpoint)) {
